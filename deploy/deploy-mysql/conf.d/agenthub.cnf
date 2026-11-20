@@ -1,0 +1,10 @@
+# MySQL 容器客户端配置——只放 [client]，服务端字符集由 docker-compose.yml 的 command 显式给，避免两处口径。
+#
+# 为什么必须有这个文件：官方镜像的 initdb 逐个用独立 mysql 客户端进程执行 /docker-entrypoint-initdb.d/*.sql，
+# 该客户端不带 --default-character-set 时按 latin1 解析连接，UTF-8 中文被当成 3 个字符，
+# sys_user.nick_name varchar(30) 在第 113 行直接报 ERROR 1406 Data too long，
+# 整个 initdb 链就此中断——ai_ 表、菜单、字典一条都建不起来。
+# entrypoint 会读 /etc/mysql/conf.d/*.cnf，所以这里补上客户端默认字符集。
+# 实测依据见 docs/configuration.md「双栈 initdb 与字符集」。
+[client]
+default-character-set = utf8mb4
