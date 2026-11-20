@@ -1,0 +1,122 @@
+name: CI
+
+# 交付门禁：合入 main 前必须通过的最低集合。
+# 档位取自「最小可绿」——规则类检查恒定执行；后端/前端/契约作业在底座制品入仓前自动跳过，
+# 制品出现后无需改本文件即自动生效。设计稿 §9 H1 的 e2e 全量硬门禁与 JaCoCo 覆盖率仍属一周后硬化项，未在此提前。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 双方言 SQL 一致性与幂等
+        run: node scripts/checks/schema-dialect-parity.mjs
+
+      - name: 文件与目录命名规范
+        run: node scripts/checks/naming-convention.mjs
+
+      - name: 密钥入库防护
+        run: node scripts/checks/no-secrets-in-repo.mjs
+
+      - name: 探测已入仓的构建工件
+        id: probe
+        run: |
+          test_true() { [ -e "$1" ] && echo true || echo false; }
+          {
+            echo "backend=$(test_true code/back-end/pom.xml)"
+            echo "frontend=$(test_true code/front-end/package.json)"
+            echo "contract=$(test_true e2e/http/L00-contract-consistency.mjs)"
+            echo "nodepin=$(test_true code/front-end/.node-version)"
+          } >> "$GITHUB_OUTPUT"
+
+      # JDK 与 Node 版本一律取自仓库内声明，CI 不硬编码版本，避免与设计稿 §11 前置的底座制品版本漂移。
+      - name: 解析 JDK 版本
+        if: steps.probe.outputs.backend == 'true'
+        id: jdk
+        run: |
+          if [ -f code/back-end/.java-version ]; then
+            version=$(tr -d '[:space:]' < code/back-end/.java-version)
+          else
+            version=$(sed -n 's:.*<java\.version>\([0-9][0-9.]*\)</java\.version>.*:\1:p' code/back-end/pom.xml | head -1)
+          fi
+          if [ -z "$version" ]; then
+            echo "::error::未从 code/back-end/.java-version 或根 pom.xml 的 <java.version> 解析到 JDK 版本，请补齐其一"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: 装配 JDK
+        if: steps.probe.outputs.backend == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.jdk.outputs.version }}
+          cache: maven
+
+      - name: AI 模块单测
+        if: steps.probe.outputs.backend == 'true'
+        working-directory: code/back-end
+        # -am 必需：CI 为全新检出，本地仓库无同级模块制品，只 -pl 单模块会解析失败。
+        run: |
+          if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
+          "$MVN" -B -ntp -pl ruoyi-modules/agent-hub-ai -am test
+
+      - name: 装配 pnpm
+        if: steps.probe.outputs.frontend == 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: 装配 Node
+        if: steps.probe.outputs.frontend == 'true' && steps.probe.outputs.nodepin == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: code/front-end/.node-version
+
+      - name: 前端构建
+        if: steps.probe.outputs.frontend == 'true'
+        working-directory: code/front-end
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: 契约一致性
+        if: steps.probe.outputs.contract == 'true'
+        run: node e2e/http/L00-contract-consistency.mjs
+
+      - name: 门禁覆盖小结
+        if: ${{ !cancelled() }}
+        env:
+          # 经 env 传入而非直接插值进 shell，遵循 actions 的脚本注入防护惯例。
+          BACKEND: ${{ steps.probe.outputs.backend }}
+          FRONTEND: ${{ steps.probe.outputs.frontend }}
+          CONTRACT: ${{ steps.probe.outputs.contract }}
+        run: |
+          state() { [ "$1" = 'true' ] && echo 已执行 || echo "跳过：$2"; }
+          {
+            echo "### CI 门禁覆盖"
+            echo ""
+            echo "| 门禁 | 本次状态 |"
+            echo "|---|---|"
+            echo "| 双方言 SQL 一致性与幂等 | 恒定执行 |"
+            echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
+            echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
+            echo "| AI 模块单测 | $(state "$BACKEND" 'code/back-end/pom.xml 未入仓') |"
+            echo "| 前端构建 | $(state "$FRONTEND" 'code/front-end/package.json 未入仓') |"
+            echo "| 契约一致性 L00 | $(state "$CONTRACT" 'e2e/http/L00-contract-consistency.mjs 未入仓') |"
+            echo ""
+            echo "> 接口 e2e 分层、浏览器巡检、RAG 评测需真实栈与模型密钥，按设计稿 §9 H1 留作一周后流水线硬化。"
+          } >> "$GITHUB_STEP_SUMMARY"
