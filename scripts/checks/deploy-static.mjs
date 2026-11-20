@@ -196,6 +196,60 @@ const checkProfileWiring = (stack, compose) => {
   }
 };
 
+// ── 6. 应用镜像与栈端口接线 ─────────────────────────────────────────
+// app 服务是 build 出来的，容器里进程监听哪个端口只有 Dockerfile 说了算：底座 yml 写死 8080，
+// 少了 SERVER_PORT 这一环，MySQL 栈的 Nginx upstream 与健康探针会同时错位——
+// 静态三处（compose / nginx / Dockerfile）必须对齐同一个端口口径，否则起栈时才在日志里见分晓。
+const checkAppImage = (stack, compose, expect) => {
+  const rel = `${stack}/docker-compose.yml`;
+  const dfName = (compose.match(/dockerfile:\s*\$\{AGENTHUB_APP_DOCKERFILE:-([^}]+)\}/) || [, 'Dockerfile'])[1];
+  const dfRel = `code/back-end/${dfName}`;
+  const dfPath = `${REPO_ROOT}${dfRel}`;
+  if (!existsSync(dfPath)) return fail(dfRel, `缺失：${rel} 的 app.build 指向它，镜像建不出来栈就起不来`);
+  const df = readFileSync(dfPath, 'utf8');
+
+  if (!new RegExp(`SERVER_PORT:\\s*"${expect.app}"`).test(compose)) {
+    fail(rel, `app 环境必须注入 SERVER_PORT: "${expect.app}"（本栈端口口径），否则容器仍按底座 yml 的 8080 监听`);
+  }
+  if (!/-Dserver\.port=\$\{SERVER_PORT\}/.test(df)) fail(dfRel, 'ENTRYPOINT 未把 SERVER_PORT 传给 -Dserver.port');
+  // 探针 `timeout 3 bash -c '</dev/tcp/127.0.0.1/<port>'` 要 bash + coreutils：jre-alpine 里没有，web 会永远等不到 healthy。
+  if (!/FROM\s+eclipse-temurin:\d+-jre(?![\w-])/.test(df)) fail(dfRel, '运行期镜像应为 eclipse-temurin:<n>-jre（compose 的容器探针依赖 bash 与 coreutils；-jre-alpine 里没有）');
+
+  // JDK 口径只由仓库内声明决定，与 ci.yml 的「解析 JDK 版本」同源，避免镜像与 CI 各跑一个版本。
+  const pomPath = `${REPO_ROOT}code/back-end/pom.xml`;
+  const pomJava = existsSync(pomPath) ? (readFileSync(pomPath, 'utf8').match(/<java\.version>(\d+)/) || [])[1] : '';
+  const imgJava = (df.match(/eclipse-temurin-(\d+)/) || [])[1];
+  if (!pomJava || !imgJava) {
+    fail(dfRel, `未同时解析到 pom <java.version>（${pomJava || '缺'}）与构建镜像 temurin 版本（${imgJava || '缺'}），版本口径不能靠记忆`);
+  } else if (pomJava !== imgJava) {
+    fail(dfRel, `构建镜像 JDK ${imgJava} 与 pom <java.version> ${pomJava} 不一致`);
+  }
+
+  // 少装 AI 模块不会报错，只会让前端 34 个 AI 页面全部拿不到接口。
+  if (!/-pl\s+ruoyi-admin\s+-am/.test(df)) fail(dfRel, '构建命令需为 `-pl ruoyi-admin -am`：缺 -am 时同级模块在容器本地仓库里解析不到');
+  const adminPom = `${REPO_ROOT}code/back-end/ruoyi-admin/pom.xml`;
+  if (!existsSync(adminPom) || !/<artifactId>agent-hub-ai<\/artifactId>/.test(readFileSync(adminPom, 'utf8'))) {
+    fail('code/back-end/ruoyi-admin/pom.xml', '未依赖 agent-hub-ai，镜像里不会带 AI 能力域');
+  }
+
+  // 落盘目录必须挂命名卷：bind 会跟着 compose 目录走，两栈同机时容易指到同一份。
+  for (const [path, why] of [['/app/logs', 'logback 的 log.path=./logs'], ['/app/data', '长期记忆与工作区 workspace-root=./data/agent-workspace']]) {
+    const m = new RegExp(`^\\s*-\\s*([^:\\s]+):${path}$`, 'm').exec(compose);
+    if (!m) {
+      fail(rel, `app 未挂载 ${path}（${why}）——写在容器可写层里，一次 recreate 就清零`);
+    } else if (m[1].includes('/') || m[1].startsWith('.')) {
+      fail(rel, `${path} 应挂命名卷，实际是 bind 源 ${m[1]}`);
+    }
+  }
+
+  const diPath = `${REPO_ROOT}code/back-end/.dockerignore`;
+  if (!existsSync(diPath)) {
+    fail('code/back-end/.dockerignore', '缺失：本地 mvn 留下的 target/ 会整层进构建上下文，每次构建重传几十 MB 且 COPY 进去的是过期产物');
+  } else if (!/^\*\*\/target\/\s*$/m.test(readFileSync(diPath, 'utf8'))) {
+    fail('code/back-end/.dockerignore', '未排除 **/target/');
+  }
+};
+
 const main = () => {
   if (!existsSync(DEPLOY_ROOT)) {
     console.log('· deploy/ 未入仓，跳过');
@@ -218,6 +272,7 @@ const main = () => {
     const services = checkPorts(stack, compose, STACKS[stack]);
     checkNginx(stack, conf, STACKS[stack]);
     checkProfileWiring(stack, compose);
+    checkAppImage(stack, compose, STACKS[stack]);
     notes.push(`${stack}: 服务 ${services} 个，必需变量 ${required} 个 / 清单登记 ${declared} 个`);
     checked += 1;
   }
@@ -248,7 +303,7 @@ const main = () => {
     for (const f of failures) console.error(`  - ${f}`);
     process.exit(1);
   }
-  console.log(`✓ 部署编排校验通过（${checked} 个栈：端口口径 / 变量清单 / Nginx 行为断言 / 字符集前置 / 覆盖接线）`);
+  console.log(`✓ 部署编排校验通过（${checked} 个栈：端口口径 / 变量清单 / Nginx 行为断言 / 字符集前置 / 覆盖接线 / 镜像接线）`);
 };
 
 main();

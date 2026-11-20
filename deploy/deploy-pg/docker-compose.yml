@@ -1,7 +1,7 @@
 # AgentHub PG 栈编排——设计稿 §2.1 各层位置、§2.3 部署与安全约束、§3.2 部署命名行；端口口径见手册 §10.1。
 # 双栈在同一台云服务器并存：本栈对外 80/443、后端 8080；MySQL 栈为 81/8443、8081。
 # 中间件端口一律不发布到宿主机（§2.3.9 公网暴露收敛），进公网的只有 Nginx。
-# 前置：同目录 .env（由 .env.example 复制）；app 镜像需要 B 线在 code/back-end 落 Dockerfile 后才能 --build。
+# 前置：同目录 .env（由 .env.example 复制）；app 镜像由 code/back-end/Dockerfile 两阶段构建，`--build` 即可产出。
 name: agenthub-pg
 
 # 运行期配置只走两条路：本段注入 AGENTHUB_* 环境变量，config/ 目录挂载属性路径映射。
@@ -11,6 +11,8 @@ x-app-environment: &app-environment
   # agenthub profile 必须排在 prod 之后：额外挂载目录 + 后置 profile 才压得动 classpath 明文默认值。
   SPRING_PROFILES_ACTIVE: ${AGENTHUB_SPRING_PROFILES_ACTIVE:-prod,agenthub}
   SPRING_CONFIG_ADDITIONAL_LOCATION: optional:file:/config/
+  # 容器内监听端口必须等于本栈口径（Nginx upstream 与健康探针同值），底座 yml 里写的是 8080，故显式覆盖。
+  SERVER_PORT: "8080"
 
   # ↓ 以下由 config/application-agenthub.yml 映射到底座既有属性路径（数据源、Redis、JWT、接口加解密）。
   AGENTHUB_DATASOURCE_URL: ${AGENTHUB_DATASOURCE_URL:-jdbc:postgresql://db:5432/${POSTGRES_DB}?useUnicode=true&characterEncoding=utf8&useSSL=false&autoReconnect=true&reWriteBatchedInserts=true}
@@ -142,7 +144,10 @@ services:
     volumes:
       # 配置覆盖目录：只放 application-agenthub.yml，密钥值一律留在 .env。
       - ./config:/config:ro
+      # 长期记忆与工作区（`workspace-root=./data/agent-workspace`）按用户分目录落盘，
+      # 挂命名卷才不会在一次 `compose up --force-recreate` 后把 MEMORY.md 与版本快照清零。
       - agenthub-pg-logs:/app/logs
+      - agenthub-pg-workspace:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -185,3 +190,4 @@ volumes:
   agenthub-pg-minio:
   agenthub-pg-milvus:
   agenthub-pg-logs:
+  agenthub-pg-workspace:

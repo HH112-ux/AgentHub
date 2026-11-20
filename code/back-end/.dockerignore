@@ -1,0 +1,11 @@
+# 构建上下文瘦身：这些条目不发给 docker daemon。
+# 不写这一份的话 `code/back-end` 的 64 MB 里有 50 MB 以上是本地 `mvn` 留下的 target/，
+# 每次构建都要先重传一遍，而且镜像里 COPY 进去的也是过期产物。
+**/target/
+**/*.log
+**/.DS_Store
+.git
+.idea
+*.iml
+.run
+.flattened-pom.xml
