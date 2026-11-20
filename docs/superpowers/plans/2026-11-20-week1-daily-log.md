@@ -36,3 +36,5 @@
 4. **内存预算（须进 §11 确认）**：两栈各带一套 Milvus/etcd/MinIO，同机并存余量未验。若改为共享外部网络与卷属部署变更，按 Task 4 流程走队长批准。
 
 未达项归属：app 镜像构建缺 `Dockerfile`（B 线，Task 1 Step 6 已列出）；云服务器、公网域名与正式证书（§11 前置，队长本周申请）。
+
+D2 追加：`deploy/**` 补上门禁——新脚本 `scripts/checks/deploy-static.mjs`（端口口径 / 清单与占位符对齐 / Nginx 关键指令 / MySQL 字符集前置 / profile 覆盖接线，docker 在场追加真实渲染）+ CI 一步 `nginx -t`。门禁自身经 8 项变异测试验证会变红，不是空跑。队友本地跑：`node scripts/checks/deploy-static.mjs`。详见 `docs/configuration.md` §4、§6。
