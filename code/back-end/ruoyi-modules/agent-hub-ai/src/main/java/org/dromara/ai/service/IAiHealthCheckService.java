@@ -15,7 +15,7 @@ import org.dromara.ai.domain.vo.AiHealthReportVo;
 public interface IAiHealthCheckService {
 
     /**
-     * 执行一次全量自检。
+     * 执行一次全量自检（读 60 秒结果缓存，缓存缺失时才真跑）。
      *
      * <p><b>纯本地判定，绝不发起外网调用</b>；需要真实连接的项返回
      * {@code UNKNOWN}（并标记支持探测），由 {@link #probe(AiHealthProbeBo)} 按需验证。</p>
@@ -23,6 +23,17 @@ public interface IAiHealthCheckService {
      * @return 体检报告
      */
     AiHealthReportVo check();
+
+    /**
+     * 执行一次全量自检，可选择穿透结果缓存。
+     *
+     * <p>缓存只是把「进页面就重算 15 项」压到 60 秒一次；无论走哪条路，返回值都会被写回缓存并
+     * 重置 TTL，因此连续刷新不会把 Redis 打穿。</p>
+     *
+     * @param refresh {@code true} 时忽略缓存重新体检（页面「重新自检」按钮），{@code false} 时优先复用缓存
+     * @return 体检报告
+     */
+    AiHealthReportVo check(boolean refresh);
 
     /**
      * 对单个体检项做真实连接探测（会发起外网 / 建连）。

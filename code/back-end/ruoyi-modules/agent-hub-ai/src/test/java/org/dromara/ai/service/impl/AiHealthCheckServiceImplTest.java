@@ -31,6 +31,7 @@ import org.dromara.ai.service.IAiMcpServerService;
 import org.dromara.ai.service.IAiModelConfigService;
 import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.exception.ServiceException;
+import org.dromara.common.json.utils.JsonUtils;
 import org.dromara.common.redis.utils.RedisUtils;
 import org.dromara.system.api.OssService;
 import org.junit.jupiter.api.AfterEach;
@@ -38,12 +39,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +65,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -152,6 +158,81 @@ class AiHealthCheckServiceImplTest {
         verify(milvusProbe, never()).probe();
         // 未建连时向量库项应是「待探测」而非绿灯
         assertEquals(AiHealthCheckVo.STATUS_UNKNOWN, itemOf(report, "vector.milvus").getStatus());
+    }
+
+    // ------------------------------------------------- 结果缓存（设计稿 §12.3：60 秒内复用，手动刷新穿透）
+
+    @Test
+    @DisplayName("60 秒内已有缓存报告时直接复用，不再逐项查库")
+    void shouldReuseCachedReportWithinTtl() throws Exception {
+        redisUtils.when(() -> RedisUtils.getCacheObject(AiHealthCheckServiceImpl.REPORT_CACHE_KEY))
+            .thenReturn(cachedReportJson(3));
+
+        AiHealthReportVo report = service.check();
+
+        assertEquals(3, report.getTotal(), "命中的是缓存里的报告，不是重新算出来的 15 项");
+        verify(dataSource, never()).getConnection();
+    }
+
+    @Test
+    @DisplayName("实时体检后按 60 秒 TTL 把报告写回 Redis")
+    void shouldCacheReportWithSixtySecondTtl() {
+        service.check();
+
+        ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Duration> ttl = ArgumentCaptor.forClass(Duration.class);
+        redisUtils.verify(() -> RedisUtils.setCacheObject(
+            eq(AiHealthCheckServiceImpl.REPORT_CACHE_KEY), payload.capture(), ttl.capture()));
+        assertEquals(Duration.ofSeconds(60), ttl.getValue());
+        assertTrue(payload.getValue().contains("\"total\":15"), "缓存里存的应是本次完整报告的 JSON");
+    }
+
+    @Test
+    @DisplayName("手动刷新（refresh=true）穿透缓存重新体检，并覆盖旧缓存")
+    void shouldBypassCacheWhenRefreshRequested() throws Exception {
+        redisUtils.when(() -> RedisUtils.getCacheObject(AiHealthCheckServiceImpl.REPORT_CACHE_KEY))
+            .thenReturn(cachedReportJson(3));
+
+        AiHealthReportVo report = service.check(true);
+
+        assertEquals(15, report.getTotal());
+        verify(dataSource, atLeastOnce()).getConnection();
+        redisUtils.verify(() -> RedisUtils.setCacheObject(
+            eq(AiHealthCheckServiceImpl.REPORT_CACHE_KEY), anyString(), eq(Duration.ofSeconds(60))));
+    }
+
+    @Test
+    @DisplayName("缓存内容损坏时回退实时体检，页面不报错")
+    void shouldFallBackToLiveCheckWhenCacheCorrupted() {
+        redisUtils.when(() -> RedisUtils.getCacheObject(AiHealthCheckServiceImpl.REPORT_CACHE_KEY))
+            .thenReturn("{ 不是合法 JSON");
+
+        AiHealthReportVo report = service.check();
+
+        assertEquals(15, report.getTotal());
+        assertEquals(AiHealthCheckVo.STATUS_PASS, report.getOverall(), "失败原因：" + report.getItems());
+    }
+
+    @Test
+    @DisplayName("写缓存失败只降级为不缓存，不影响报告返回")
+    void shouldReturnReportWhenCacheWriteFails() {
+        redisUtils.when(() -> RedisUtils.setCacheObject(anyString(), any(), any(Duration.class)))
+            .thenThrow(new RuntimeException("redis down"));
+
+        AiHealthReportVo report = service.check();
+
+        assertEquals(15, report.getTotal());
+        assertEquals(AiHealthCheckVo.STATUS_PASS, report.getOverall(), "失败原因：" + report.getItems());
+    }
+
+    /** 造一份「上一次体检」的缓存值：项数改成与实时结果不同的数字，便于区分复用还是重算。 */
+    private String cachedReportJson(int total) {
+        AiHealthReportVo cached = new AiHealthReportVo();
+        cached.setTotal(total);
+        cached.setPassCount(total);
+        cached.setOverall(AiHealthCheckVo.STATUS_PASS);
+        cached.setCheckedAt(LocalDateTime.now().minusSeconds(30));
+        return JsonUtils.toJsonString(cached);
     }
 
     // ---------------------------------------------------------------- 逐项判据

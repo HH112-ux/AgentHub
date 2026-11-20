@@ -20,7 +20,7 @@
             <el-button v-hasPermi="['ai:health:query']" icon="List" @click="openOnboarding">
               首登清单
             </el-button>
-            <el-button v-hasPermi="['ai:health:query']" icon="Refresh" :loading="loading" @click="loadReport">
+            <el-button v-hasPermi="['ai:health:query']" icon="Refresh" :loading="loading" @click="loadReport(true)">
               重新自检
             </el-button>
           </div>
@@ -260,11 +260,11 @@ const recompute = () => {
   }
 };
 
-/** 执行一次全量自检 */
-const loadReport = async () => {
+/** 执行一次全量自检；refresh 为 true 时穿透服务端 60 秒结果缓存 */
+const loadReport = async (refresh = false) => {
   loading.value = true;
   try {
-    const res = await getHealthReport();
+    const res = await getHealthReport(refresh);
     if (res.data) {
       report.value = res.data;
     }
@@ -300,7 +300,7 @@ const handleProbe = async (row: HealthCheckItem) => {
   }
 };
 
-onMounted(loadReport);
+onMounted(() => loadReport());
 </script>
 
 <style scoped lang="scss">

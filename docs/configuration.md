@@ -12,7 +12,7 @@
 
 两栈在同一台云服务器并存，靠宿主端口区分入口。Redis、etcd、MinIO、Milvus 一律只在栈内网络可达（§2.3.9 公网暴露收敛），进公网的只有 Nginx。`APP_HOST_PORT` 的后端映射是留给开发机直连的，生产按防火墙只放行内网。
 
-`GET /ai/health/check` 需要 `ai:health:check` 鉴权，因此**不能**作为无鉴权探针：容器健康检查只做 TCP 端口就绪，Nginx 侧的 `/healthz` 是纯静态 `200 agenthub[-mysql]-nginx-ok`，只证明 TLS 与入口在跑。
+`GET /ai/health/check` 需要 `ai:health:query` 鉴权，因此**不能**作为无鉴权探针：容器健康检查只做 TCP 端口就绪，Nginx 侧的 `/healthz` 是纯静态 `200 agenthub[-mysql]-nginx-ok`，只证明 TLS 与入口在跑。
 
 ## 2. 运行期配置：三段式，底座 yml 一行不改
 
@@ -78,6 +78,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 131 权限标识 | 注解与常量类 ↔ 双方言菜单脚本对账（`e2e/http/L00-contract-consistency.mjs`） | 注解 ⊆ 菜单 = 常量，双方言差异 0 |
 | 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 139 菜单行 / 31+108 字典行 |
 | 状态字典 ↔ 实体常量 | `e2e/http/L00-contract-consistency.mjs` E 段：5 个 `ai_*_status` 的取值集合与实体 `STATUS_*` 常量双向比对，另断言取值不重复、词表不空、字典项不孤立 | 5 类逐字对齐；`ai_attachment_status` 不登记（`ai_message_attachment` 无 `status` 列），口径见设计稿 §12.7 |
+| 体检报告 60 秒缓存 | `AiHealthCheckServiceImplTest` 5 项断言（缓存复用、TTL=60s、`refresh=true` 穿透、缓存值损坏回退实时、写缓存失败降级）+ 6 项变异：TTL 改 300 秒、缓存读取短路、忽略 refresh、读/写缓存异常不再兜底、Controller 丢掉 refresh 参数 | 6/6 如期变红且报错命中对应断言；缓存键 `agenthub:ai:health:report`，每次实时体检覆盖并重置 TTL，页面「重新自检」不受 60 秒限制 |
 | 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损 |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
 | 部署门禁有效性 | 对 `deploy-static.mjs` 做 17 项变异：编排与 Nginx 8 项（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件）+ 镜像接线 9 项（compose 去 `SERVER_PORT`、`ENTRYPOINT` 不传端口、运行期镜像改 `-jre-alpine`、构建镜像 JDK 降 17、构建命令去 `-am`、`ruoyi-admin` 不依赖 `agent-hub-ai`、`/app/data` 退化 bind、删 `.dockerignore` 排除项、删 `Dockerfile`） | 17/17 如期变红且报错命中对应断言（判定按「rc=1 且报错含该断言措辞」，脚本自身崩溃不计通过）；无 docker 时渲染记为「未执行」而非静默通过 |
@@ -111,7 +112,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 容器内端口 | `ENV SERVER_PORT` 由 compose 按栈注入（PG `8080` / MySQL `8081`），ENTRYPOINT 传 `-Dserver.port=${SERVER_PORT}` | 底座 yml 写死 8080；两栈同机并存时，MySQL 栈的 Nginx upstream 与健康探针都按 §1 的口径指 8081，容器不监听 8081 就是「nginx 502 + 容器不 healthy」的连环故障。三处（compose 环境 / nginx upstream / Dockerfile）由 `deploy-static.mjs` 的镜像接线段对齐 |
 | 落盘目录 | `/app/logs`（logback `log.path=./logs`）与 `/app/data`（`workspace-root=./data/agent-workspace`）各挂命名卷 | 长期记忆的 `MEMORY.md`、抽取流水与版本快照是文件而不是表；不挂卷的话一次 `--force-recreate` 就把用户记忆清零，而且现场无法复现 |
 | 上下文 | `code/back-end/.dockerignore` 排除 `**/target/` 与 IDE/系统文件 | 不排除时 64 MB 上下文里有 50 MB 是本地构建产物，每次构建重传一遍，`COPY` 进去的还是过期 jar |
-| 探针与就绪 | 不用 `GET /ai/health/check`（带 `ai:health:check` 鉴权），改用 TCP 就绪 + Nginx `/healthz` | 见 §2 与 D2 日志：带鉴权的接口作容器探针只会把「未登录」当成启动失败 |
+| 探针与就绪 | 不用 `GET /ai/health/check`（带 `ai:health:query` 鉴权），改用 TCP 就绪 + Nginx `/healthz` | 见 §2 与 D2 日志：带鉴权的接口作容器探针只会把「未登录」当成启动失败 |
 
 现场校验（本地与 CI 同一入口）：`node scripts/checks/deploy-static.mjs`。
 
