@@ -1,8 +1,5 @@
 package org.dromara.ai.service.impl;
 
-import cn.hutool.extra.spring.SpringUtil;
-import io.github.linpeilie.Converter;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.TextBlock;
@@ -23,6 +20,7 @@ import org.dromara.ai.domain.vo.AiMemoryContentVo;
 import org.dromara.ai.domain.vo.AiMemoryFileVo;
 import org.dromara.ai.service.IAiAgentService;
 import org.dromara.ai.service.IAiUsageStatService;
+import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.exception.ServiceException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,10 +33,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.redisson.api.RedissonClient;
-import org.springframework.context.support.StaticApplicationContext;
 import reactor.core.publisher.Flux;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -102,13 +97,7 @@ class AiMemoryServiceImplTest {
      */
     @BeforeAll
     static void initStaticContext() {
-        StaticApplicationContext context = new StaticApplicationContext();
-        context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
-        context.getBeanFactory().registerSingleton("jsonMapper", JsonMapper.builder().build());
-        context.getBeanFactory().registerSingleton("redissonClient", mock(RedissonClient.class));
-        context.getBeanFactory().registerSingleton("identifierGenerator", mock(IdentifierGenerator.class));
-        context.refresh();
-        new SpringUtil().setApplicationContext(context);
+        AiTestSupport.initialize();
     }
 
     /**

@@ -1,8 +1,5 @@
 package org.dromara.ai.service.impl;
 
-import cn.hutool.extra.spring.SpringUtil;
-import io.github.linpeilie.Converter;
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.dromara.ai.domain.AiAgent;
 import org.dromara.ai.domain.AiModelConfig;
@@ -16,6 +13,7 @@ import org.dromara.ai.domain.vo.AiUsageSummaryVo;
 import org.dromara.ai.mapper.AiModelConfigMapper;
 import org.dromara.ai.mapper.AiUsageStatMapper;
 import org.dromara.ai.service.IAiAgentService;
+import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.utils.IdGeneratorUtil;
@@ -32,8 +30,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
-import org.springframework.context.support.StaticApplicationContext;
-import tools.jackson.databind.json.JsonMapper;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
@@ -81,13 +77,7 @@ class AiUsageStatServiceImplTest {
      */
     @BeforeAll
     static void initStaticContext() {
-        StaticApplicationContext context = new StaticApplicationContext();
-        context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
-        context.getBeanFactory().registerSingleton("redissonClient", mock(RedissonClient.class));
-        context.getBeanFactory().registerSingleton("identifierGenerator", mock(IdentifierGenerator.class));
-        context.getBeanFactory().registerSingleton("jsonMapper", JsonMapper.builder().build());
-        context.refresh();
-        new SpringUtil().setApplicationContext(context);
+        AiTestSupport.initialize();
     }
 
     /**

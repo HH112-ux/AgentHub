@@ -1,10 +1,8 @@
 package org.dromara.ai.service.impl;
 
-import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.github.linpeilie.Converter;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.ai.config.AiSecretManager;
 import org.dromara.ai.core.channel.AiChannelStreamStatus;
@@ -25,6 +23,7 @@ import org.dromara.ai.mapper.AiChannelMapper;
 import org.dromara.ai.mapper.AiChannelThreadMapper;
 import org.dromara.ai.mapper.AiSessionMapper;
 import org.dromara.ai.service.IAiAgentService;
+import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.MapstructUtils;
@@ -42,7 +41,6 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.context.support.StaticApplicationContext;
 
 import java.util.List;
 import java.util.Map;
@@ -95,10 +93,7 @@ class AiChannelServiceImplTest {
 
     @BeforeAll
     static void setUp() {
-        StaticApplicationContext context = new StaticApplicationContext();
-        context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
-        context.refresh();
-        new SpringUtil().setApplicationContext(context);
+        AiTestSupport.initialize();
         for (Class<?> clazz : new Class<?>[]{AiChannel.class, AiChannelIdentity.class, AiChannelThread.class}) {
             TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), clazz);
         }

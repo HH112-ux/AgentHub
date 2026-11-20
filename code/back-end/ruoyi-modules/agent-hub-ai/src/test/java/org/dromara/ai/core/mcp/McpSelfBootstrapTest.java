@@ -1,14 +1,11 @@
 package org.dromara.ai.core.mcp;
 
-import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
-import io.github.linpeilie.Converter;
 import org.dromara.ai.config.AiSecretManager;
 import org.dromara.ai.core.agent.AiRuntimeConfigStore;
 import org.dromara.ai.domain.AiMcpClient;
 import org.dromara.ai.domain.bo.AiMcpServerConfigBo;
 import org.dromara.ai.mapper.AiMcpClientMapper;
 import org.dromara.ai.test.AiTestSupport;
-import org.dromara.common.core.utils.SpringUtils;
 import org.dromara.common.mybatis.utils.IdGeneratorUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -18,13 +15,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.support.StaticApplicationContext;
-import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,13 +45,7 @@ class McpSelfBootstrapTest {
      */
     @BeforeAll
     static void initStaticContext() {
-        AiTestSupport.registerTableInfo();
-        StaticApplicationContext context = new StaticApplicationContext();
-        context.getBeanFactory().registerSingleton("identifierGenerator", mock(IdentifierGenerator.class));
-        context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
-        context.getBeanFactory().registerSingleton("jsonMapper", JsonMapper.builder().build());
-        context.refresh();
-        new SpringUtils().setApplicationContext(context);
+        AiTestSupport.initialize();
     }
 
     @Test
