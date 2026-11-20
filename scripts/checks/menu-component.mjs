@@ -14,6 +14,13 @@ const DIALECTS = ['postgres', 'mysql'];
 const failures = [];
 const checked = new Set();
 
+// 与 CI 的工件探测同口径（`ci.yml` 的 `frontend=code/front-end/package.json`）：
+// 前端未入仓时无从比对，显式跳过而不是让本地跑出一个 CI 不复现的红。
+if (!existsSync(`${REPO_ROOT}code/front-end/package.json`)) {
+  console.log('⚠ 跳过菜单 component 校验：code/front-end/package.json 未入仓，无页面可比对');
+  process.exit(0);
+}
+
 for (const dialect of DIALECTS) {
   const rel = MENU_SQL.replace('%s', dialect);
   if (!existsSync(`${REPO_ROOT}${rel}`)) {
