@@ -34,13 +34,21 @@ const files = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--
   .split('\0')
   .filter(Boolean);
 
+// 出处：设计稿 §3.2「Java 源文件」行 + JLS §7.6——.java 叶子名必须与 public 类型名逐字一致，
+// PascalCase 属语言强制，与 Dockerfile 同类。故只对叶子名换用类型名规则，包目录段仍按本表全小写校验。
+const JAVA_TYPE_NAME = /^[A-Z][A-Za-z0-9]*\.java$/;
+
 const violations = [];
 for (const path of files) {
-  const base = path.split('/').pop();
-  if (ECOSYSTEM_NAMES.has(base) || BASELINE_DOCS.has(base)) continue;
+  const segs = path.split('/');
+  const leaf = segs[segs.length - 1];
+  if (ECOSYSTEM_NAMES.has(leaf) || BASELINE_DOCS.has(leaf)) continue;
   if (PRESCRIBED_PATTERNS.some((re) => re.test(path))) continue;
 
-  for (const segment of path.split('/')) {
+  if (leaf.endsWith('.java') && !JAVA_TYPE_NAME.test(leaf)) {
+    violations.push(`${path}：Java 源文件名须与 public 类型名一致（JLS §7.6），「${leaf}」不符合 PascalCase`);
+  }
+  for (const segment of leaf.endsWith('.java') ? segs.slice(0, -1) : segs) {
     if (/[A-Z]/.test(segment)) {
       violations.push(`${path}：段「${segment}」含大写字母——§3.2 要求 ASCII 小写 kebab-case`);
     } else if (/[^\x00-\x7F]/.test(segment)) {

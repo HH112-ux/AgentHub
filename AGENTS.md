@@ -16,7 +16,8 @@
 ## Git 与团队协作
 
 - 远程仓库固定为 `origin`：`https://github.com/HH112-ux/AgentHub.git`，代码不推送到其他远程仓库。
-- 开始任务前同步 `origin/main` 并从最新 `main` 创建分支；一个分支只承载一个独立任务，推送前解决与 `main` 的冲突，避免混入无关改动。
+- 每个新开发任务开始前，先检查 `git status` 并保留或提交本地改动，再在 `main` 执行 `git pull --ff-only origin main`，从最新 `main` 创建任务分支；一个分支只承载一个独立任务，不得为同步代码而覆盖他人改动。
+- 开发中 `main` 有更新时，及时将最新 `origin/main` 合并到任务分支。推送前必须执行 `git fetch origin` 并再次合并、解决冲突；远端任务分支也有更新时先执行 `git pull --ff-only`，重新运行相关检查后再推送。
 - `main` 是集成分支，日常开发不得直接推送；功能开发使用 `feature/<scope>`，修复使用 `fix/<scope>`。
 - 合入 `main` 必须通过 Pull Request，由至少一名非作者成员评审通过，并通过相关单元测试与接口 e2e；评审问题修复并复验后再合并。
 - 最终设计稿 §6 的契约冻结后，改动必须经队长批准并同步三条任务线。
