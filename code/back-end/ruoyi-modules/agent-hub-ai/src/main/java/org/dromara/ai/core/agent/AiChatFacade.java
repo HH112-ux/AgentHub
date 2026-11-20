@@ -154,9 +154,9 @@ public class AiChatFacade {
     private static final String PIN_SOURCE_USER = "user";
 
     /**
-     * 会话状态：进行中
+     * 会话状态：进行中（取值单一来源见 {@link AiSession#STATUS_ACTIVE}）
      */
-    private static final String SESSION_ACTIVE = "0";
+    private static final String SESSION_ACTIVE = AiSession.STATUS_ACTIVE;
 
     private final IAiSessionService sessionService;
 

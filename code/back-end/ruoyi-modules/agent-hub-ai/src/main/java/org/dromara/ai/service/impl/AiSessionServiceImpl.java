@@ -103,24 +103,24 @@ public class AiSessionServiceImpl implements IAiSessionService {
     private static final int ERROR_MSG_MAX_LENGTH = 1000;
 
     /**
-     * 会话状态：进行中
+     * 会话状态：进行中（取值单一来源见 {@link AiSession#STATUS_ACTIVE}）
      */
-    private static final String SESSION_ACTIVE = "0";
+    private static final String SESSION_ACTIVE = AiSession.STATUS_ACTIVE;
 
     /**
      * 会话状态：已结束
      */
-    private static final String SESSION_CLOSED = "1";
+    private static final String SESSION_CLOSED = AiSession.STATUS_CLOSED;
 
     /**
      * 消息状态：正常
      */
-    private static final String MESSAGE_NORMAL = "0";
+    private static final String MESSAGE_NORMAL = AiMessage.STATUS_NORMAL;
 
     /**
      * 消息状态：失败
      */
-    private static final String MESSAGE_FAILED = "1";
+    private static final String MESSAGE_FAILED = AiMessage.STATUS_FAILED;
 
     /**
      * 流式状态：已完成

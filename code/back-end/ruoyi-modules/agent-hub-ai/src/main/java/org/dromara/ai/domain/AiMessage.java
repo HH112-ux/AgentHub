@@ -33,9 +33,14 @@ public class AiMessage extends BaseEntity {
     public static final String ROLE_ASSISTANT = "assistant";
 
     /**
-     * 消息状态：正常结束
+     * 消息状态：正常结束（`ai_message.status`，字典 `ai_message_status`）
      */
     public static final String STATUS_NORMAL = "0";
+
+    /**
+     * 消息状态：本轮调用失败（落 `error_msg`）
+     */
+    public static final String STATUS_FAILED = "1";
 
     /**
      * 消息状态：等待人工确认工具调用（HITL 暂停）

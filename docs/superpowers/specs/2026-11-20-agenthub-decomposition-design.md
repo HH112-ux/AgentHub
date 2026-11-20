@@ -23,10 +23,11 @@
 | D4 | 服务端部署 | **云服务器**：应用、PostgreSQL 14 / MySQL 8.0、Redis、Milvus + etcd、对象存储、调度、MCP 出口、渠道长连接。整套系统可私有化部署，不依赖 Sites 运行 |
 | D5 | Qoder Sites 定位 | **仅承载产品介绍页与跳转链接**（「进入系统」「开发文档」），以及基于云端 Agent 的在线体验与平台使用问答；不承载真实系统页面，不接触业务数据 |
 | D6 | 排期 | **一周硬性，且一周目标为全量目标**；不做范围削减式排期，只做 §7.3 的客观降级触发 |
-| D7 | 团队 | 3 人，用户为队长，分工见 §8 |
+| D7 | 团队 | 用户为队长。原定 3 人分工（队长 + 后端 B + 前端 C）已于 2026-11-20 取消，改为**队长单线全量交付**，范围与验收标准不变，裁决记录见 §8.1 |
 | D8 | 拆解毒点 | 契约先行 + 垂直切片；手册 13.1 的 M1~M5 仅作对外排期参考 |
 | D9 | 智能体内核与云端 Agent 边界 | **业务主链路内核为 AgentScope Java 2.0.4，跑在云服务器**，不外包给托管 Agent：三档授权与 HITL 需要工具调用前的同步决策钩子、业务工具需在服务端执行并复核权限、审计与编排预算需内核级可观测、私有化与数据边界不允许业务数据出域。**云端 Agent 仅用于 Sites 介绍页的在线体验与平台使用问答**，不接触知识库正文、工具回参与任何业务数据 |
 | D10 | 文档隔离 | 全部产出物不引用其他仓库的路径、类名与测试产物 |
+| D11 | 契约重冻 | 全量代码入仓后按**路线 A**重冻：§6/§12 与实现逐条对账，实现正确的改本文件（效力修正见 §12.7 B 段），契约正确的列为增量项（§12.7 C 段）。数据面唯一变更为状态字典按实体常量重登记，并由 `e2e/http/L00-contract-consistency.mjs` E 段做机械对账 |
 
 ---
 
@@ -112,18 +113,20 @@ AgentHub
 | 面 | 规范 | 示例 |
 |---|---|---|
 | SQL 建库（AI 模块） | `script/sql/{dialect}/agenthub-ai-ddl.sql`，双方言同路径同文件名 | `script/sql/postgres/agenthub-ai-ddl.sql`、`script/sql/mysql/agenthub-ai-ddl.sql` |
+| SQL 底座基线 | `script/sql/base/{dialect}/ruoyi-{vue,job,workflow}-base.sql`，属底座 MIT 分发件（出处见 [开源许可边界](../../open-source-licenses.md)），不受本表小写 kebab 约束，也不参与双方言对账；initdb 序号 `10`/`11`/`12` 固定先于 `20`~`40` | `script/sql/base/postgres/ruoyi-vue-base.sql` |
 | SQL 种子与菜单 | `agenthub-ai-seed.sql`（字典/内置工具/示例库）、`agenthub-ai-menu.sql`（菜单与 98 按钮权限），按权限标识分组顺序追加 | `script/sql/postgres/agenthub-ai-menu.sql` |
 | SQL 迁移 | `agenthub-ai-migrate-v{n}-{kebab-scope}.sql`，1.0.0 基线不产出迁移 | `agenthub-ai-migrate-v2-hitl-index.sql` |
 | Java 包 | `org.dromara.ai.{domain}`，`{domain}` 与权限标识的 `{模块}` 段一一对应 | `org.dromara.ai.knowledge`、`org.dromara.ai.channel` |
+| 契约常量 | `org.dromara.ai.contract.Ai{面}`，一类一面，取值即线上值，改动走 §6.5 契约变更流程 | `AiEventType`、`AiPermissionKeys`、`AiToolImpl`、`AiDegradeReason` |
 | Java 类型后缀 | `Controller` / `Service` / `ServiceImpl` / `Mapper` / `Bo` / `Vo` / `Entity` / `Factory` / `Wrapper` / `Guard` / `Handler` | `KnowledgeBaseController`、`AiToolFactory` |
 | 后端测试 | 单测 `{Class}Test.java`（`mvn test` 可跑）；集成 `{Feature}IT.java`（`AGENTHUB_IT=true`）；同包镜像目录 | `RouteDecisionServiceTest.java`、`HybridSearchIT.java` |
 | 前端页面 | `src/views/ai/{domain}/{page}/index.vue`，`{domain}` 与 `{page}` 与 §4 的 34 页清单一一映射 | `src/views/ai/knowledge/search-test/index.vue` |
 | 前端 API 与类型 | `src/api/ai/{domain}.ts` + 同名 `{domain}.types.ts`；流式客户端固定 `src/api/ai/stream.ts` | `src/api/ai/mcp.ts`、`src/api/ai/stream.ts` |
 | 前端组件与状态 | 组件 PascalCase 目录 `src/components/ai/{Component}.vue`；Pinia store `src/store/modules/ai-{domain}.ts` | `src/components/ai/ConfirmCard.vue`、`src/store/modules/ai-chat.ts` |
-| 接口 e2e | `e2e/http/L{nn}-{kebab-scope}.mjs`，`nn` 为手册层号 01~21 | `e2e/http/L05-hitl-confirm.mjs` |
+| 接口 e2e | `e2e/http/L{nn}-{kebab-scope}.mjs`，`nn` 为手册层号 01~21；`L00` 固定留给 §6.5 的契约对账，不占层号 | `e2e/http/L00-contract-consistency.mjs`、`e2e/http/L05-hitl-confirm.mjs` |
 | 浏览器 e2e | `e2e/ui/{domain}-{page}.spec.ts`，覆盖 34 页巡检 | `e2e/ui/audit-tool-call.spec.ts` |
 | RAG 评测 | `e2e/rag/cases.jsonl`（用例集）、`e2e/rag/run.mjs`（跑分）、`e2e/rag/report-{YYYYMMDD}.md`（报告，不入库） | `e2e/rag/report-20261126.md` |
-| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁" | `scripts/checks/schema-dialect-parity.mjs` |
+| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs` |
 | Java 源文件 | `.java` 叶子名必须与 public 类型名逐字一致（JLS §7.6），PascalCase 属语言强制而非项目偏好，豁免本表小写 kebab 校验；包目录段仍全小写，其它扩展名不放行 | `.../org/dromara/ai/contract/AiEventType.java` |
 | 交付配置文件 | GitHub 强制约定名，不受本表小写 kebab 约束且豁免命名校验：`.github/workflows/ci.yml`、`.github/pull_request_template.md`（大小写不敏感，须位于默认分支方生效） | `.github/pull_request_template.md` |
 | 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
@@ -265,6 +268,8 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 - 唯一免登录端点为渠道回调 `/ai/channel/callback/**`，安全由验签/解密/渠道口令承担。
 - RSA 接口加解密需白名单，明确排除流式与文件流。
 - **§12 裁决新增的权限标识**（D1 一并登记菜单与按钮脚本）：`ai:health:check`、`ai:audit:retention:view` / `:edit` / `:purge` / `:unlimited`、`ai:session:governance:list` / `:terminate` / `:delete` / `:export`、`ai:memory:version:restore`、`ai:attachment:recycle`。
+- **重冻后的登记名（2026-11-20）**：上一条是按能力意图写的暂定名，实现落库时按「模块 = URL 资源段」的硬规范改成了下面的名字，菜单与常量登记、前端 `hasPermi` 引用一律用后者；上一条保留作意图说明，不再作为登记名：
+  `ai:health:query` / `ai:health:probe`（自检与按需探测）、`ai:audit:route:query`（保留配置读取，复用审计查询）/ `ai:audit:retention:edit` / `ai:audit:retention:cleanup`（`POST /ai/audit/retention/purge` 的执行入口）、`ai:session:list` / `:query` / `:edit`（结束会话即治理里的终止）/ `:remove` / `:export` 与 `ai:session:state:reap`（闲置回收手动触发）、`ai:memory:query` / `ai:memory:edit`（`POST /ai/memory/versions/{versionId}/restore` 用编辑档，不再单开 `:restore`）、`ai:chat:attachment:reclaim`。「永久豁免档」当前没有独立权限，见 §12.4。
 
 ### 6.2 SSE 事件协议
 
@@ -284,18 +289,57 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 **硬约束**：确认卡片刷新后可还原 ⇒ 编排事件必须可持久化或可重建，落 `ai_message` 的编排事件快照字段。专家侧工具调用在主会话以"工具调用 N 次"汇总，明细进审计页；入口智能体自调用逐条渲染。
 
+**命名对齐（2026-11-20 随契约重冻登记）**：实现落地的线上事件名与本表用词有出入，重冻以实现的 16 项为准，本表保留作意图说明。逐项对应：
+
+| 本表（设计用词） | 线上名（`AiEventType`） | 说明 |
+|---|---|---|
+| `text_delta` | `text_delta` | 一致 |
+| `route_hint` | `route_decision` | 同一语义，改名 |
+| `expert_start` / `expert_result` | `expert_start` / `expert_result` | 一致 |
+| `tool_call_start` / `tool_call_end` | `tool_call_start` / `tool_result` | 入参流式增量另有 `tool_call_delta` |
+| `confirm_request` / `confirm_result` | `tool_confirm` | 确认结果只经 `POST /ai/chat/confirm` 返回，不再回推独立事件 |
+| `progress` | `phase` | 取值见 `AiPhaseSupport` |
+| `sources` | `references` | 一致语义 |
+| `stopped` | `aborted` | 用户停止与管理员终止共用 |
+| `turn_done` / `turn_error` | `done` / `error` | 一致语义 |
+| —— | `start` | 本轮开始，回 assistant 消息 id |
+| —— | `route_fallback` / `answer_reset` | 回落自答与正文作废成对出现，前端据此清空已渲染片段 |
+
+16 项的完整枚举见 §6.5。
+
 ### 6.3 工具与装配契约
 
 - `ai_tool.impl_name` ↔ 代码侧工厂常量，是元数据与代码之间**唯一允许的引用面**；注册页不产生裸 SQL/Shell/HTTP 万能工具。
 - 三档授权枚举：`0` 允许 / `1` 需确认 / `2` 禁止；优先级 会话直选 > 场景包 > 智能体绑定；禁止档装配期不注册（模型不可见）。
 - 装配缓存键：`智能体 × 会话资源集签名`；资源内容变更由装配指纹触发重建；改选择后下一轮生效；同资源组合多会话共享实例。
 - 降级必须带**结构化原因码**，否则"降级并如实声明"无法统一实现。本轮冻结码表：`EXPERT_FAILED` / `EXPERT_TIMEOUT` / `EXPERT_EMPTY` / `ROUTE_CONTRACT_INVALID` / `BUDGET_EXCEEDED` / `BM25_NOT_READY` / `RERANK_UNAVAILABLE` / `SAFETY_ENGINE_UNAVAILABLE` / `MEDIA_FAILED` / `ADMIN_TERMINATED` / `STALE_REAPED`。
+- **原因码落地口径（2026-11-20 重冻）**：`ai_route_run.degrade_reason` 存的是给人读、也给运维筛选的中文文案（`varchar(500)`），编排侧的冻结码按 `AiDegradeReason` 的 8 个固定前缀归类——`EXPERT_FAILED` / `EXPERT_TIMEOUT` / `EXPERT_EMPTY` 合为「专家结论不可用：+ 现场摘要」（续跑与断点恢复各有前缀，见 §6.5 词表），`ROUTE_CONTRACT_INVALID` 拆为 action 越界与候选非法两条，`BUDGET_EXCEEDED` 由 `AiBudgetGuard` 拼「超出编排预算（+ 明细」。其余四码不经该列：`RERANK_UNAVAILABLE` 以 `RerankOutcome.degradedOrder` 原位返回、`SAFETY_ENGINE_UNAVAILABLE` 由 `AiSafetyGuard` 降级为本地词库并告警、`BM25_NOT_READY` 走索引任务与告警日志、`MEDIA_FAILED` 在多媒体装配点降级，四者统一在健康自检报告（`AiHealthCheckServiceImpl`，15 项）里可见；`ADMIN_TERMINATED` / `STALE_REAPED` 属会话终止而非编排回落，走 `aborted` 事件与会话状态列。列宽由 `AiRouteRecorder.DEGRADE_REASON_MAX` 与两方言 DDL 对账，摘要按 headroom 截断。
 - 写工具：HITL 由档位驱动、执行期复核业务权限、操作人取自运行上下文（Reactor 线程无 Sa-Token 上下文）、数据权限走不显式挂数据权限注解的方法并显式归属校验、无人值守默认拒绝、非幂等操作要求幂等键、专家链路写工具短期去重（TTL 可配）。
 - 内置无害只读工具（当前时间/当前用户/当前部门/当前权限）无需绑定即注册并默认放行；用户级"记住该工具"按 `(userId, sessionId)` 槽位每轮并入，不写进共享实例。
 
 ### 6.4 三层权限模型
 
 ① 工具可见面（装配期：智能体绑定 ∪ 会话资源集 ∪ 平台内置只读，禁止档不注册）→ ② 三档授权（运行期 ALLOW/ASK/DENY）→ ③ 业务权限复核（执行期按提问用户复核菜单权限）。
+
+### 6.5 契约事实源与对账（2026-11-20 重冻）
+
+§6.1~§6.4 原先只把契约写在表格和段落里，改一边不改另一边的情况无法被发现。本次重冻的原则是**以已落地的实现取值反向冻结**：每个契约面指定唯一一处常量源，另加一条本地与 CI 都能跑的机械断言；文档与实现不一致的地方在 §6.2、§6.3 逐项标注，不为了对齐旧表格去改实现。
+
+| 契约面 | 唯一常量源（`org.dromara.ai.contract`） | 对账的另一/两侧 | 当前口径 |
+|---|---|---|---|
+| SSE 事件类型 | `AiEventType`（16 项，`wire()` 即线上名） | 后端各 `EVENT_*` 发射常量、前端 `api/ai/chat/types.ts` 的 `ChatStreamEvent['type']` 联合 | 三方逐字相等且双向无多余 |
+| 权限标识 | `AiPermissionKeys`（131 项） | `@SaCheckPermission` 实参、双方言 `agenthub-ai-menu.sql` 的 `perms`、前端 `hasPermi` 引用 | 注解 ⊆ 菜单 = 常量；MySQL 与 PostgreSQL 集合相等 |
+| 工具实现标识 | `AiToolImpl`（30 项） | `AiToolFactory` 的 `IMPL_*` 常量、双方言种子脚本的 `ai_tool.impl_name` | 三方集合相等（§6.3 的「唯一引用面」由此可执行） |
+| 降级原因 | `AiDegradeReason`（8 项中文前缀，`prefix()`） | 代码里 `degradeReason = "…"` 的字面量 | 字面量必须命中某个前缀；异常兜底分支直接落 `rootCauseMessage(e)`，无固定前缀，不入词表 |
+
+菜单登记口径：139 行 = 7 目录 + 34 页面 + 98 按钮，`perms` 去重后 131 个 `ai:` 标识（`ai:health:probe` 在页面与按钮各登记一次）。§6.1 段首「98 按钮权限」按此口径理解。
+
+对账入口：`e2e/http/L00-contract-consistency.mjs`（零依赖 ESM，本地与 CI 同一命令），已登记为 `.github/workflows/ci.yml` 的必过步骤；§3.2 另由 `scripts/checks/menu-component.mjs` 把菜单 `component` 与前端页面文件对齐，同样登记为必过步骤。
+
+**实现与 §6.2 的已知偏差（保留，不算缺陷）**：
+
+- 事件帧是扁平 JSON（统一由 `AiSseSupport.envelope` 构造，`type` 之外按事件类型直接挂字段），未落地本节早先写的 `sessionId / turnId / seq / payload` 四层包装；SSE 也没带 `id:` 字段，浏览器原生 `Last-Event-ID` 续传不可用。
+- 「确认卡片刷新后可还原」这条硬约束当前的实现方式是 REST 回放，而不是 `ai_message` 的事件快照列：待确认轮次由 `GET /ai/chat/session/{sessionId}/pending` 还原，历史与工具明细由 `.../messages`、`.../toolCalls`、`.../routeRuns` 还原。包装字段与 `id:` 若将来要补，属 §9 硬化项，需按本节流程走契约变更。
 
 ---
 
@@ -327,31 +371,41 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 ---
 
-## 8. 三人分工与逐日排班
+## 8. 交付形态与节奏（2026-11-20 改为队长单线全量交付）
 
-### 8.1 分工原则
+### 8.1 决策记录
 
-| 角色 | 人 | 职责 | 拥有物 |
+原计划的三人分工（队长 + 后端 B + 前端 C）在同日取消，改为**队长一人单线全量交付**：三人排班的前提是三条任务线能并行推进共享契约，实际契约面（40 表双方言、SSE、权限、工具 impl）在实现里仍在动，并行只会把返工放大。取消分工不动的是范围与验收标准——§4 全量清单、§7.1 一周交付清单、§10 验收口径全部保留，§7.3 的客观降级触发也保留。
+
+### 8.2 交付切分
+
+单线不等于单块提交。本次交付按影响面切成三条 PR 线，每条一个分支，串行合入 `main`：
+
+| 线 | 分支命名 | 内容 | 合入前置 |
 |---|---|---|---|
-| **队长** | 你 | 架构与契约最终裁定、云服务器与双栈部署、**权限与 HITL**、**RAG 全链与评测**、**MCP 双向**、安全合规、审计与发布验收、阻塞清除 | A0 契约、A2 权限面、A4、A5、A8、A12、部署与发布 |
-| 队员 B（后端） | 1 人 | 底座接入、模型接入、会话与消息、SSE 主链路、工具系统与内置工具集、**入口路由与专家装配**、长期记忆/技能/工作区、上下文工程与用量、子智能体/场景包、四渠道、定时任务与日报 | A1、A2 工具面、A3、A6、A7、A9、A10、A11 |
-| 队员 C（前端） | 1 人 | 前端骨架与模板化表格/表单引擎、SSE 客户端、工作台全部交互、34 个管理页、审计六类页面、Sites 介绍页与云端 Agent 体验、34 页巡检配合 | 前端全部 + 介绍页 |
+| 后端 | `feature/backend-full-code` | 底座 + `ruoyi-modules/agent-hub-ai` 全量 AI 能力域 | CI 必过（含 AI 模块单测） |
+| 前端 | `feature/frontend-full-code` | 管理台前端 + 34 个 AI 页面 + SSE 客户端 | CI 必过（含前端构建） |
+| 契约与门禁 | `chore/contract-refreeze` | §6.5 常量类、双方言 SQL、部署与 initdb 链、`scripts/checks` 与 `ci.yml` 登记、设计稿同步 | CI 必过 + L00 契约对账 |
 
-队长保留契约冻结、跨线接口争议、每日验收、上线与回滚的签字权；队长编码量按 60% 计，其余 40% 留给部署、联调与验收。
+分支之间只允许通过 `main` 汇合：任一条线合入后，其余分支先 `git merge origin/main` 复跑门禁再推。
 
-### 8.2 逐日排班（D1~D5）
+### 8.3 节奏与检查点
 
-| 日 | 队长 | 队员 B | 队员 C | 当日 18:00 验收点 |
-|---|---|---|---|---|
-| **D1** | 云服务器/证书/PG+MySQL/Redis/Milvus+etcd/MinIO 起栈；冻结四类契约（40 表双方言 DDL、SSE 事件、权限标识与菜单脚本、工具 impl 常量与降级原因码；§12 细则已裁决，一并冻结） | 底座接入与裁剪；模型配置（密文/连通性/复制/引用拦截）；会话与消息落库；SSE 主链路 | 前端骨架（登录/路由/权限显隐/模板化引擎）；SSE 客户端封装；工作台消息流 | 双栈可起可登录；40 表双方言幂等可重复执行；模型连通性通过；echo 流打通 |
-| **D2** | 三层权限 + HITL 暂停/恢复 + 信任槽位 + 写工具去重；安全（敏感词/PII/注入/六场景过审与降级） | 工具两段式 + 内置只读与写工具集（部门/用户/公告/角色/菜单/用量/日报）+ 工具标签；小Z 与 `route_decision`；专家装配缓存与指纹；暂存件 72 小时回收任务与暂存配额 | 工作台全部卡片（工具/专家/路由/确认/来源/进度）；资源选择器与附件上传；模型配置页；专家配置页（AI 辅助生成/9 模板/克隆/体检） | 写工具走完"需确认→允许→落库"，拒绝路径无副作用；一句话路由到专家直答；输入侧敏感词阻断并留痕 |
-| **D3** | RAG 全链（解析/切片/向量化/BM25/RRF/Rerank/装配/检索测试）；RAG 评测脚本与基线报告 | 长期记忆（抽取/合并/版本/维护）+ 工作区 + 技能仓库；上下文压缩/大结果卸载/编排预算/用量配额/对话偏好 | 知识库三页（库/文档切片/检索测试）；工具注册页；记忆三页签；工作区；技能页；模型运行时四页（压缩/预算/用量/偏好） | 文档入库→检索命中→回答带来源卡片；评测报告产出；记忆跨会话生效；长会话触发压缩不爆 Token |
-| **D4** | MCP 出口（口令 fail-closed + 只读暴露热生效 + 自演示）与客户端（白名单/归一化/回参脱敏）；子智能体与场景包后端；定时任务 + 无人值守白名单 + 日报 | 四渠道（飞书/企微/GitHub Webhook + 钉钉/飞书长连接、身份/会话映射、媒体降级、回调幂等）；子智能体委派与场景包绑定联调；计划模式与任务清单 | MCP 两页；渠道三页签；场景包/子智能体页；定时任务页与执行记录弹窗；日报页；首登检查清单 | MCP initialize/tools/list/tools/call 通过且错误口令被拒；飞书回调端到端；定时任务产出日报；无人值守写默认拒绝 |
-| **D5** | 审计六类落库与保留清理、链路追踪、健康自检、生产密钥门禁；双栈上线 + Nginx + 介绍页发布；发版五道门禁执行 | 审计接口与统计、编排运行统计卡、Reaper 中断回收；单测补齐与 4 类集成测试；e2e 全量回归配合 | 审计六类页面（消息/工具/权限/追踪/编排运行/日报）；健康自检页；介绍页与云端 Agent 体验；34 页浏览器巡检 | 34 页可达无 console.error；接口 e2e 零 FAIL；日志 ERROR 归零 + 体检全绿；介绍页可跳转并登录系统 |
+§8.2 的 D1~D5 排班表不再按人分列，改为交付顺序上的检查点，每个检查点必须当场可验证：
 
-### 8.3 协作规则
+| 检查点 | 内容 | 当场验证方式 |
+|---|---|---|
+| C1 底座与栈 | 双栈起栈、initdb 链、登录 | `docker compose up -d` 后 40 表 / 131 perms / 中文无损，能登进管理台 |
+| C2 契约 | 四类契约重冻并钉死 | `node e2e/http/L00-contract-consistency.mjs` 与 `scripts/checks/*` 全绿 |
+| C3 后端能力域 | AI 模块单测 | `mvn -pl ruoyi-modules/agent-hub-ai -am test` 通过，且执行顺序无关 |
+| C4 前端 | 构建 + 菜单可达 | `pnpm build` 通过，`scripts/checks/menu-component.mjs` 全命中 |
+| C5 联调 | 真实栈冒烟 | 对话流打通、SSE 逐帧不缓冲、写工具确认与恢复、审计落库 |
 
-- 每日站会只同步：当日验收点、阻塞、契约变更申请。契约变更必须队长批准并同步三线。
+§9 的接口 e2e 分层、浏览器巡检、RAG 评测仍按「一周后硬化」执行，不在本次门禁内。
+
+### 8.4 协作规则
+
+- 契约变更必须队长批准；单线交付期由队长开 PR，CI 必过后合入 `main`（队长已获直接合并授权），AGENTS.md 的「非作者评审」在他人可得时照常执行。
 - 双方言 SQL 同步改；新增接口必须带权限标识并登记菜单脚本；新增工具/配置项/接口同步更新 docs。
 - 密钥不入库不入仓：模型密钥走页面密文落库或环境变量，测试机密放 `.env.local`（已 gitignore）。
 - 写工具、装配、路由改动必须补单测；提交遵循约定式提交（feat/fix/docs/test/refactor/chore）。
@@ -403,15 +457,19 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | 4 | 演示与评测语料：行政公告/值班制度类文档若干 + RAG 评测用例集（基线复现前提） | 队长 | D3 前 |
 | 5 | 渠道测试凭据：飞书/企微/钉钉/GitHub 测试应用与回调地址（公网可达） | 队长 | D4 前 |
 | 6 | 外部内容安全 API（可选，缺则自动降级本地词库） | 队长 | D2 前 |
-| 7 | 介绍页文案与界面截图素材（队员 C 提供、队长审定）；演示账号与 IP 白名单策略 | 队长 / 队员 C | D4 前 |
+| 7 | 介绍页文案与界面截图素材（队长提供并审定）；演示账号与 IP 白名单策略 | 队长 | D4 前 |
 | 8 | 演示日期、时长与对象 | 队长 | D1 站会 |
 | 9 | 开源中后台底座 6.0.0 制品（后端与前端发行包，供 D1 导入 `code/back-end`、`code/front-end`） | 队长 | D1 前 |
+
+**#9 已就位（2026-11-20）**：底座整树导入 `code/back-end` 与 `code/front-end`，许可与原创边界登记在 [开源许可与原创边界](../../open-source-licenses.md)；底座基线 SQL 整理进 `code/back-end/script/sql/base/{dialect}/`，initdb 链不再依赖仓库外文件（见 [部署与环境变量](../../configuration.md) 第 3 节）。#1~#6、#7~#8 属云环境与素材，仍在联调前逐项确认。
 
 ---
 
 ## 12. 补充细则裁决（2026-11-20 队长已裁定，纳入契约冻结）
 
-手册未给出可实现口径的 6 项，现已逐条裁决完毕。以下与 §6 同级：**改动需队长批准并同步三条线**。
+手册未给出可实现口径的 6 项，现已逐条裁决完毕。以下与 §6 同级：**改动需队长批准并同步三条任务线**。
+
+全量代码入仓后按 §1 的 D11 逐条复核了一遍，**与实现冲突处以 §12.7 为准**。
 
 ### 12.1 路由判定（A3）——本周不引入独立前置判定
 
@@ -473,16 +531,73 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 ---
 
+### 12.7 落地核对：契约重冻与效力修正（D11 队长裁定，路线 A）
+
+§12.2~§12.6 裁的是设计意图，落地时以代码为事实源复核了一遍：**实现没错的改本文件，契约没错的改实现**。本节与 §6 同级效力，且**对 §12.2~§12.6 有修正效力**（冲突处以本节为准），机械对账由 `e2e/http/L00-contract-consistency.mjs` 执行。
+
+#### A. 状态字典补回与按实体常量重登记（本次唯一的数据变更）
+
+缺陷有两层。第一层是**取值不一致**：`ai_*_status` 字典当初照 §12.5/§12.6 的词表写成 UPPER 串，而服务层落库是 char 码或小写串——库里存 `0`、字典配 `RUNNING`，管理台状态列只能显示裸码或空白，且只有点开列表才暴露。第二层是**字典整块缺失**：后端全树导入（`2c4c7ec`）把 D1 契约 seed 里的 `sys_dict_*` 整块覆盖掉了，合入后 AI 侧一条字典都没登记。本次一并补回，取值改为以实体 `STATUS_*` 常量为准（单一来源），当前在架 **31 类 / 108 项**、双方言逐字一致。
+
+| 字典类型 | 在架取值（与实体常量逐字一致） | 对账基准 |
+|---|---|---|
+| `ai_session_status` | `0` 进行中 / `1` 已结束 | `AiSession.STATUS_ACTIVE` / `STATUS_CLOSED` |
+| `ai_message_status` | `0` 正常 / `1` 失败 / `2` 待确认 / `3` 已中断 | `AiMessage.STATUS_*` |
+| `ai_task_run_status` | `2` 执行中 / `0` 成功 / `1` 失败 | `AiAgentTaskRun.STATUS_*` |
+| `ai_route_run_status` | `pending` / `running` / `success` / `degraded` / `aborted` | `AiRouteRun.STATUS_*` |
+| `ai_expert_call_status` | `success` / `invalid` / `failed` / `timeout` / `pending_confirm` / `cancelled` | `AiRouteExpertCall.STATUS_*` |
+
+`ai_attachment_status` 不登记：`ai_message_attachment` 没有 `status` 列（补齐该列是 C 段 I-10，落地时字典与对账一并回补）。
+
+新增门禁（L00 E 段，四个方向都断言）：同一方言内字典取值不得重复；字典项必须有登记过的词表；词表不得空着（否则页面拿裸码）；实体 `STATUS_*` 写入的每个取值必须在字典里，字典里不得有代码从不写入的取值。变异测试四项（改大小写、改拼写、删词表登记、删全部字典项）均如期变红。
+
+#### B. §12.2~§12.6 的效力修正（按实现改口径，已生效）
+
+| 原条目 | 原口径 | 落地口径（以此为准） |
+|---|---|---|
+| §12.3 档位 | 三档 FAIL/WARN/INFO，页面按分支展开 | 单项四态 `PASS`/`WARN`/`FAIL`/`UNKNOWN` × 六个分类（基础设施/模型与向量/集成/安全与运行时/智能体/存储），共 15 项；`overall` 由最差档聚合，发布门禁仍要求 0 `FAIL` |
+| §12.3 检查项 | 含对象存储读写删、BM25、渠道长连接、磁盘与 Redis 余量、Reaper 心跳、向量队列积压、近 24h ERROR 日志、INFO 段 | 在架 15 项为：`db`、`db.schema`、`redis`、`model.chat.key`、`model.embedding`、`vector.milvus`、`agent.model`、`mcp.server`、`mcp.client`、`safety.engine`、`rag.rerank`、`runtime.timezone`、`structured-decision`、`storage.domain`、`crypto.key`；其余项进 C 段增量 |
+| §12.5 会话状态 | `RUNNING`/`AWAITING_CONFIRM`/`IDLE`/`STOPPED` 四态落库 | `ai_session.status` 为 char：`0` 进行中 / `1` 已结束；未决确认只在 Redis 侧推导不回写；「已终止」在 `ai_route_run.status=aborted` 与该轮消息 `status=3`（已中断）上体现 |
+| §12.5 权限 | `ai:session:governance:list`/`:terminate`/`:delete`/`:export` | 终止走 `POST /ai/chat/session/{sessionId}/stop`（类级 `ai:chat:send`，本人会话语义）；Redis 会话状态回收走 `ai:session:state:reap`；`ai:session:governance:*` 不引入 |
+| §12.5 导出 | CSV/XLSX 落 OSS + 浏览器预签名 120 秒 | 导出为响应流直接下载（`ExcelBuilder` → `toResponse`），不落对象存储、不发预签名 URL；§12.5 的「留档窗口」口径随存储侧改动一并作废 |
+| §12.5 Reaper | 停留进行中 > `stale-minutes=60` 置 `STOPPED`，原因码 `STALE_REAPED` | 实际语义是**Redis 会话状态回收**：闲置 ≥ `session-state-idle-days=30` 天清除会话状态键（每 24h 一轮、首批 200×20、启动延迟 15 分钟），不改写 `ai_session.status`，无 `STALE_REAPED` |
+| §12.4 预检 | dry-run 参数 + 二次确认 + 理由 | 预检由保留配置查询接口返回各表超期行数承担（等价 dry-run，无独立 `dryRun` 参数）；权限为 `ai:audit:route:query` / `ai:audit:retention:edit` / `ai:audit:retention:cleanup`，`:view`/`:purge`/`:unlimited` 不引入 |
+| §12.4 删除顺序 | 先 `ai_route_expert_call` 再 `ai_route_run` 保证引用一致 | 实现顺序为 `ai_trace`→`ai_tool_call_log`→`ai_permission_decision_log`→`ai_agent_task_run`→`ai_route_run`→`ai_route_expert_call`。40 表无外键，且父记录早于截止日、子记录晚于截止日时两种顺序都留下孤立子记录——**顺序并不产生正确性**，真正的口径是 C 段的按父记录联动删除 |
+| §12.6 附件生命周期 | `status=PENDING/BOUND/ORPHANED/RECYCLED` + `expire_at = 上传 + 72h` | `ai_message_attachment` 无 `status`/`expire_at` 列；暂存件判定为 `message_id IS NULL`，TTL 由 `pending-attachment-ttl-hours=24` 决定，回收任务每 1h 一轮（非每日 04:00），手动回收入口 `POST /ai/chat/attachment/reclaim`（`ai:chat:attachment:reclaim`） |
+| §12.2 版本来源 | `versions/{ts}-PRE_MERGE.md`、写 `ROLLBACK_POINT` 快照 | 来源词表为 `PRE_MANUAL`/`MANUAL`/`PRE_CONSOLIDATE`/`CONSOLIDATE`/`RESTORE`；合并前置快照即 `PRE_CONSOLIDATE`，恢复前置快照即 `RESTORE`；间隔与保留期（1440/30 分钟、90/365/180 天、自动归档开）与原裁定一致 |
+
+#### C. 增量补齐项（契约没错、实现欠账，按 §7.3 排期，不许口头划掉）
+
+| 编号 | 条目 | 缺口 | 验收口径 |
+|---|---|---|---|
+| I-1 | §12.3「40 表齐备」 | `REQUIRED_TABLES` 只列 4 张 | 表清单以实体 `@TableName` 为单一来源，健康项做集合差集并报缺表名；L00 追加「DDL 表集合 = 实体表集合」断言 |
+| I-2 | §12.3 结果缓存 60 秒 | 无缓存，每次点刷新都全跑 | 同一份报告 60 秒内复用（Redis 键 + TTL），手动刷新可强制穿透 |
+| I-3 | §12.3 WARN 项补齐 | 对象存储读写删、BM25 就绪、渠道长连接、磁盘与 Redis 余量、Reaper 心跳、向量化积压、近 24h ERROR 日志 | 每项独立 `WARN` 判定，接不进的一律记 `UNKNOWN` 而非 `PASS` |
+| I-4 | §12.3 触发时机 | 日报生成后不触发体检 | 08:00 日报落库后串一次体检，结果写运行健康 |
+| I-5 | §12.4 保留期下限 | BO 只有 `@Min(0) @Max(3650)`，无 30 天下限 | `audit-days` 非 0 时 ≥30；0 视为不限并需 `ai:audit:retention:unlimited` + 菜单脚本登记 |
+| I-6 | §12.4 分批删除 | 单条 `delete from … where create_time < cutoff` 全量删 | 按 `create_time` 索引分片，单事务 ≤5000 行循环，逐批累计行数写清理记录 |
+| I-7 | §12.4 引用一致 | 跨截止日的子记录会成孤立引用 | 子记录按父记录联动删除（`join` 父表 `create_time`），不再依赖删除顺序 |
+| I-8 | §12.5 并发与保护 | 对进行中会话直接删除无 409；无会话级锁 + 状态 CAS | 删除进行中会话返回 409 并引导先终止；重复终止幂等返回 |
+| I-9 | §12.5 治理面留痕 | 操作他人会话不必填理由 | 跨本人范围的操作必填理由并落底座 `sys_oper_log` |
+| I-10 | §12.6 附件状态机 | 无 `status`/`expire_at` 列，无单用户配额（≤20 个 / ≤50MB） | 双方言加列（含字典 `ai_attachment_status` 回补）+ 配额校验 + 回收优先最旧 `PENDING`；此项完成后 L00 的状态字典对账一并覆盖 |
+| I-11 | §12.2 版本恢复权限 | 回滚复用 `ai:memory:edit`，无 `ai:memory:version:restore`、无二次确认 | 独立权限 + 二次确认 + 操作日志，验收仍是「正文与目标版本逐字一致」 |
+| I-12 | 底座示例菜单的空挂载 | 基线 `sys_menu` 里 7 个页面级菜单（`ai/chat`、`tool/gen`、`monitor/admin`、`monitor/snailjob`、`monitor/snailai`、`demo/demo`、`demo/tree`）在本项目没有对应前端页面：底座自带的 `ruoyi-ai` 与 `ruoyi-demo`/代码生成模块按 D1 备注裁掉，`agent-hub-ai` 的工作台另有自己的命名空间。**点开这些菜单是白屏**，且底座基线脚本不改，删除只能由我方脚本承担 | 新增 `script/sql/{dialect}/agenthub-base-menu-prune.sql`（按 `component` 命中删除，连带 `sys_role_menu` 授权，幂等），initdb 序号排在基线之后；`menu-component` 门禁把覆盖面对象扩到全部 `sys_menu` 行。**属产品面裁剪（去掉底座示例功能），待队长批准后再落** |
+| I-13 | 忽略规则吃掉源码 | 仓库根 `.gitignore` 的未锚定 `data/` 把前端 `src/api/system/dict/data/` 整目录挡在仓外，构建期才暴露（`utils/dict.ts` 的 `getDicts` 解析失败），AI 五个状态字典的渲染同链路依赖它 | 已修：模式锚定为 `/data/`，模块补回，并落 `scripts/checks/gitignore-hygiene.mjs`（未锚定的目录级模式 + 源码被忽略清单命中即红）为必过步骤 |
+
+I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。
+
+---
+
 ## 13. 下一步
 
-本版为团队执行基线（一周全量 + 三人分工 + 部署形态与云端 Agent 边界）。
+本版为执行基线（一周全量 + 队长单线全量交付 + 部署形态与云端 Agent 边界），分工变更见 §8.1。
 
-**已产出**：`docs/superpowers/plans/2026-11-20-week1-collaboration-plan.md`——三人协作开发计划（分支与 PR 协作、契约冻结流程、D1~D5 逐日节拍与验收、联调依赖矩阵、冲突规避、质量门禁分工、发布回滚值班）。
+**已产出**：
 
-**待产出**（三条线逐功能 TDD 任务清单，共用 §6 与 §12 契约）：
+- `docs/superpowers/plans/2026-11-20-week1-collaboration-plan.md`——交付节拍与验收计划（分支与 PR 协作、契约冻结流程、D1~D5 逐日节拍与验收、联调依赖矩阵、质量门禁、发布回滚）。原按三人排班书写，责任人自 D11 重冻起统一为队长单线执行，任务范围与验收标准不变。
+- `docs/superpowers/plans/2026-11-20-week1-daily-log.md`——逐日执行日志（D3 记录分工取消后的三面 PR 交付与 §12.7 契约重冻裁决）。
+- 代码交付分三面开 PR：后端全树、前端全树、契约与门禁重冻（本文件 §6/§12.7 的机械执行面）。
 
-1. `docs/superpowers/plans/2026-11-20-week1-lead-plan.md`——队长线（部署/契约/权限 HITL/RAG/MCP/安全/审计发布）。
-2. `docs/superpowers/plans/2026-11-20-week1-backend-plan.md`——队员 B 线（模型/会话/工具/编排/记忆/渠道/定时）。
-3. `docs/superpowers/plans/2026-11-20-week1-frontend-plan.md`——队员 C 线（骨架/工作台/34 页/介绍页）。
+**待产出**：不再按三条任务线拆计划文件——单线交付下由 §7.1 一周交付清单 + §12.7 C 段增量表直接驱动，逐条开 `feature/<scope>` 分支与 PR。
 
-三份共用 §6 契约，接口与事件类型以本文件为唯一来源。
+接口与事件类型以本文件为唯一来源；任何取值、命名与状态口径的争议，先查 §12.7 的效力修正，再看 `e2e/http/L00-contract-consistency.mjs` 的对账结果。

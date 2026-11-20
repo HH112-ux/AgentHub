@@ -36,6 +36,10 @@ jobs:
       - name: 文档交叉引用
         run: node scripts/checks/doc-links.mjs
 
+      # 恒定执行：CI 是全新检出，被忽略的文件根本不在工作树里，所以真正起作用的是「未锚定模式」这条静态断言。
+      - name: gitignore 卫生
+        run: node scripts/checks/gitignore-hygiene.mjs
+
       - name: 探测已入仓的构建工件
         id: probe
         run: |
@@ -101,6 +105,12 @@ jobs:
           if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
           "$MVN" -B -ntp -pl ruoyi-modules/agent-hub-ai -am test
 
+      # 只在前端在架时跑：菜单 component 是运行期字符串，写错只在点开菜单时白屏；前端不在架时只剩空断言，跳过比假装通过诚实。
+      # 排在构建之前，避免构建失败连带跳过这条与打包无关的静态对齐。
+      - name: 菜单 component 与前端页面对齐
+        if: steps.probe.outputs.frontend == 'true'
+        run: node scripts/checks/menu-component.mjs
+
       - name: 装配 pnpm
         if: steps.probe.outputs.frontend == 'true'
         uses: pnpm/action-setup@v4
@@ -144,9 +154,11 @@ jobs:
             echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
             echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
             echo "| 文档交叉引用（绝对链接/死链/锚点） | 恒定执行 |"
+            echo "| gitignore 卫生（源码不被忽略规则吃掉） | 恒定执行 |"
             echo "| 部署编排校验（§4 静态断言 + compose 渲染） | $(state "$DEPLOY" 'deploy/deploy-pg/docker-compose.yml 未入仓') |"
             echo "| Nginx 入口配置语法（nginx -t） | $(state "$DEPLOY" 'deploy/ 未入仓') |"
             echo "| AI 模块单测 | $(state "$BACKEND" 'code/back-end/pom.xml 未入仓') |"
+            echo "| 菜单 component ↔ 前端页面文件 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
             echo "| 前端构建 | $(state "$FRONTEND" 'code/front-end/package.json 未入仓') |"
             echo "| 契约一致性 L00 | $(state "$CONTRACT" 'e2e/http/L00-contract-consistency.mjs 未入仓') |"
             echo ""

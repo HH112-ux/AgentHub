@@ -1,140 +1,313 @@
 package org.dromara.ai.contract;
 
-// 权限标识（sys_menu.perms）的唯一常量源，取值由 script/sql 双方言脚本冻结；改动须按设计稿 §6 走契约变更流程并同步三条任务线。
+// 权限标识（sys_menu.perms）的唯一常量源，取值与 script/sql/{mysql,postgres}/agenthub-ai-menu.sql 逐字对齐；
+// 由 e2e/http/L00-contract-consistency.mjs 校验「注解 ⊆ 菜单 = 本类」，改动须按设计稿 §6 走契约变更流程。
 
 public final class AiPermissionKeys {
-    public static final String AI_ATTACHMENT_RECYCLE = "ai:attachment:recycle";
-    public static final String AI_ATTACHMENT_UPLOAD = "ai:attachment:upload";
+
+    // ---- ai:agent ----
+    /** 菜单「智能体新增」 */
+    public static final String AI_AGENT_ADD = "ai:agent:add";
+    /** 菜单「智能体修改」 */
+    public static final String AI_AGENT_EDIT = "ai:agent:edit";
+    /** 菜单「小Z配置修改」 */
+    public static final String AI_AGENT_ENTRY_EDIT = "ai:agent:entry:edit";
+    /** 菜单「小Z配置」 */
+    public static final String AI_AGENT_ENTRY_QUERY = "ai:agent:entry:query";
+    /** 菜单「专家配置」 */
+    public static final String AI_AGENT_LIST = "ai:agent:list";
+    /** 菜单「智能体查询」 */
+    public static final String AI_AGENT_QUERY = "ai:agent:query";
+    /** 菜单「智能体删除」 */
+    public static final String AI_AGENT_REMOVE = "ai:agent:remove";
+
+    // ---- ai:audit ----
+    /** 菜单「会话与消息审计」 */
+    public static final String AI_AUDIT_MESSAGE = "ai:audit:message";
+    /** 菜单「消息导出」 */
     public static final String AI_AUDIT_MESSAGE_EXPORT = "ai:audit:message:export";
-    public static final String AI_AUDIT_MESSAGE_LIST = "ai:audit:message:list";
-    public static final String AI_AUDIT_PERMISSION_EXPORT = "ai:audit:permission:export";
-    public static final String AI_AUDIT_PERMISSION_LIST = "ai:audit:permission:list";
+    /** 菜单「审计数据清理」 */
+    public static final String AI_AUDIT_RETENTION_CLEANUP = "ai:audit:retention:cleanup";
+    /** 菜单「审计保留修改」 */
     public static final String AI_AUDIT_RETENTION_EDIT = "ai:audit:retention:edit";
-    public static final String AI_AUDIT_RETENTION_PREVIEW = "ai:audit:retention:preview";
-    public static final String AI_AUDIT_RETENTION_PURGE = "ai:audit:retention:purge";
-    public static final String AI_AUDIT_RETENTION_UNLIMITED = "ai:audit:retention:unlimited";
-    public static final String AI_AUDIT_RETENTION_VIEW = "ai:audit:retention:view";
-    public static final String AI_AUDIT_TOOL_EXPORT = "ai:audit:tool:export";
-    public static final String AI_AUDIT_TOOL_LIST = "ai:audit:tool:list";
+    /** 菜单「编排运行」 */
+    public static final String AI_AUDIT_ROUTE = "ai:audit:route";
+    /** 菜单「编排运行详情」 */
+    public static final String AI_AUDIT_ROUTE_QUERY = "ai:audit:route:query";
+    /** 菜单「工具调用明细」 */
+    public static final String AI_AUDIT_TOOLCALL = "ai:audit:toolcall";
+    /** 菜单「链路追踪」 */
+    public static final String AI_AUDIT_TRACE = "ai:audit:trace";
+    /** 菜单「链路查询」 */
+    public static final String AI_AUDIT_TRACE_QUERY = "ai:audit:trace:query";
+
+    // ---- ai:channel ----
+    /** 菜单「渠道新增」 */
     public static final String AI_CHANNEL_ADD = "ai:channel:add";
+    /** 菜单「渠道修改」 */
     public static final String AI_CHANNEL_EDIT = "ai:channel:edit";
-    public static final String AI_CHANNEL_IDENTITY_BIND = "ai:channel:identity:bind";
+    /** 菜单「渠道接入」 */
     public static final String AI_CHANNEL_LIST = "ai:channel:list";
+    /** 菜单「渠道查询」 */
+    public static final String AI_CHANNEL_QUERY = "ai:channel:query";
+    /** 菜单「渠道删除」 */
     public static final String AI_CHANNEL_REMOVE = "ai:channel:remove";
-    public static final String AI_CHAT_EXPORT = "ai:chat:export";
-    public static final String AI_CHAT_PLAN_CONFIRM = "ai:chat:plan:confirm";
-    public static final String AI_CHAT_REGENERATE = "ai:chat:regenerate";
+
+    // ---- ai:chat ----
+    /** 菜单「暂存附件回收」 */
+    public static final String AI_CHAT_ATTACHMENT_RECLAIM = "ai:chat:attachment:reclaim";
+    /** 菜单「对话偏好修改」 */
+    public static final String AI_CHAT_PREF_EDIT = "ai:chat:pref:edit";
+    /** 菜单「对话偏好」 */
+    public static final String AI_CHAT_PREF_QUERY = "ai:chat:pref:query";
+    /** 菜单「任务工作台」 */
     public static final String AI_CHAT_SEND = "ai:chat:send";
-    public static final String AI_CHAT_SESSION_LIST = "ai:chat:session:list";
-    public static final String AI_CHAT_SESSION_MANAGE = "ai:chat:session:manage";
-    public static final String AI_CHAT_STOP = "ai:chat:stop";
-    public static final String AI_DIGEST_EXPORT = "ai:digest:export";
-    public static final String AI_DIGEST_GENERATE = "ai:digest:generate";
-    public static final String AI_DIGEST_VIEW = "ai:digest:view";
-    public static final String AI_DOCUMENT_CHUNK_LIST = "ai:document:chunk:list";
-    public static final String AI_DOCUMENT_LIST = "ai:document:list";
-    public static final String AI_DOCUMENT_REBUILD = "ai:document:rebuild";
-    public static final String AI_DOCUMENT_REMOVE = "ai:document:remove";
-    public static final String AI_DOCUMENT_UPLOAD = "ai:document:upload";
-    public static final String AI_ENTRY_EDIT = "ai:entry:edit";
-    public static final String AI_ENTRY_QUERY = "ai:entry:query";
-    public static final String AI_EXPERT_ADD = "ai:expert:add";
-    public static final String AI_EXPERT_ASSIST = "ai:expert:assist";
-    public static final String AI_EXPERT_COPY = "ai:expert:copy";
-    public static final String AI_EXPERT_EDIT = "ai:expert:edit";
-    public static final String AI_EXPERT_LIST = "ai:expert:list";
-    public static final String AI_EXPERT_REMOVE = "ai:expert:remove";
-    public static final String AI_HEALTH_CHECK = "ai:health:check";
-    public static final String AI_KNOWLEDGE_ADD = "ai:knowledge:add";
-    public static final String AI_KNOWLEDGE_BM25_REBUILD = "ai:knowledge:bm25:rebuild";
-    public static final String AI_KNOWLEDGE_EDIT = "ai:knowledge:edit";
-    public static final String AI_KNOWLEDGE_LIST = "ai:knowledge:list";
-    public static final String AI_KNOWLEDGE_REMOVE = "ai:knowledge:remove";
+
+    // ---- ai:digest ----
+    /** 菜单「平台运行日报」 */
+    public static final String AI_DIGEST_LIST = "ai:digest:list";
+    /** 菜单「平台运行日报详情」 */
+    public static final String AI_DIGEST_QUERY = "ai:digest:query";
+
+    // ---- ai:health ----
+    /** 菜单「健康自检」 */
+    public static final String AI_HEALTH = "ai:health";
+    /** 菜单「结构化决策探测」 */
+    public static final String AI_HEALTH_PROBE = "ai:health:probe";
+    /** 菜单「健康自检查询」 */
+    public static final String AI_HEALTH_QUERY = "ai:health:query";
+
+    // ---- ai:kb ----
+    /** 菜单「知识库新增」 */
+    public static final String AI_KB_ADD = "ai:kb:add";
+    /** 菜单「文档与切片」 */
+    public static final String AI_KB_DOC = "ai:kb:doc";
+    /** 菜单「文档解析」 */
+    public static final String AI_KB_DOC_PARSE = "ai:kb:doc:parse";
+    /** 菜单「文档预览」 */
+    public static final String AI_KB_DOC_PREVIEW = "ai:kb:doc:preview";
+    /** 菜单「文档删除」 */
+    public static final String AI_KB_DOC_REMOVE = "ai:kb:doc:remove";
+    /** 菜单「文档上传」 */
+    public static final String AI_KB_DOC_UPLOAD = "ai:kb:doc:upload";
+    /** 菜单「文档向量化」 */
+    public static final String AI_KB_DOC_VECTOR = "ai:kb:doc:vector";
+    /** 菜单「知识库修改」 */
+    public static final String AI_KB_EDIT = "ai:kb:edit";
+    /** 菜单「知识库管理」 */
+    public static final String AI_KB_LIST = "ai:kb:list";
+    /** 菜单「知识库查询」 */
+    public static final String AI_KB_QUERY = "ai:kb:query";
+    /** 菜单「知识库删除」 */
+    public static final String AI_KB_REMOVE = "ai:kb:remove";
+    /** 菜单「检索测试」 */
+    public static final String AI_KB_RETRIEVAL = "ai:kb:retrieval";
+
+    // ---- ai:mcp ----
+    /** 菜单「MCP 客户端」 */
+    public static final String AI_MCP_CLIENT = "ai:mcp:client";
+    /** 菜单「MCP 客户端新增」 */
     public static final String AI_MCP_CLIENT_ADD = "ai:mcp:client:add";
+    /** 菜单「MCP 客户端修改」 */
     public static final String AI_MCP_CLIENT_EDIT = "ai:mcp:client:edit";
-    public static final String AI_MCP_CLIENT_LIST = "ai:mcp:client:list";
+    /** 菜单「MCP 客户端查询」 */
+    public static final String AI_MCP_CLIENT_QUERY = "ai:mcp:client:query";
+    /** 菜单「MCP 客户端删除」 */
     public static final String AI_MCP_CLIENT_REMOVE = "ai:mcp:client:remove";
-    public static final String AI_MCP_CLIENT_TEST = "ai:mcp:client:test";
-    public static final String AI_MCP_SERVER_EXPOSE = "ai:mcp:server:expose";
-    public static final String AI_MCP_SERVER_TOKEN = "ai:mcp:server:token";
-    public static final String AI_MCP_SERVER_VIEW = "ai:mcp:server:view";
+    /** 菜单「MCP 服务端」 */
+    public static final String AI_MCP_SERVER = "ai:mcp:server";
+    /** 菜单「MCP 服务端修改」 */
+    public static final String AI_MCP_SERVER_EDIT = "ai:mcp:server:edit";
+    /** 菜单「MCP 服务端查询」 */
+    public static final String AI_MCP_SERVER_QUERY = "ai:mcp:server:query";
+
+    // ---- ai:memory ----
+    /** 菜单「记忆归档」 */
+    public static final String AI_MEMORY_ARCHIVE = "ai:memory:archive";
+    /** 菜单「记忆清理」 */
+    public static final String AI_MEMORY_CLEANUP = "ai:memory:cleanup";
+    /** 菜单「触发记忆合并」 */
+    public static final String AI_MEMORY_CONSOLIDATE = "ai:memory:consolidate";
+    /** 菜单「记忆修改」 */
     public static final String AI_MEMORY_EDIT = "ai:memory:edit";
-    public static final String AI_MEMORY_EXPLICIT_SAVE = "ai:memory:explicit:save";
-    public static final String AI_MEMORY_HEALTH_VIEW = "ai:memory:health:view";
-    public static final String AI_MEMORY_VERSION_LIST = "ai:memory:version:list";
-    public static final String AI_MEMORY_VERSION_RESTORE = "ai:memory:version:restore";
-    public static final String AI_MEMORY_VIEW = "ai:memory:view";
+    /** 菜单「长期记忆」 */
+    public static final String AI_MEMORY_LIST = "ai:memory:list";
+    /** 菜单「记忆查询」 */
+    public static final String AI_MEMORY_QUERY = "ai:memory:query";
+    /** 菜单「记忆删除」 */
+    public static final String AI_MEMORY_REMOVE = "ai:memory:remove";
+
+    // ---- ai:model ----
+    /** 菜单「模型配置新增」 */
     public static final String AI_MODEL_ADD = "ai:model:add";
+    /** 菜单「模型配置复制」 */
     public static final String AI_MODEL_COPY = "ai:model:copy";
+    /** 菜单「模型配置修改」 */
     public static final String AI_MODEL_EDIT = "ai:model:edit";
+    /** 菜单「模型配置」 */
     public static final String AI_MODEL_LIST = "ai:model:list";
+    /** 菜单「模型配置查询」 */
+    public static final String AI_MODEL_QUERY = "ai:model:query";
+    /** 菜单「模型配置删除」 */
     public static final String AI_MODEL_REMOVE = "ai:model:remove";
+    /** 菜单「模型连通性测试」 */
     public static final String AI_MODEL_TEST = "ai:model:test";
-    public static final String AI_ONBOARDING_DISMISS = "ai:onboarding:dismiss";
+
+    // ---- ai:pack ----
+    /** 菜单「场景包新增」 */
     public static final String AI_PACK_ADD = "ai:pack:add";
-    public static final String AI_PACK_BIND = "ai:pack:bind";
+    /** 菜单「场景包修改」 */
     public static final String AI_PACK_EDIT = "ai:pack:edit";
+    /** 菜单「场景包」 */
     public static final String AI_PACK_LIST = "ai:pack:list";
+    /** 菜单「场景包查询」 */
+    public static final String AI_PACK_QUERY = "ai:pack:query";
+    /** 菜单「场景包删除」 */
     public static final String AI_PACK_REMOVE = "ai:pack:remove";
-    public static final String AI_PERMISSION_CONFIRM_APPROVE = "ai:permission:confirm:approve";
-    public static final String AI_PERMISSION_CONFIRM_REJECT = "ai:permission:confirm:reject";
-    public static final String AI_PERMISSION_CONFIRM_REMEMBER = "ai:permission:confirm:remember";
-    public static final String AI_PREF_EDIT = "ai:pref:edit";
-    public static final String AI_PREF_VIEW = "ai:pref:view";
-    public static final String AI_RETRIEVAL_ABTEST = "ai:retrieval:abtest";
-    public static final String AI_RETRIEVAL_TEST = "ai:retrieval:test";
-    public static final String AI_ROUTE_EXPORT = "ai:route:export";
-    public static final String AI_ROUTE_LIST = "ai:route:list";
-    public static final String AI_RUNTIME_BUDGET_EDIT = "ai:runtime:budget:edit";
-    public static final String AI_RUNTIME_BUDGET_VIEW = "ai:runtime:budget:view";
-    public static final String AI_RUNTIME_COMPRESS_EDIT = "ai:runtime:compress:edit";
-    public static final String AI_RUNTIME_COMPRESS_VIEW = "ai:runtime:compress:view";
-    public static final String AI_RUNTIME_CONFIG_EDIT = "ai:runtime:config:edit";
-    public static final String AI_RUNTIME_CONFIG_VIEW = "ai:runtime:config:view";
+
+    // ---- ai:perm ----
+    /** 菜单「权限决策日志」 */
+    public static final String AI_PERM_LIST = "ai:perm:list";
+    /** 菜单「权限模式切换」 */
+    public static final String AI_PERM_MODE = "ai:perm:mode";
+    /** 菜单「决策查询」 */
+    public static final String AI_PERM_QUERY = "ai:perm:query";
+
+    // ---- ai:runtime ----
+    /** 菜单「上下文与压缩策略」 */
+    public static final String AI_RUNTIME_COMPACTION = "ai:runtime:compaction";
+    /** 菜单「压缩策略修改」 */
+    public static final String AI_RUNTIME_COMPACTION_EDIT = "ai:runtime:compaction:edit";
+    /** 菜单「压缩策略查询」 */
+    public static final String AI_RUNTIME_COMPACTION_QUERY = "ai:runtime:compaction:query";
+    /** 菜单「结构化决策路由」 */
+    public static final String AI_RUNTIME_JEV = "ai:runtime:jev";
+    /** 菜单「结构化决策修改」 */
+    public static final String AI_RUNTIME_JEV_EDIT = "ai:runtime:jev:edit";
+    /** 菜单「结构化决策查询」 */
+    public static final String AI_RUNTIME_JEV_QUERY = "ai:runtime:jev:query";
+    /** 菜单「计划模式与任务清单」 */
+    public static final String AI_RUNTIME_PLAN = "ai:runtime:plan";
+    /** 菜单「计划模式修改」 */
+    public static final String AI_RUNTIME_PLAN_EDIT = "ai:runtime:plan:edit";
+    /** 菜单「计划模式查询」 */
+    public static final String AI_RUNTIME_PLAN_QUERY = "ai:runtime:plan:query";
+    /** 菜单「编排预算」 */
+    public static final String AI_RUNTIME_ROUTE_BUDGET = "ai:runtime:route-budget";
+    /** 菜单「编排预算修改」 */
+    public static final String AI_RUNTIME_ROUTE_BUDGET_EDIT = "ai:runtime:route-budget:edit";
+    /** 菜单「编排预算查询」 */
+    public static final String AI_RUNTIME_ROUTE_BUDGET_QUERY = "ai:runtime:route-budget:query";
+    /** 菜单「安全合规配置」 */
+    public static final String AI_RUNTIME_SECURITY = "ai:runtime:security";
+    /** 菜单「安全合规修改」 */
+    public static final String AI_RUNTIME_SECURITY_EDIT = "ai:runtime:security:edit";
+    /** 菜单「安全合规查询」 */
+    public static final String AI_RUNTIME_SECURITY_QUERY = "ai:runtime:security:query";
+    /** 菜单「无人值守白名单修改」 */
     public static final String AI_RUNTIME_UNATTENDED_EDIT = "ai:runtime:unattended:edit";
-    public static final String AI_SAFETY_CONFIG_EDIT = "ai:safety:config:edit";
-    public static final String AI_SAFETY_CONFIG_VIEW = "ai:safety:config:view";
-    public static final String AI_SAFETY_EVENT_EXPORT = "ai:safety:event:export";
+
+    // ---- ai:safety ----
+    /** 菜单「安全事件」 */
     public static final String AI_SAFETY_EVENT_LIST = "ai:safety:event:list";
+    /** 菜单「安全事件详情」 */
+    public static final String AI_SAFETY_EVENT_QUERY = "ai:safety:event:query";
+    /** 菜单「敏感词新增」 */
     public static final String AI_SAFETY_WORD_ADD = "ai:safety:word:add";
+    /** 菜单「敏感词修改」 */
     public static final String AI_SAFETY_WORD_EDIT = "ai:safety:word:edit";
+    /** 菜单「敏感词库」 */
     public static final String AI_SAFETY_WORD_LIST = "ai:safety:word:list";
+    /** 菜单「敏感词查询」 */
+    public static final String AI_SAFETY_WORD_QUERY = "ai:safety:word:query";
+    /** 菜单「敏感词删除」 */
     public static final String AI_SAFETY_WORD_REMOVE = "ai:safety:word:remove";
-    public static final String AI_SESSION_GOVERNANCE_DELETE = "ai:session:governance:delete";
-    public static final String AI_SESSION_GOVERNANCE_EXPORT = "ai:session:governance:export";
-    public static final String AI_SESSION_GOVERNANCE_LIST = "ai:session:governance:list";
-    public static final String AI_SESSION_GOVERNANCE_TERMINATE = "ai:session:governance:terminate";
+
+    // ---- ai:session ----
+    /** 菜单「会话终止」 */
+    public static final String AI_SESSION_EDIT = "ai:session:edit";
+    /** 菜单「会话导出」 */
+    public static final String AI_SESSION_EXPORT = "ai:session:export";
+    /** 菜单「任务管理」 */
+    public static final String AI_SESSION_LIST = "ai:session:list";
+    /** 菜单「会话明细查看」 */
+    public static final String AI_SESSION_QUERY = "ai:session:query";
+    /** 菜单「会话删除」 */
+    public static final String AI_SESSION_REMOVE = "ai:session:remove";
+    /** 菜单「会话状态回收」 */
+    public static final String AI_SESSION_STATE_REAP = "ai:session:state:reap";
+
+    // ---- ai:skill ----
+    /** 菜单「技能新增」 */
     public static final String AI_SKILL_ADD = "ai:skill:add";
+    /** 菜单「技能修改」 */
     public static final String AI_SKILL_EDIT = "ai:skill:edit";
+    /** 菜单「技能仓库」 */
     public static final String AI_SKILL_LIST = "ai:skill:list";
+    /** 菜单「技能查询」 */
+    public static final String AI_SKILL_QUERY = "ai:skill:query";
+    /** 菜单「技能删除」 */
     public static final String AI_SKILL_REMOVE = "ai:skill:remove";
-    public static final String AI_SKILL_RESOURCE = "ai:skill:resource";
+
+    // ---- ai:subagent ----
+    /** 菜单「子智能体新增」 */
     public static final String AI_SUBAGENT_ADD = "ai:subagent:add";
+    /** 菜单「子智能体修改」 */
     public static final String AI_SUBAGENT_EDIT = "ai:subagent:edit";
+    /** 菜单「子智能体」 */
     public static final String AI_SUBAGENT_LIST = "ai:subagent:list";
+    /** 菜单「子智能体查询」 */
+    public static final String AI_SUBAGENT_QUERY = "ai:subagent:query";
+    /** 菜单「子智能体删除」 */
     public static final String AI_SUBAGENT_REMOVE = "ai:subagent:remove";
+
+    // ---- ai:task ----
+    /** 菜单「任务新增」 */
     public static final String AI_TASK_ADD = "ai:task:add";
+    /** 菜单「任务修改」 */
     public static final String AI_TASK_EDIT = "ai:task:edit";
+    /** 菜单「定时任务」 */
     public static final String AI_TASK_LIST = "ai:task:list";
+    /** 菜单「任务查询」 */
+    public static final String AI_TASK_QUERY = "ai:task:query";
+    /** 菜单「任务删除」 */
     public static final String AI_TASK_REMOVE = "ai:task:remove";
+    /** 菜单「立即执行」 */
     public static final String AI_TASK_RUN = "ai:task:run";
+
+    // ---- ai:tool ----
+    /** 菜单「工具新增」 */
     public static final String AI_TOOL_ADD = "ai:tool:add";
+    /** 菜单「工具修改」 */
     public static final String AI_TOOL_EDIT = "ai:tool:edit";
-    public static final String AI_TOOL_EXPOSE = "ai:tool:expose";
+    /** 菜单「业务工具注册」 */
     public static final String AI_TOOL_LIST = "ai:tool:list";
+    /** 菜单「工具删除」 */
     public static final String AI_TOOL_REMOVE = "ai:tool:remove";
+    /** 菜单「标签新增」 */
     public static final String AI_TOOL_TAG_ADD = "ai:tool:tag:add";
-    public static final String AI_TOOL_TAG_BIND = "ai:tool:tag:bind";
+    /** 菜单「标签修改」 */
     public static final String AI_TOOL_TAG_EDIT = "ai:tool:tag:edit";
+    /** 菜单「标签管理」 */
+    public static final String AI_TOOL_TAG_QUERY = "ai:tool:tag:query";
+    /** 菜单「标签删除」 */
     public static final String AI_TOOL_TAG_REMOVE = "ai:tool:tag:remove";
-    public static final String AI_TRACE_EXPORT = "ai:trace:export";
-    public static final String AI_TRACE_LIST = "ai:trace:list";
+
+    // ---- ai:usage ----
+    /** 菜单「用量导出」 */
     public static final String AI_USAGE_EXPORT = "ai:usage:export";
+    /** 菜单「用量与配额」 */
     public static final String AI_USAGE_LIST = "ai:usage:list";
-    public static final String AI_USAGE_QUOTA_EDIT = "ai:usage:quota:edit";
+    /** 菜单「用量查询」 */
+    public static final String AI_USAGE_QUERY = "ai:usage:query";
+
+    // ---- ai:workspace ----
+    /** 菜单「工作区修改」 */
     public static final String AI_WORKSPACE_EDIT = "ai:workspace:edit";
-    public static final String AI_WORKSPACE_OVERRIDE_CLEAR = "ai:workspace:override:clear";
-    public static final String AI_WORKSPACE_VIEW = "ai:workspace:view";
+    /** 菜单「工作区文件」 */
+    public static final String AI_WORKSPACE_LIST = "ai:workspace:list";
+    /** 菜单「工作区查询」 */
+    public static final String AI_WORKSPACE_QUERY = "ai:workspace:query";
 
     private AiPermissionKeys() {}
 }

@@ -52,8 +52,10 @@ services:
       # initdb 客户端字符集：缺这一行，底座基线的中文会把整条 initdb 链打断（文件内有实测说明）。
       - ./conf.d/agenthub.cnf:/etc/mysql/conf.d/agenthub.cnf:ro
       # initdb 按文件名顺序执行：底座基线 → AI 表结构 → 种子 → 菜单。
-      # 底座基线由 B 线导入后放到 RY_BASE_SQL 指向的路径；未导入时挂 /dev/null 跳过。
-      - ${RY_BASE_SQL:-/dev/null}:/docker-entrypoint-initdb.d/10-ry-base.sql:ro
+      # 底座基线随仓分发（MySQL 方言整理件，许可与出处见 docs/open-source-licenses.md）。
+      - ../../code/back-end/script/sql/base/mysql/ruoyi-vue-base.sql:/docker-entrypoint-initdb.d/10-ruoyi-vue-base.sql:ro
+      - ../../code/back-end/script/sql/base/mysql/ruoyi-job-base.sql:/docker-entrypoint-initdb.d/11-ruoyi-job-base.sql:ro
+      - ../../code/back-end/script/sql/base/mysql/ruoyi-workflow-base.sql:/docker-entrypoint-initdb.d/12-ruoyi-workflow-base.sql:ro
       - ../../code/back-end/script/sql/mysql/agenthub-ai-ddl.sql:/docker-entrypoint-initdb.d/20-agenthub-ai-ddl.sql:ro
       - ../../code/back-end/script/sql/mysql/agenthub-ai-seed.sql:/docker-entrypoint-initdb.d/30-agenthub-ai-seed.sql:ro
       - ../../code/back-end/script/sql/mysql/agenthub-ai-menu.sql:/docker-entrypoint-initdb.d/40-agenthub-ai-menu.sql:ro
