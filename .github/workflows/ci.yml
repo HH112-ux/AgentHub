@@ -104,6 +104,9 @@ jobs:
       - name: 装配 pnpm
         if: steps.probe.outputs.frontend == 'true'
         uses: pnpm/action-setup@v4
+        with:
+          # 前端不在仓库根，action 默认只读根 package.json 的 packageManager，指过去才不会「No pnpm version is specified」。
+          package_json_file: code/front-end/package.json
 
       - name: 装配 Node
         if: steps.probe.outputs.frontend == 'true' && steps.probe.outputs.nodepin == 'true'
