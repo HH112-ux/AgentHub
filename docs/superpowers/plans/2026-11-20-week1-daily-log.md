@@ -38,3 +38,7 @@
 未达项归属：app 镜像构建缺 `Dockerfile`（B 线，Task 1 Step 6 已列出）；云服务器、公网域名与正式证书（§11 前置，队长本周申请）。
 
 D2 追加：`deploy/**` 补上门禁——新脚本 `scripts/checks/deploy-static.mjs`（端口口径 / 清单与占位符对齐 / Nginx 关键指令 / MySQL 字符集前置 / profile 覆盖接线，docker 在场追加真实渲染）+ CI 一步 `nginx -t`。门禁自身经 8 项变异测试验证会变红，不是空跑。队友本地跑：`node scripts/checks/deploy-static.mjs`。详见 `docs/configuration.md` §4、§6。
+
+D2 追加：文档交叉引用门禁 `scripts/checks/doc-links.mjs` 已落地（PR #6），并修掉协作计划里 2 处 `file:///` 绝对链接——那类链接在队友机器上是死链。同样以 8 项变异测试（含「围栏内伪链接不该报错」反向用例）验证。队友本地跑：`node scripts/checks/doc-links.mjs`。
+
+D2 追加：CI 三条门禁（文档交叉引用、部署编排校验、Nginx 入口配置语法）已接入 `ci.yml`。推送 `.github/workflows/*` 需 `workflow` 权限，`gh` 的 OAuth token 只有 `gist, read:org, repo` 被 GitHub 拒；仓库所有者授权队长自行完成后，改用其已配置的 owner SSH key 推同一个 `origin` 仓库（未新增远程、未改 `origin` URL），并在 PR 里明示该通道。
