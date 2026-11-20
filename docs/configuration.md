@@ -92,3 +92,5 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 1. `app` 服务的镜像构建依赖 B 线在 `code/back-end` 落 `Dockerfile`；本编排只约定 `/config` 挂载点与 `8080`/`8081` 监听，不改这条就起不了 app。
 2. PG 栈起不来的根因在底座侧：`ruoyi-admin/pom.xml` 的 `org.postgresql:postgresql` 是注释态，B 线导入时必须放开（见 D1 日志）。
 3. 两栈各自带一套 Milvus/etcd/MinIO，同机并存的内存预算要在 §11 前置里确认；若余量不足，改为共享外部网络与卷属部署变更，需队长批准。
+4. CI 目前只恒定跑「双方言 SQL / 命名 / 密钥入库」三条，`deploy/**` 改动无门禁覆盖。补法已在本地实测：渲染用 `cp .env.example .env && docker compose config --quiet`（两栈 `rc=0`）；入口配置用 `nginx -t`，需先自签一份一次性证书并带 `--add-host app:127.0.0.1` 解 upstream，否则报 `cannot load certificate`。因涉及共享流水线且会作用于三条线的每个 PR，单独出 PR，不夹进功能改动。
+5. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。
