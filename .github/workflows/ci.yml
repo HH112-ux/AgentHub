@@ -1,7 +1,7 @@
 name: CI
 
 # 交付门禁：合入 main 前必须通过的最低集合。
-# 档位取自「最小可绿」——规则类检查恒定执行；后端/前端/契约作业在底座制品入仓前自动跳过，
+# 档位取自「最小可绿」——规则类检查恒定执行；后端/前端/契约/部署作业在对应制品入仓前自动跳过，
 # 制品出现后无需改本文件即自动生效。设计稿 §9 H1 的 e2e 全量硬门禁与 JaCoCo 覆盖率仍属一周后硬化项，未在此提前。
 
 on:
@@ -42,7 +42,29 @@ jobs:
             echo "frontend=$(test_true code/front-end/package.json)"
             echo "contract=$(test_true e2e/http/L00-contract-consistency.mjs)"
             echo "nodepin=$(test_true code/front-end/.node-version)"
+            echo "deploy=$(test_true deploy/deploy-pg/docker-compose.yml)"
           } >> "$GITHUB_OUTPUT"
+
+      # 部署门禁与本地同一入口：脚本自带「无 docker 则跳过渲染、静态断言照跑」的降级，故无需在此探测。
+      - name: 部署编排校验
+        if: steps.probe.outputs.deploy == 'true'
+        run: node scripts/checks/deploy-static.mjs
+
+      - name: Nginx 入口配置语法
+        if: steps.probe.outputs.deploy == 'true'
+        run: |
+          # nginx -t 会真去加载 ssl_certificate，证书不入库（§2.3.1），因此现签一份一次性的放临时目录。
+          cert=$RUNNER_TEMP/cert
+          mkdir -p "$cert"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout "$cert/agenthub.key" -out "$cert/agenthub.crt" -subj "/CN=agenthub.test" 2>/dev/null
+          for stack in pg mysql; do
+            # app 是栈内服务名，CI 里没有 DNS，不预置解析则 nginx -t 在 upstream 阶段就失败。
+            docker run --rm --add-host app:127.0.0.1 \
+              -v "$GITHUB_WORKSPACE/deploy/deploy-$stack/nginx/agenthub.conf:/etc/nginx/conf.d/default.conf:ro" \
+              -v "$cert:/etc/nginx/cert:ro" \
+              nginx:1.27 nginx -t
+          done
 
       # JDK 与 Node 版本一律取自仓库内声明，CI 不硬编码版本，避免与设计稿 §11 前置的底座制品版本漂移。
       - name: 解析 JDK 版本
@@ -104,6 +126,7 @@ jobs:
           BACKEND: ${{ steps.probe.outputs.backend }}
           FRONTEND: ${{ steps.probe.outputs.frontend }}
           CONTRACT: ${{ steps.probe.outputs.contract }}
+          DEPLOY: ${{ steps.probe.outputs.deploy }}
         run: |
           state() { [ "$1" = 'true' ] && echo 已执行 || echo "跳过：$2"; }
           {
@@ -114,6 +137,8 @@ jobs:
             echo "| 双方言 SQL 一致性与幂等 | 恒定执行 |"
             echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
             echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
+            echo "| 部署编排校验（§4 静态断言 + compose 渲染） | $(state "$DEPLOY" 'deploy/deploy-pg/docker-compose.yml 未入仓') |"
+            echo "| Nginx 入口配置语法（nginx -t） | $(state "$DEPLOY" 'deploy/ 未入仓') |"
             echo "| AI 模块单测 | $(state "$BACKEND" 'code/back-end/pom.xml 未入仓') |"
             echo "| 前端构建 | $(state "$FRONTEND" 'code/front-end/package.json 未入仓') |"
             echo "| 契约一致性 L00 | $(state "$CONTRACT" 'e2e/http/L00-contract-consistency.mjs 未入仓') |"
