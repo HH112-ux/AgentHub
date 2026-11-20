@@ -1,10 +1,8 @@
 package org.dromara.ai.service.impl;
 
-import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import io.github.linpeilie.Converter;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.dromara.ai.domain.AiAgentSkill;
 import org.dromara.ai.domain.AiSkill;
@@ -19,6 +17,7 @@ import org.dromara.ai.mapper.AiAgentSkillMapper;
 import org.dromara.ai.mapper.AiSkillMapper;
 import org.dromara.ai.mapper.AiSkillResourceMapper;
 import org.dromara.ai.mapper.AiToolCallLogMapper;
+import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.MapstructUtils;
@@ -37,8 +36,6 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.context.support.StaticApplicationContext;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,14 +43,12 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -86,11 +81,7 @@ class AiSkillServiceImplTest {
 
     @BeforeAll
     static void setUp() {
-        StaticApplicationContext context = new StaticApplicationContext();
-        context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
-        context.getBeanFactory().registerSingleton("jsonMapper", mock(JsonMapper.class));
-        context.refresh();
-        new SpringUtil().setApplicationContext(context);
+        AiTestSupport.initialize();
         for (Class<?> clazz : new Class<?>[]{AiSkill.class, AiSkillResource.class, AiAgentSkill.class,
             AiToolCallLog.class}) {
             TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), ""), clazz);
