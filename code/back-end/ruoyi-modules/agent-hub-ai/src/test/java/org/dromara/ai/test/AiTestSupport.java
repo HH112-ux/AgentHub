@@ -1,6 +1,7 @@
 package org.dromara.ai.test;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import io.github.linpeilie.Converter;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -18,10 +19,17 @@ import static org.mockito.Mockito.mock;
  * <p>纯单元测试不起 Spring 容器，但以下两类静态能力会在类初始化时要求容器 / MyBatis 上下文，
  * 否则首次触达即抛异常：</p>
  * <ul>
- *   <li>{@code MapstructUtils} / {@code JsonUtils}：类初始化时从 Spring 取 {@code Converter} / {@code JsonMapper} Bean；</li>
+ *   <li>{@code MapstructUtils} / {@code JsonUtils} / {@code RedisUtils} / {@code IdGeneratorUtil}：
+ *       类初始化时从 Spring 取 {@code Converter} / {@code JsonMapper} / {@code RedissonClient} / {@code IdentifierGenerator} Bean；</li>
  *   <li>{@code LambdaQueryWrapper}：需要目标实体的 MyBatis-Plus {@code TableInfo}（lambda 缓存），
  *       否则抛 "can not find lambda cache for this entity"。</li>
  * </ul>
+ *
+ * <p>类初始化每个 JVM 只做一次，取的是当时挂在 {@code SpringUtils} 上的容器；测试类各自 new 一个
+ * 只含部分 Bean 的容器会把它换掉，于是「谁先跑」决定后面全部用例是否可用——surefire 默认按文件系统顺序
+ * 执行，本地与 CI 顺序不同即表现为本地全绿、CI 偶发红。因此这里由本类统一装载容器，并在装载后
+ * 立刻把这几个工具类初始化掉（{@link #warmUpUtilityClasses()}），测试类只调 {@link #initialize()}，
+ * 不再自建容器。</p>
  *
  * <p>用法：在测试类 {@code @BeforeAll} 中调用一次 {@link #initialize()}（幂等）。</p>
  */
@@ -40,10 +48,21 @@ public final class AiTestSupport {
         "AiToolCallLog", "AiToolTag", "AiToolTagRel", "AiTrace", "AiUsageStat"
     };
 
+    /**
+     * 类初始化即依赖容器 Bean 的工具类；在本类装载好容器后一次性初始化，后续用例不再受执行顺序影响。
+     */
+    private static final String[] UTILITY_CLASS_NAMES = {
+        "org.dromara.common.core.utils.MapstructUtils",
+        "org.dromara.common.json.utils.JsonUtils",
+        "org.dromara.common.redis.utils.RedisUtils",
+        "org.dromara.common.mybatis.utils.IdGeneratorUtil"
+    };
+
     private static final GenericApplicationContext CONTEXT = createContext();
 
     static {
         registerTableInfo();
+        warmUpUtilityClasses();
     }
 
     private AiTestSupport() {
@@ -54,6 +73,19 @@ public final class AiTestSupport {
      */
     public static void initialize() {
         CONTEXT.isActive();
+    }
+
+    /**
+     * 提前完成 {@link #UTILITY_CLASS_NAMES} 的类初始化，把「首次触达即取 Bean」固定在容器正确的时刻。
+     */
+    public static void warmUpUtilityClasses() {
+        for (String name : UTILITY_CLASS_NAMES) {
+            try {
+                Class.forName(name);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("工具类不存在：" + name, e);
+            }
+        }
     }
 
     /**
@@ -93,9 +125,10 @@ public final class AiTestSupport {
         GenericApplicationContext context = new GenericApplicationContext();
         context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
         context.getBeanFactory().registerSingleton("jsonMapper", JsonMapper.builder().build());
-        // RedisUtils 的静态字段在类初始化时即从容器取 RedissonClient，缺它会导致 RedisUtils 无法初始化、
-        // 进而 mockStatic(RedisUtils.class) 抛错并污染 Mockito 的 matcher 栈（后续用例报 InvalidUseOfMatchers）
+        // RedisUtils / IdGeneratorUtil 的静态字段在类初始化时即从容器取 Bean，缺它会让类初始化永久失败，
+        // 之后每个 mockStatic(RedisUtils.class) 都抛错并污染 Mockito 的 matcher 栈（后续用例报 InvalidUseOfMatchers）。
         context.getBeanFactory().registerSingleton("redissonClient", mock(RedissonClient.class));
+        context.getBeanFactory().registerSingleton("identifierGenerator", mock(IdentifierGenerator.class));
         context.refresh();
         new SpringUtils().setApplicationContext(context);
         return context;

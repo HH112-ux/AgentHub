@@ -1,6 +1,5 @@
 package org.dromara.ai.service.impl;
 
-import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -28,6 +27,7 @@ import org.dromara.ai.mapper.AiSkillMapper;
 import org.dromara.ai.mapper.AiToolMapper;
 import org.dromara.ai.service.IAiSkillService;
 import org.dromara.ai.service.IAiToolService;
+import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.MapstructUtils;
@@ -44,7 +44,6 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.context.support.StaticApplicationContext;
 
 import java.util.Collection;
 import java.util.List;
@@ -58,7 +57,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -100,11 +98,8 @@ class AiScenarioPackServiceImplTest {
 
     @BeforeAll
     static void setUp() {
+        AiTestSupport.initialize();
         // 无 Spring 容器时，初始化 MapstructUtils 依赖的 Converter 与实体元数据
-        StaticApplicationContext context = new StaticApplicationContext();
-        context.getBeanFactory().registerSingleton("converter", mock(Converter.class));
-        context.refresh();
-        new SpringUtil().setApplicationContext(context);
         for (Class<?> clazz : new Class<?>[]{AiScenarioPack.class, AiScenarioPackTool.class,
             AiScenarioPackMcpTool.class, AiScenarioPackSkill.class, AiMcpClient.class, AiTool.class,
             AiSkill.class}) {
