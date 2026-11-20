@@ -71,18 +71,27 @@ git switch -c feature/frontend-shell     # 队员 C
 ```
 预期：`git status` 干净，三条分支同起点。
 
-- [ ] **Step 2: 队长提供底座制品（D1 硬前置，缺失即记为当日阻塞项）**
+- [x] **Step 2: 队长提供底座制品（D1 已完成）**
 
-队长把开源中后台底座 6.0.0 的后端与前端发行包放入 `vendor/`（不提交进 git，`.gitignore` 已含 `vendor/`；若未含则本步补一行 `vendor/`），并在站会announce路径。
+开源中后台底座 6.0.0 的后端与前端发行包已放入 `vendor/`（不入库，`.gitignore` 已补 `vendor/`），解包为 `vendor/back-end` 与 `vendor/front-end`，sha256 与解包事实见[每日执行日志 D1 备注](file:///Users/caspian/Projects/ai-agent/active/AgentHub/docs/superpowers/plans/2026-11-20-week1-daily-log.md)。
 
 - [ ] **Step 3: B 导入后端并做首个基线提交**
 
 ```bash
 cp -a vendor/back-end/. code/back-end/
-cd code/back-end && ./mvnw -o -q -DskipTests package
-git add code/back-end && git commit -m "chore: 导入中后台底座 6.0.0 后端"
 ```
-预期：`BUILD SUCCESS`；`code/back-end/pom.xml` 中 `<modules>` 含 `ruoyi-modules/agent-hub-ai`（无则本步新建空模块并注册）。
+
+导入后先做三件裁剪，再编译：
+
+1. `ruoyi-admin/pom.xml` 放开被注释的 `org.postgresql:postgresql`——PG 栈（`:8080`）没有它起不来，MySQL 栈不受影响。
+2. 从 `ruoyi-modules/pom.xml` 去掉 `<module>ruoyi-ai</module>`，`script/sql/ry_ai.sql` 不加载，前端 `views/ai/chat` 与底座自带 `aichat` 菜单一并删除：该模块 Java 包根与 §3.2 冻结的 `org.dromara.ai` 同名（split package），其页面占住 `src/views/ai/` 命名空间。它的 `sai_*` 表与我们的 40 张 `ai_*` 不重名，删除无数据迁移。
+3. `mvn` 的 `profiles.active` 保持 `prod`，但**不改底座 `application-prod.yml` 里的明文默认值**——运行期值由 `deploy/{stack}/config/application-agenthub.yml` 挂载覆盖，机密只在 `.env`。
+
+```bash
+cd code/back-end && ./mvnw -o -q -DskipTests package
+git add code/back-end && git commit -m "chore: 导入中后台底座 6.0.0 后端并裁剪自带 ai 模块"
+```
+预期：`BUILD SUCCESS`；`code/back-end/pom.xml` 中 `<modules>` 含 `ruoyi-modules/agent-hub-ai`（无则本步新建空模块并注册）；`code/back-end/ruoyi-modules/` 下不再有 `ruoyi-ai`。
 
 - [ ] **Step 4: C 导入前端并做首个基线提交**
 
