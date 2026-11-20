@@ -84,7 +84,7 @@ AgentHub
 │   │   ├── ruoyi-system     # RBAC、字典、日志、OSS、消息（底座）
 │   │   ├── ruoyi-workflow   # 工作流（底座）
 │   │   └── agent-hub-ai     # AI 能力主体（包 org.dromara.ai）
-│   └── script/sql           # 双方言建库脚本，幂等
+│   └── script/sql           # 双方言建库脚本，幂等（命名见 §3.2）
 ├── code/front-end           # Vue 3 + TS + Element Plus（云服务器 Nginx 同源伺服）
 ├── code/intro-site          # Qoder Sites 产品介绍页工程（含云端 Agent 体验与问答）
 ├── deploy/deploy-pg         # PG 栈 Compose（云服务器）
@@ -104,6 +104,31 @@ AgentHub
 | 环境变量前缀 | `AGENTHUB_*`（密钥加密根 `AGENTHUB_AI_CRYPTO_KEY`、守卫降级 `AGENTHUB_SECURITY_GUARD_MODE`、集成测试开关 `AGENTHUB_IT`、时区 `AGENTHUB_AI_CHAT_CURRENT_TIME_ZONE`） |
 | Redis 键前缀 | `agenthub:ai:`（AgentScope 状态 `agenthub:ai:agentscope`、HITL 待确认 `agenthub:ai:hitl`、锁 `agenthub:ai:lock`、运行期配置 `agenthub:ai:config`） |
 | 代码侧包装 | 工厂 `AiToolFactory`、MCP 回参脱敏包装 `GuardingMcpClientWrapper`、状态存储 `RedisAgentStateStore`、生产守卫 `ProductionConfigGuard`、回收 `Reaper` |
+
+### 3.2 文件与目录命名规范（强制）
+
+**总则**：除面向业务读者的基线文档（《开发总览手册.md》，保持原名不动）外，全部新建文件与目录使用 **ASCII 小写 + kebab-case**；Java 类型 PascalCase、方法/变量 camelCase、常量 SCREAMING_SNAKE；一个文件只有一个职责，文件名即其职责名词。**任何文件名不得含外部项目名或产品代号**，AI 主体统一 `agent-hub-ai` / `agenthub-ai`。
+
+| 面 | 规范 | 示例 |
+|---|---|---|
+| SQL 建库（AI 模块） | `script/sql/{dialect}/agenthub-ai-ddl.sql`，双方言同路径同文件名 | `script/sql/postgres/agenthub-ai-ddl.sql`、`script/sql/mysql/agenthub-ai-ddl.sql` |
+| SQL 种子与菜单 | `agenthub-ai-seed.sql`（字典/内置工具/示例库）、`agenthub-ai-menu.sql`（菜单与 98 按钮权限），按权限标识分组顺序追加 | `script/sql/postgres/agenthub-ai-menu.sql` |
+| SQL 迁移 | `agenthub-ai-migrate-v{n}-{kebab-scope}.sql`，1.0.0 基线不产出迁移 | `agenthub-ai-migrate-v2-hitl-index.sql` |
+| Java 包 | `org.dromara.ai.{domain}`，`{domain}` 与权限标识的 `{模块}` 段一一对应 | `org.dromara.ai.knowledge`、`org.dromara.ai.channel` |
+| Java 类型后缀 | `Controller` / `Service` / `ServiceImpl` / `Mapper` / `Bo` / `Vo` / `Entity` / `Factory` / `Wrapper` / `Guard` / `Handler` | `KnowledgeBaseController`、`AiToolFactory` |
+| 后端测试 | 单测 `{Class}Test.java`（`mvn test` 可跑）；集成 `{Feature}IT.java`（`AGENTHUB_IT=true`）；同包镜像目录 | `RouteDecisionServiceTest.java`、`HybridSearchIT.java` |
+| 前端页面 | `src/views/ai/{domain}/{page}/index.vue`，`{domain}` 与 `{page}` 与 §4 的 34 页清单一一映射 | `src/views/ai/knowledge/search-test/index.vue` |
+| 前端 API 与类型 | `src/api/ai/{domain}.ts` + 同名 `{domain}.types.ts`；流式客户端固定 `src/api/ai/stream.ts` | `src/api/ai/mcp.ts`、`src/api/ai/stream.ts` |
+| 前端组件与状态 | 组件 PascalCase 目录 `src/components/ai/{Component}.vue`；Pinia store `src/store/modules/ai-{domain}.ts` | `src/components/ai/ConfirmCard.vue`、`src/store/modules/ai-chat.ts` |
+| 接口 e2e | `e2e/http/L{nn}-{kebab-scope}.mjs`，`nn` 为手册层号 01~21 | `e2e/http/L05-hitl-confirm.mjs` |
+| 浏览器 e2e | `e2e/ui/{domain}-{page}.spec.ts`，覆盖 34 页巡检 | `e2e/ui/audit-tool-call.spec.ts` |
+| RAG 评测 | `e2e/rag/cases.jsonl`（用例集）、`e2e/rag/run.mjs`（跑分）、`e2e/rag/report-{YYYYMMDD}.md`（报告，不入库） | `e2e/rag/report-20261126.md` |
+| 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
+| 文档 | 规格与计划 `docs/superpowers/{specs,plans}/YYYY-MM-DD-{kebab-topic}-{design\|plan}.md`；长期文档固定名 `docs/architecture.md`、`docs/development.md`、`docs/configuration.md` | 本文即 `...-decomposition-design.md` |
+| 配置键 | 运行期配置沿用手册点分 kebab（`memory-flush-mode`、`reaper.stale-minutes`）；环境变量一律 `AGENTHUB_*` SCREAMING_SNAKE | `AGENTHUB_AI_CRYPTO_KEY` |
+| 提交与分支 | 约定式提交 `<type>: <中文简述>`；分支 `feature/<scope>` / `fix/<scope>`，`<scope>` 用 `{domain}` 名 | `feat(knowledge): 混合检索 RRF 融合` |
+
+**落地要求**：新增文件先在上表定位命名；不符合本表的存量文件名（含 e2e、SQL、前端目录）在 D1 契约冻结前一次性改齐，之后走 §6 的契约变更流程。
 
 ---
 
@@ -190,7 +215,7 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 ## 5. 数据模型
 
-40 张 `ai_` 表，**本周全部交付**，双方言脚本幂等（`if not exists` / `on conflict do nothing`）。主键与 `create_dept/create_by/create_time/update_by/update_time/del_flag` 沿用底座约定；PG 脚本 `script/sql/postgres/postgres_ry_ai.sql`，MySQL 脚本 `script/sql/ry_ai.sql`，同步维护。
+40 张 `ai_` 表，**本周全部交付**，双方言脚本幂等（`if not exists` / `on conflict do nothing`）。主键与 `create_dept/create_by/create_time/update_by/update_time/del_flag` 沿用底座约定；双方言脚本 `script/sql/postgres/agenthub-ai-ddl.sql` 与 `script/sql/mysql/agenthub-ai-ddl.sql`（种子与菜单见 §3.2），同步维护。
 
 | 分组 | 表 |
 |---|---|
@@ -448,8 +473,8 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 本版为团队执行基线（一周全量 + 三人分工 + 部署形态与云端 Agent 边界）。实施计划按三条线拆成三份，避免单文件过大：
 
-1. `docs/superpowers/plans/2026-11-20-week1-lead.md`——队长线（部署/契约/权限 HITL/RAG/MCP/安全/审计发布）。
-2. `docs/superpowers/plans/2026-11-20-week1-backend.md`——队员 B 线（模型/会话/工具/编排/记忆/渠道/定时）。
-3. `docs/superpowers/plans/2026-11-20-week1-frontend.md`——队员 C 线（骨架/工作台/34 页/介绍页）。
+1. `docs/superpowers/plans/2026-11-20-week1-lead-plan.md`——队长线（部署/契约/权限 HITL/RAG/MCP/安全/审计发布）。
+2. `docs/superpowers/plans/2026-11-20-week1-backend-plan.md`——队员 B 线（模型/会话/工具/编排/记忆/渠道/定时）。
+3. `docs/superpowers/plans/2026-11-20-week1-frontend-plan.md`——队员 C 线（骨架/工作台/34 页/介绍页）。
 
 三份共用 §6 契约，接口与事件类型以本文件为唯一来源。
