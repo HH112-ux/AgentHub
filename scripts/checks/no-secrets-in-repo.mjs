@@ -15,6 +15,12 @@ const SIGNATURES = [
   { name: 'Slack token', re: /xox[baprs]-[0-9A-Za-z-]{10,}/ },
 ];
 
+// 出处：Vite 按 `--mode` 固定加载 `.env.[mode]`，本仓库的构建脚本写死 `vite build --mode production`，
+// 文件名改名即失效。这两个文件只承载页面标题、接口前缀等构建期配置，以及底座出厂的演示密钥对
+// （后端 ProductionConfigGuard 在 prod 启动时会拒绝未替换的出厂值，故不构成可用凭据）。
+// 免检仅限文件名，下方的内容特征扫描照常执行。
+const ECOSYSTEM_ENV_FILES = new Set(['code/front-end/.env.development', 'code/front-end/.env.production']);
+
 const files = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
   cwd: REPO_ROOT,
   encoding: 'utf8',
@@ -31,7 +37,7 @@ for (const path of files) {
     violations.push(`${path}：密钥库/私钥扩展名 ${ext} 不得入库`);
     continue;
   }
-  if (/^\.env/i.test(base) && !/\.(example|sample|template|txt)$/.test(base)) {
+  if (/^\.env/i.test(base) && !/\.(example|sample|template|txt)$/.test(base) && !ECOSYSTEM_ENV_FILES.has(path)) {
     violations.push(`${path}：环境密钥文件不得入库，请放 .env.local（已 gitignore）或走页面密文落库`);
     continue;
   }

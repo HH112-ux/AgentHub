@@ -27,6 +27,24 @@ const BASELINE_DOCS = new Set(['开发总览手册.md']);
 // §3.2 接口 e2e 行自身规定 `L{nn}-{kebab-scope}.mjs`：大写 L 为手册层号前缀，属规范内命名。
 const PRESCRIBED_PATTERNS = [/^e2e\/http\/L\d{2}-[a-z0-9._-]+\.mjs$/];
 
+// 校验范围限定为「本项目自有文件」。出处：docs/open-source-licenses.md 登记的底座边界——
+// RuoYi-Vue-Plus 6.0.0 与 plus-ui 的上游目录名、Spring 自动配置入口（META-INF/*.imports）、
+// i18n locale 文件名、MyBatis `*Mapper.xml` 与 Vite 约定名均为生态强制名，
+// 改名会断开 import 与运行期解析；这些文件不属于 §3.2「新建文件名」的约束对象。
+// 自有范围之外的文件仅统计数量并提示，不参与判定。
+const OWN_SCOPES = [
+  'code/back-end/ruoyi-modules/agent-hub-ai/',
+  'code/back-end/script/',
+  'code/front-end/src/views/ai/',
+  'code/front-end/src/api/ai/',
+  'code/front-end/src/types/ai/',
+  'deploy/',
+  'docs/',
+  'e2e/',
+  'scripts/',
+  '.github/',
+];
+
 const files = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
   cwd: REPO_ROOT,
   encoding: 'utf8',
@@ -38,8 +56,11 @@ const files = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--
 // PascalCase 属语言强制，与 Dockerfile 同类。故只对叶子名换用类型名规则，包目录段仍按本表全小写校验。
 const JAVA_TYPE_NAME = /^[A-Z][A-Za-z0-9]*\.java$/;
 
+const ownFiles = files.filter((p) => OWN_SCOPES.some((scope) => p.startsWith(scope)));
+const upstreamFiles = files.length - ownFiles.length;
+
 const violations = [];
-for (const path of files) {
+for (const path of ownFiles) {
   const segs = path.split('/');
   const leaf = segs[segs.length - 1];
   if (ECOSYSTEM_NAMES.has(leaf) || BASELINE_DOCS.has(leaf)) continue;
@@ -65,4 +86,4 @@ if (violations.length) {
   console.error('\n如属生态强制名或基线文档，请在 scripts/checks/naming-convention.mjs 的豁免表中登记并写明出处。');
   process.exit(1);
 }
-console.log(`✓ 命名规范校验通过（${files.length} 个文件纳入检查）`);
+console.log(`✓ 命名规范校验通过（自有文件 ${ownFiles.length} 个纳入检查，底座上游文件 ${upstreamFiles} 个按上述出处免检）`);
