@@ -76,6 +76,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 138 / 33+127 行全部对齐 |
 | 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 132 perms / 中文无损 |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
+| 部署门禁有效性 | 对 `deploy-static.mjs` 做 8 项变异（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件） | 8/8 如期变红且报错命中对应断言；无 docker 时渲染记为「未执行」而非静默通过 |
 
 两栈各跑一遍上述入口用例，探针串分别为 `agenthub-nginx-ok` / `agenthub-mysql-nginx-ok`，用于区分实际应答方。
 
@@ -92,5 +93,5 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 1. `app` 服务的镜像构建依赖 B 线在 `code/back-end` 落 `Dockerfile`；本编排只约定 `/config` 挂载点与 `8080`/`8081` 监听，不改这条就起不了 app。
 2. PG 栈起不来的根因在底座侧：`ruoyi-admin/pom.xml` 的 `org.postgresql:postgresql` 是注释态，B 线导入时必须放开（见 D1 日志）。
 3. 两栈各自带一套 Milvus/etcd/MinIO，同机并存的内存预算要在 §11 前置里确认；若余量不足，改为共享外部网络与卷属部署变更，需队长批准。
-4. CI 目前只恒定跑「双方言 SQL / 命名 / 密钥入库」三条，`deploy/**` 改动无门禁覆盖。补法已在本地实测：渲染用 `cp .env.example .env && docker compose config --quiet`（两栈 `rc=0`）；入口配置用 `nginx -t`，需先自签一份一次性证书并带 `--add-host app:127.0.0.1` 解 upstream，否则报 `cannot load certificate`。因涉及共享流水线且会作用于三条线的每个 PR，单独出 PR，不夹进功能改动。
-5. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。
+4. `deploy/**` 的改动由 CI 两条门禁兜住：`node scripts/checks/deploy-static.mjs`（端口口径、`.env.example` 与 compose 占位符对齐、Nginx 关键指令、MySQL 字符集前置、profile 覆盖接线，docker 在场时追加一次真实渲染）与「Nginx 入口配置语法」（现签一次性自签证书后跑 `nginx -t`，必须带 `--add-host app:127.0.0.1`，否则 upstream 解析在测试阶段就失败）。两条都随 `deploy/deploy-pg/docker-compose.yml` 是否入仓自动启停，不起容器、不连真库；行为类实测口径见上表。
+5. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。CI 侧走 `RUNNER_TEMP`，无此问题。
