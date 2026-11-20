@@ -31,7 +31,8 @@ const slugify = (heading) =>
 
 const headingsOf = (text) => new Set([...text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)].map((m) => slugify(m[1])));
 
-const LINK_RE = /(!?)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+// 目标允许为空：[]() 是最常见的漏填，正则若要求 ≥1 字符就会静默漏过。
+const LINK_RE = /(!?)\[[^\]]*\]\(([^)\s]*)\)/g;
 
 const checkFile = (rel) => {
   const text = readFileSync(path.join(REPO_ROOT, rel), 'utf8');
