@@ -126,7 +126,7 @@ AgentHub
 | 接口 e2e | `e2e/http/L{nn}-{kebab-scope}.mjs`，`nn` 为手册层号 01~21；`L00` 固定留给 §6.5 的契约对账，不占层号 | `e2e/http/L00-contract-consistency.mjs`、`e2e/http/L05-hitl-confirm.mjs` |
 | 浏览器 e2e | `e2e/ui/{domain}-{page}.spec.ts`，覆盖 34 页巡检 | `e2e/ui/audit-tool-call.spec.ts` |
 | RAG 评测 | `e2e/rag/cases.jsonl`（用例集）、`e2e/rag/run.mjs`（跑分）、`e2e/rag/report-{YYYYMMDD}.md`（报告，不入库） | `e2e/rag/report-20261126.md` |
-| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs` |
+| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs` |
 | Java 源文件 | `.java` 叶子名必须与 public 类型名逐字一致（JLS §7.6），PascalCase 属语言强制而非项目偏好，豁免本表小写 kebab 校验；包目录段仍全小写，其它扩展名不放行 | `.../org/dromara/ai/contract/AiEventType.java` |
 | 交付配置文件 | GitHub 强制约定名，不受本表小写 kebab 约束且豁免命名校验：`.github/workflows/ci.yml`、`.github/pull_request_template.md`（大小写不敏感，须位于默认分支方生效） | `.github/pull_request_template.md` |
 | 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
@@ -581,14 +581,16 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | I-9 | §12.5 治理面留痕 | 操作他人会话不必填理由 | 跨本人范围的操作必填理由并落底座 `sys_oper_log` |
 | I-10 | §12.6 附件状态机 | 无 `status`/`expire_at` 列，无单用户配额（≤20 个 / ≤50MB） | 双方言加列（含字典 `ai_attachment_status` 回补）+ 配额校验 + 回收优先最旧 `PENDING`；此项完成后 L00 的状态字典对账一并覆盖 |
 | I-11 | §12.2 版本恢复权限 | 回滚复用 `ai:memory:edit`，无 `ai:memory:version:restore`、无二次确认 | 独立权限 + 二次确认 + 操作日志，验收仍是「正文与目标版本逐字一致」 |
+| I-12 | 底座示例菜单的空挂载 | 基线 `sys_menu` 里 7 个页面级菜单（`ai/chat`、`tool/gen`、`monitor/admin`、`monitor/snailjob`、`monitor/snailai`、`demo/demo`、`demo/tree`）在本项目没有对应前端页面：底座自带的 `ruoyi-ai` 与 `ruoyi-demo`/代码生成模块按 D1 备注裁掉，`agent-hub-ai` 的工作台另有自己的命名空间。**点开这些菜单是白屏**，且底座基线脚本不改，删除只能由我方脚本承担 | 新增 `script/sql/{dialect}/agenthub-base-menu-prune.sql`（按 `component` 命中删除，连带 `sys_role_menu` 授权，幂等），initdb 序号排在基线之后；`menu-component` 门禁把覆盖面对象扩到全部 `sys_menu` 行。**属产品面裁剪（去掉底座示例功能），待队长批准后再落** |
+| I-13 | 忽略规则吃掉源码 | 仓库根 `.gitignore` 的未锚定 `data/` 把前端 `src/api/system/dict/data/` 整目录挡在仓外，构建期才暴露（`utils/dict.ts` 的 `getDicts` 解析失败），AI 五个状态字典的渲染同链路依赖它 | 已修：模式锚定为 `/data/`，模块补回，并落 `scripts/checks/gitignore-hygiene.mjs`（未锚定的目录级模式 + 源码被忽略清单命中即红）为必过步骤 |
 
-I-1/I-2/I-5/I-6 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。
+I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。
 
 ---
 
 ## 13. 下一步
 
-本版为执行基线（一周全量 + 队长单线全量交付 + 部署形态与云端 Agent 边界），分工变更见 §7.4。
+本版为执行基线（一周全量 + 队长单线全量交付 + 部署形态与云端 Agent 边界），分工变更见 §8.1。
 
 **已产出**：
 
