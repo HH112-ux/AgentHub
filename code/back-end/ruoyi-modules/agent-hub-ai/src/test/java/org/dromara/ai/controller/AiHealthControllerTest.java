@@ -32,14 +32,21 @@ class AiHealthControllerTest {
     }
 
     @Test
-    @DisplayName("自检转发到服务并返回报告")
+    @DisplayName("自检转发到服务并返回报告（默认读 60 秒缓存）")
     void shouldCheck() {
         AiHealthReportVo report = new AiHealthReportVo();
         report.setOverall(AiHealthCheckVo.STATUS_PASS);
-        when(healthCheckService.check()).thenReturn(report);
-        R<AiHealthReportVo> r = controller.check();
+        when(healthCheckService.check(false)).thenReturn(report);
+        R<AiHealthReportVo> r = controller.check(false);
         assertTrue(R.isSuccess(r));
         assertSame(report, r.getData());
+    }
+
+    @Test
+    @DisplayName("页面点「重新自检」时把穿透标记传给服务")
+    void shouldForwardRefreshFlag() {
+        controller.check(true);
+        verify(healthCheckService).check(true);
     }
 
     @Test

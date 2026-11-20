@@ -494,7 +494,7 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 ### 12.3 健康自检（A12）
 
-接口 `GET /ai/health/check`（`ai:health:check`）；单项超时 3 秒、总预算 30 秒；结果缓存 60 秒；分支三档，页面按分支展开明细。
+接口 `GET /ai/health/check`（权限按 §3.2 冻结为 `ai:health:query`，本行原写的 `ai:health:check` 是 D1 重冻前的旧名，已更正）；单项超时 3 秒、总预算 30 秒（未落地，记 §12.7 I-14）；结果缓存 60 秒（已落地，见 §12.7 I-2）；分支三档，页面按分支展开明细。
 
 | 档 | 检查项 |
 |---|---|
@@ -571,7 +571,7 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | 编号 | 条目 | 缺口 | 验收口径 |
 |---|---|---|---|
 | I-1 | §12.3「40 表齐备」 | `REQUIRED_TABLES` 只列 4 张 | 已交付：健康项 `db.schema` 的待检清单改由实体 `@TableName` 提供（`AiHealthCheckServiceImpl.expectedAiTables()`，只认带显式注解的实体——`AiAgent` 无注解，按类名推导会去查一张并不存在的 `ai_agent`），与库内 `getTables` 做差集并按名字报缺表；`e2e/http/L00-contract-consistency.mjs` F 段断言「DDL 表集合 = 实体 `@TableName` 集合 = Mapper 覆盖集合」，5 项漂移变异（改 DDL 表名 / 实体漏注解 / 实体无 Mapper / 双方言多一张无实体表 / 注解指向不存在的表）全部变红 |
-| I-2 | §12.3 结果缓存 60 秒 | 无缓存，每次点刷新都全跑 | 同一份报告 60 秒内复用（Redis 键 + TTL），手动刷新可强制穿透 |
+| I-2 | §12.3 结果缓存 60 秒 | 无缓存，每次点刷新都全跑 | 已交付：`check()` 先读 Redis 键 `agenthub:ai:health:report`（值为报告 JSON，TTL 60 秒，写法与本模块 `AiSensitiveWordServiceImpl` 的缓存惯例一致：JSON 串入库而不是靠 Redisson 编解码器保对象图）；实时体检后覆盖并重置 TTL，因此连续点刷新不会把 Redis 打穿。`GET /ai/health/check?refresh=true`（页面「重新自检」按钮）穿透缓存重算；读缓存与写缓存各自 try/catch——Redis 抖动或缓存值被写坏都只当作没缓存，不改「永不 500」。`AiHealthCheckServiceImplTest` 5 项断言 + 6 项变异（TTL 改 300 秒 / 缓存读取短路 / 忽略 refresh / 读缓存异常不兜底 / 写缓存异常不兜底 / Controller 丢参）全部变红 |
 | I-3 | §12.3 WARN 项补齐 | 对象存储读写删、BM25 就绪、渠道长连接、磁盘与 Redis 余量、Reaper 心跳、向量化积压、近 24h ERROR 日志 | 每项独立 `WARN` 判定，接不进的一律记 `UNKNOWN` 而非 `PASS` |
 | I-4 | §12.3 触发时机 | 日报生成后不触发体检 | 08:00 日报落库后串一次体检，结果写运行健康 |
 | I-5 | §12.4 保留期下限 | BO 只有 `@Min(0) @Max(3650)`，无 30 天下限 | `audit-days` 非 0 时 ≥30；0 视为不限并需 `ai:audit:retention:unlimited` + 菜单脚本登记 |
@@ -583,8 +583,9 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | I-11 | §12.2 版本恢复权限 | 回滚复用 `ai:memory:edit`，无 `ai:memory:version:restore`、无二次确认 | 独立权限 + 二次确认 + 操作日志，验收仍是「正文与目标版本逐字一致」 |
 | I-12 | 底座示例菜单的空挂载 | 基线 `sys_menu` 里 7 个页面级菜单（`ai/chat`、`tool/gen`、`monitor/admin`、`monitor/snailjob`、`monitor/snailai`、`demo/demo`、`demo/tree`）在本项目没有对应前端页面：底座自带的 `ruoyi-ai` 与 `ruoyi-demo`/代码生成模块按 D1 备注裁掉，`agent-hub-ai` 的工作台另有自己的命名空间。**点开这些菜单是白屏**，且底座基线脚本不改，删除只能由我方脚本承担 | 新增 `script/sql/{dialect}/agenthub-base-menu-prune.sql`（按 `component` 命中删除，连带 `sys_role_menu` 授权，幂等），initdb 序号排在基线之后；`menu-component` 门禁把覆盖面对象扩到全部 `sys_menu` 行。**属产品面裁剪（去掉底座示例功能），待队长批准后再落** |
 | I-13 | 忽略规则吃掉源码 | 仓库根 `.gitignore` 的未锚定 `data/` 把前端 `src/api/system/dict/data/` 整目录挡在仓外，构建期才暴露（`utils/dict.ts` 的 `getDicts` 解析失败），AI 五个状态字典的渲染同链路依赖它 | 已修：模式锚定为 `/data/`，模块补回，并落 `scripts/checks/gitignore-hygiene.mjs`（未锚定的目录级模式 + 源码被忽略清单命中即红）为必过步骤 |
+| I-14 | §12.3 单项超时与总预算 | 全量自检串行跑 15 项，只有 `connection.isValid(2)` 一处显式超时；单项没有 3 秒上限、整屏没有 30 秒预算，某个卡住的检项（如元数据查询、OSS 域名解析）会把「进页面」拖成白屏 | 单项判定 3 秒超时、整体 30 秒预算；超时项记 `UNKNOWN` 并写明「判定超时」，其余项照常返回，页面不因超时降级为报错。I-2 交付时发现，按 §7.3 排期 |
 
-I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。I-1 的对账断言落在**既有**必过步骤 L00 的 F 段（该脚本已在 §3.2「契约」行与 `ci.yml` 登记为必过），因此不新增脚本文件；落点变化不放宽任何既有条目。
+I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。I-1 的对账断言落在**既有**必过步骤 L00 的 F 段（该脚本已在 §3.2「契约」行与 `ci.yml` 登记为必过），因此不新增脚本文件；落点变化不放宽任何既有条目。 I-2 的落点是**必过单测**（`mvn test` 已在 `ci.yml` 的 `verify` 里）加 6 项变异验证：缓存复用、TTL 与穿透都是运行期行为，静态脚本只能自证「常量存在」，写在 `scripts/checks/` 里反而是一条不会报警的假门禁，因此不新增脚本文件。两处落点变化都不放宽任何既有条目。
 
 ---
 

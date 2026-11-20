@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -35,11 +36,13 @@ public class AiHealthController extends BaseController {
 
     /**
      * 平台健康自检（只读，不发起任何外网调用）
+     *
+     * @param refresh 是否穿透 60 秒结果缓存重新体检，页面「重新自检」按钮传 {@code true}
      */
     @SaCheckPermission("ai:health:query")
     @GetMapping("/check")
-    public R<AiHealthReportVo> check() {
-        return R.ok(healthCheckService.check());
+    public R<AiHealthReportVo> check(@RequestParam(required = false, defaultValue = "false") boolean refresh) {
+        return R.ok(healthCheckService.check(refresh));
     }
 
     /**

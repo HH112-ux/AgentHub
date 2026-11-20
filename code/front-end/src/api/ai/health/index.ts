@@ -4,11 +4,13 @@ import request from '@/utils/request';
 
 /**
  * 平台健康自检（只读，不发起任何外网调用）
+ * @param refresh 是否穿透服务端 60 秒结果缓存重新体检，页面「重新自检」传 true
  */
-export const getHealthReport = (): AxiosPromise<HealthReport> => {
+export const getHealthReport = (refresh = false): AxiosPromise<HealthReport> => {
   return request({
     url: '/ai/health/check',
-    method: 'get'
+    method: 'get',
+    params: { refresh }
   });
 };
 

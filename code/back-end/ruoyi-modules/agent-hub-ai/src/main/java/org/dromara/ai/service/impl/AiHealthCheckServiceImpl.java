@@ -39,6 +39,7 @@ import org.dromara.ai.service.IAiMcpServerService;
 import org.dromara.ai.service.IAiModelConfigService;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
+import org.dromara.common.json.utils.JsonUtils;
 import org.dromara.common.redis.utils.RedisUtils;
 import org.dromara.system.api.OssService;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +49,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -72,6 +74,9 @@ import java.util.stream.Collectors;
  *       需要真实连接的项返回 {@code UNKNOWN} 并标记可探测，由 {@link #probe(AiHealthProbeBo)} 按需验证。</li>
  *   <li><b>永不 500</b>：每个体检项各自 try/catch，单点异常降级为该行的 FAIL（并写明原因），
  *       不影响其余项，也不让页面整体报错。</li>
+ *   <li><b>结果缓存 60 秒</b>：一次全量自检要遍历 15 项、多次查库，进页面与切回来不必每次重算。
+ *       缓存读写同样按「永不 500」处理：Redis 坏了就当没缓存。页面「重新自检」带
+ *       {@code refresh=true} 穿透，改完配置立刻能看到新结论。</li>
  * </ul>
  *
  * @author AgentHub
@@ -100,6 +105,17 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
      * AI 业务表前缀（设计稿 §5 的 40 张表全部以此开头）
      */
     private static final String AI_TABLE_PREFIX = "ai_";
+
+    /**
+     * 体检报告结果缓存键（设计稿 §12.3：同一份报告 60 秒内复用）
+     */
+    static final String REPORT_CACHE_KEY = "agenthub:ai:health:report";
+
+    /**
+     * 体检报告缓存时长。取 60 秒是因为一次全量自检要遍历 15 项、多次查库，
+     * 而页面切回来不需要每一秒都重算；手动刷新不受它限制。
+     */
+    private static final Duration REPORT_CACHE_TTL = Duration.ofSeconds(60);
 
     private static final String CATEGORY_INFRA = "基础设施";
 
@@ -147,6 +163,57 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
 
     @Override
     public AiHealthReportVo check() {
+        return check(false);
+    }
+
+    @Override
+    public AiHealthReportVo check(boolean refresh) {
+        if (!refresh) {
+            AiHealthReportVo cached = readCachedReport();
+            if (cached != null) {
+                return cached;
+            }
+        }
+        AiHealthReportVo report = runChecks();
+        cacheReport(report);
+        return report;
+    }
+
+    /**
+     * 读 60 秒内的报告缓存。
+     *
+     * <p>缓存只是省掉重复体检，不是判据来源，所以这里任何异常（Redis 不可用、值被别处写坏、
+     * 反序列化失败）都只意味着「当作没缓存」，绝不把页面打成 500。</p>
+     */
+    private AiHealthReportVo readCachedReport() {
+        try {
+            String cached = RedisUtils.getCacheObject(REPORT_CACHE_KEY);
+            if (StringUtils.isBlank(cached)) {
+                return null;
+            }
+            AiHealthReportVo report = JsonUtils.parseObject(cached, AiHealthReportVo.class);
+            return report == null || report.getTotal() <= 0 ? null : report;
+        } catch (Exception e) {
+            log.warn("健康自检报告缓存不可用，改为实时体检：{}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 写报告缓存并重置 TTL；写失败只降级为「不缓存」。
+     */
+    private void cacheReport(AiHealthReportVo report) {
+        try {
+            RedisUtils.setCacheObject(REPORT_CACHE_KEY, JsonUtils.toJsonString(report), REPORT_CACHE_TTL);
+        } catch (Exception e) {
+            log.warn("健康自检报告写缓存失败，本次结果仍正常返回：{}", e.getMessage());
+        }
+    }
+
+    /**
+     * 逐项体检并汇总（不含缓存判定）。
+     */
+    private AiHealthReportVo runChecks() {
         List<AiHealthCheckVo> items = new ArrayList<>();
         items.add(safe("db", "数据库连通", CATEGORY_INFRA, this::checkDb));
         items.add(safe("db.schema", "AI 业务表齐全", CATEGORY_INFRA, this::checkSchema));
