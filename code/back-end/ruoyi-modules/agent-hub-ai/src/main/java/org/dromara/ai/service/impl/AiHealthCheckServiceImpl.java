@@ -1,5 +1,7 @@
 package org.dromara.ai.service.impl;
 
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,11 +50,16 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -90,10 +97,9 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     private static final String SAMPLE_MCP_TOKEN = "AgentHub";
 
     /**
-     * 必检的 AI 业务表（缺失说明建库脚本未完整执行）
+     * AI 业务表前缀（设计稿 §5 的 40 张表全部以此开头）
      */
-    private static final String[] REQUIRED_TABLES = {
-        "ai_model_config", "ai_knowledge_base", "ai_entry_agent", "ai_tool"};
+    private static final String AI_TABLE_PREFIX = "ai_";
 
     private static final String CATEGORY_INFRA = "基础设施";
 
@@ -218,38 +224,54 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
 
     /**
      * AI 业务表齐全（缺表说明建库脚本未完整执行）。
+     *
+     * <p>待检清单不写死在代码里：加表时改一边不改另一边，自检就只按旧清单自证。实体上的
+     * {@code @TableName} 是唯一来源，「DDL 表集合 = 实体表集合 = Mapper 覆盖集合」由
+     * L00 F 段守住（设计稿 §12.7 I-1）。</p>
      */
     private AiHealthCheckVo checkSchema() {
         String key = "db.schema";
         String name = "AI 业务表齐全";
+        Set<String> expected = expectedAiTables();
+        if (expected.isEmpty()) {
+            return fail(key, name, CATEGORY_INFRA, "AI 实体表清单为空：未从 @TableName 解析到任何 ai_ 开头的表",
+                "确认 ruoyi-admin 依赖 agent-hub-ai，且 Mapper 扫描覆盖 org.dromara.ai.mapper");
+        }
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData meta = connection.getMetaData();
-            List<String> missing = new ArrayList<>();
-            StringBuilder found = new StringBuilder();
-            for (String table : REQUIRED_TABLES) {
-                boolean exists = false;
-                try (ResultSet rs = meta.getTables(connection.getCatalog(), null, table, new String[]{"TABLE"})) {
-                    while (rs.next()) {
-                        if (table.equalsIgnoreCase(rs.getString("TABLE_NAME"))) {
-                            exists = true;
-                            break;
-                        }
-                    }
-                }
-                if (exists) {
-                    found.append(table).append(' ');
-                } else {
-                    missing.add(table);
+            Set<String> existing = new HashSet<>();
+            try (ResultSet rs = meta.getTables(connection.getCatalog(), null, "%", new String[]{"TABLE"})) {
+                while (rs.next()) {
+                    existing.add(rs.getString("TABLE_NAME").toLowerCase(Locale.ROOT));
                 }
             }
+            List<String> missing = expected.stream().filter(table -> !existing.contains(table)).toList();
             if (!missing.isEmpty()) {
-                return fail(key, name, CATEGORY_INFRA, "缺少表：" + String.join("、", missing),
-                    "执行建库脚本 script/sql/ry_ai.sql（PG：postgres/postgres_ry_ai.sql）");
+                return fail(key, name, CATEGORY_INFRA,
+                    "缺少表：" + String.join("、", missing) + "（实体登记 " + expected.size() + " 张，库内命中 "
+                        + (expected.size() - missing.size()) + " 张）",
+                    "执行建库脚本 script/sql/{postgres|mysql}/agenthub-ai-ddl.sql（编排序号 20，口径见 docs/configuration.md §3）");
             }
-            return pass(key, name, CATEGORY_INFRA, "四张核心表均已存在：" + found.toString().trim());
+            return pass(key, name, CATEGORY_INFRA, "实体登记的 " + expected.size() + " 张 ai_ 表在库内全部存在");
         } catch (Exception e) {
             return fail(key, name, CATEGORY_INFRA, "元数据查询失败：" + e.getMessage(), "检查数据库账号权限");
         }
+    }
+
+    /**
+     * 实体侧的 AI 表清单：MyBatis-Plus 在解析 Mapper 时按实体注册 TableInfo。
+     *
+     * <p>只认显式 {@code @TableName} 的实体——{@code AiAgent} 这类跨表共用字段载体没有注解，
+     * MyBatis-Plus 会按类名推导出一个并不存在的 {@code ai_agent}，照着它查表就是永久失败。</p>
+     */
+    static Set<String> expectedAiTables() {
+        return TableInfoHelper.getTableInfos().stream()
+            .map(info -> info.getEntityType().getAnnotation(TableName.class))
+            .filter(Objects::nonNull)
+            .map(TableName::value)
+            .map(table -> table.toLowerCase(Locale.ROOT))
+            .filter(table -> table.startsWith(AI_TABLE_PREFIX))
+            .collect(Collectors.toCollection(TreeSet::new));
     }
 
     /**

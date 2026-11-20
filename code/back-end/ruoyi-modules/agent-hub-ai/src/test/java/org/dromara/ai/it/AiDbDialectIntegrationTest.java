@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * 集成测试：**两方言真库**的 schema 与菜单一致性（PostgreSQL 栈 + MySQL 栈）。
  *
- * <p><b>为什么需要</b>：两套建库脚本（{@code script/sql/ry_ai.sql} 与 {@code script/sql/postgres/postgres_ry_ai.sql}）
+ * <p><b>为什么需要</b>：两套建库脚本（{@code script/sql/mysql/agenthub-ai-ddl.sql} 与
+ * {@code script/sql/postgres/agenthub-ai-ddl.sql}）
  * 各自演进，历史上多次出现「只改一边」——表 / 列 / 索引 / 按钮权限在另一方言缺失，且**单测（全 mock）
  * 抓不到、端到端测试只在单个栈上跑也抓不到**。本测试把两个栈的**真实 schema** 拉出来逐项对比。</p>
  *

@@ -55,7 +55,7 @@ import java.util.Set;
 /**
  * AI 场景包 Service 业务层处理
  *
- * <p>本文档口径（见 {@code script/sql/postgres/postgres_ry_ai.sql} 第三十二部分）：</p>
+ * <p>口径见 {@code script/sql/{dialect}/agenthub-ai-ddl.sql} 的 {@code ai_scenario_pack_*} 三张绑定表：</p>
  * <ul>
  *   <li>三类绑定集合「先删后插」全量覆盖（关联表无 del_flag）；本体为逻辑删除。</li>
  *   <li>包内业务工具必须是已登记的业务工具；MCP 工具必须是「启用中的连接 + 其 enable_tools 白名单子集」。</li>

@@ -41,10 +41,10 @@ public final class AiTestSupport {
     private static final String[] ENTITY_NAMES = {
         "AiAgent", "AiAgentKb", "AiAgentSkill", "AiAgentSubagent", "AiAgentTask", "AiAgentTaskRun",
         "AiAgentTool", "AiAgentToolTrust", "AiChannel", "AiChannelIdentity", "AiChannelThread",
-        "AiChunk", "AiDocument", "AiEntryAgent", "AiExpertAgent", "AiKnowledgeBase", "AiMcpClient",
-        "AiMessage", "AiModelConfig", "AiPermissionDecisionLog", "AiRouteExpertCall", "AiRouteRun",
-        "AiScenarioPack", "AiScenarioPackMcpTool", "AiScenarioPackSkill", "AiScenarioPackTool",
-        "AiSession", "AiSessionResource", "AiSkill", "AiSkillResource", "AiSubagent", "AiTool",
+        "AiChunk", "AiDailyDigest", "AiDocument", "AiEntryAgent", "AiExpertAgent", "AiKnowledgeBase", "AiMcpClient",
+        "AiMessage", "AiMessageAttachment", "AiModelConfig", "AiPermissionDecisionLog", "AiRouteExpertCall", "AiRouteRun",
+        "AiSafetyEvent", "AiScenarioPack", "AiScenarioPackMcpTool", "AiScenarioPackSkill", "AiScenarioPackTool",
+        "AiSensitiveWord", "AiSession", "AiSessionResource", "AiSkill", "AiSkillResource", "AiSubagent", "AiTool",
         "AiToolCallLog", "AiToolTag", "AiToolTagRel", "AiTrace", "AiUsageStat"
     };
 
