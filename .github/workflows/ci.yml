@@ -33,6 +33,9 @@ jobs:
       - name: 密钥入库防护
         run: node scripts/checks/no-secrets-in-repo.mjs
 
+      - name: 文档交叉引用
+        run: node scripts/checks/doc-links.mjs
+
       - name: 探测已入仓的构建工件
         id: probe
         run: |
@@ -137,6 +140,7 @@ jobs:
             echo "| 双方言 SQL 一致性与幂等 | 恒定执行 |"
             echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
             echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
+            echo "| 文档交叉引用（绝对链接/死链/锚点） | 恒定执行 |"
             echo "| 部署编排校验（§4 静态断言 + compose 渲染） | $(state "$DEPLOY" 'deploy/deploy-pg/docker-compose.yml 未入仓') |"
             echo "| Nginx 入口配置语法（nginx -t） | $(state "$DEPLOY" 'deploy/ 未入仓') |"
             echo "| AI 模块单测 | $(state "$BACKEND" 'code/back-end/pom.xml 未入仓') |"
