@@ -93,8 +93,27 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 
 ## 6. 已知未决
 
-1. `app` 服务的镜像构建依赖 B 线在 `code/back-end` 落 `Dockerfile`；本编排只约定 `/config` 挂载点与 `8080`/`8081` 监听，不改这条就起不了 app。
-2. PG 栈起不来的根因在底座侧：`ruoyi-admin/pom.xml` 的 `org.postgresql:postgresql` 是注释态，B 线导入时必须放开（见 D1 日志）。
+1. ~~`app` 服务的镜像构建依赖 B 线在 `code/back-end` 落 `Dockerfile`~~ 已交付：`code/back-end/Dockerfile` 两阶段构建，口径见 §7。仍待现场确认的是受限网络下的基础镜像通道（§7 末条）。
+2. 底座 `ruoyi-admin/pom.xml` 的 PostgreSQL 驱动在 D1 日志里是注释态；现仓库内已放开，且与 MySQL 驱动同时在位、按 url 选择（`scripts/checks/deploy-static.mjs` 的镜像接线段会校验 ruoyi-admin 依赖 `agent-hub-ai`，但驱动在位与否仍以起栈实测为准）。
 3. 两栈各自带一套 Milvus/etcd/MinIO，同机并存的内存预算要在 §11 前置里确认；若余量不足，改为共享外部网络与卷属部署变更，需队长批准。
-4. `deploy/**` 的改动由 CI 两条门禁兜住：`node scripts/checks/deploy-static.mjs`（端口口径、`.env.example` 与 compose 占位符对齐、Nginx 关键指令、MySQL 字符集前置、profile 覆盖接线，docker 在场时追加一次真实渲染）与「Nginx 入口配置语法」（现签一次性自签证书后跑 `nginx -t`，必须带 `--add-host app:127.0.0.1`，否则 upstream 解析在测试阶段就失败）。两条都随 `deploy/deploy-pg/docker-compose.yml` 是否入仓自动启停，不起容器、不连真库；行为类实测口径见上表。
+4. `deploy/**` 的改动由 CI 两条门禁兜住：`node scripts/checks/deploy-static.mjs`（端口口径、`.env.example` 与 compose 占位符对齐、Nginx 关键指令、MySQL 字符集前置、profile 覆盖接线、镜像接线（§7），docker 在场时追加一次真实渲染）与「Nginx 入口配置语法」（现签一次性自签证书后跑 `nginx -t`，必须带 `--add-host app:127.0.0.1`，否则 upstream 解析在测试阶段就失败）。两条都随 `deploy/deploy-pg/docker-compose.yml` 是否入仓自动启停，不起容器、不连真库；行为类实测口径见上表。
 5. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。CI 侧走 `RUNNER_TEMP`，无此问题。
+
+## 7. 应用镜像构建与容器内端口
+
+`docker compose --build` 一条命令产出 app 镜像，构建与运行分两阶段（`code/back-end/Dockerfile`）：
+
+| 项 | 口径 | 为什么这样定 |
+|---|---|---|
+| 构建阶段 | `maven:3.9-eclipse-temurin-21` + `RUN --mount=type=cache,target=/root/.m2`，命令 `mvn -B -ntp -Dmaven.test.skip=true -pl ruoyi-admin -am package` | 底座自带 `ruoyi-admin/Dockerfile` 走「宿主先 `mvn package` 再 ADD jar」，换台机器要先装齐同版本 JDK；把 Maven 装进容器后版本口径只由 pom 的 `<java.version>` 决定。`-am` 必需：镜像本地仓库里没有同级模块，只 `-pl ruoyi-admin` 会解析失败。测试不在镜像里跑（属 CI 与起栈后的 e2e） |
+| 运行阶段 | `eclipse-temurin:21-jre`，`WORKDIR /app` | compose 的容器探针是 `timeout 3 bash -c '</dev/tcp/127.0.0.1/<port>'`，`-jre-alpine` 里没有 bash 与 coreutils，探活会永远不绿 |
+| 容器内端口 | `ENV SERVER_PORT` 由 compose 按栈注入（PG `8080` / MySQL `8081`），ENTRYPOINT 传 `-Dserver.port=${SERVER_PORT}` | 底座 yml 写死 8080；两栈同机并存时，MySQL 栈的 Nginx upstream 与健康探针都按 §1 的口径指 8081，容器不监听 8081 就是「nginx 502 + 容器不 healthy」的连环故障。三处（compose 环境 / nginx upstream / Dockerfile）由 `deploy-static.mjs` 的镜像接线段对齐 |
+| 落盘目录 | `/app/logs`（logback `log.path=./logs`）与 `/app/data`（`workspace-root=./data/agent-workspace`）各挂命名卷 | 长期记忆的 `MEMORY.md`、抽取流水与版本快照是文件而不是表；不挂卷的话一次 `--force-recreate` 就把用户记忆清零，而且现场无法复现 |
+| 上下文 | `code/back-end/.dockerignore` 排除 `**/target/` 与 IDE/系统文件 | 不排除时 64 MB 上下文里有 50 MB 是本地构建产物，每次构建重传一遍，`COPY` 进去的还是过期 jar |
+| 探针与就绪 | 不用 `GET /ai/health/check`（带 `ai:health:check` 鉴权），改用 TCP 就绪 + Nginx `/healthz` | 见 §2 与 D2 日志：带鉴权的接口作容器探针只会把「未登录」当成启动失败 |
+
+现场校验（本地与 CI 同一入口）：`node scripts/checks/deploy-static.mjs`。
+
+受限网络下的已知偏差：Docker Hub 不可达时，`maven:3.9-eclipse-temurin-21`、`eclipse-temurin:21-jre`、`milvusdb/milvus:v2.5.5`、`quay.io/coreos/etcd:v3.5.14`、`minio/minio:RELEASE.2024-08-17T01-24-54Z` 都要经镜像站拉取后 `docker tag` 回正式名，编排文件本身不改；Maven 依赖走 `repo1.maven.org` 通常可直连，与本条无关。
+
+镜像暂以 root 运行（与底座编排习惯一致，卷属主也最简单）；改非 root 属一周后硬化项，届时须同时验证两个命名卷的属主。

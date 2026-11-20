@@ -129,7 +129,7 @@ AgentHub
 | CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs` |
 | Java 源文件 | `.java` 叶子名必须与 public 类型名逐字一致（JLS §7.6），PascalCase 属语言强制而非项目偏好，豁免本表小写 kebab 校验；包目录段仍全小写，其它扩展名不放行 | `.../org/dromara/ai/contract/AiEventType.java` |
 | 交付配置文件 | GitHub 强制约定名，不受本表小写 kebab 约束且豁免命名校验：`.github/workflows/ci.yml`、`.github/pull_request_template.md`（大小写不敏感，须位于默认分支方生效） | `.github/pull_request_template.md` |
-| 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
+| 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；app 镜像固定 `code/back-end/Dockerfile` + 同目录 `.dockerignore`（构建上下文即后端根，`app.build.context` 指过去，口径见 [配置文档 §7](../../configuration.md)）；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
 | 文档 | 规格与计划 `docs/superpowers/{specs,plans}/YYYY-MM-DD-{kebab-topic}-{design\|plan}.md`；长期文档固定名 `docs/architecture.md`、`docs/development.md`、`docs/configuration.md` | 本文即 `...-decomposition-design.md` |
 | 配置键 | 运行期配置沿用手册点分 kebab（`memory-flush-mode`、`reaper.stale-minutes`）；环境变量一律 `AGENTHUB_*` SCREAMING_SNAKE | `AGENTHUB_AI_CRYPTO_KEY` |
 | 提交与分支 | 约定式提交 `<type>: <中文简述>`；分支 `feature/<scope>` / `fix/<scope>`，`<scope>` 用 `{domain}` 名 | `feat(knowledge): 混合检索 RRF 融合` |
