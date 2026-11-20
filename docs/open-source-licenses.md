@@ -1,0 +1,25 @@
+# 第三方许可与原创范围声明
+
+本页回答两件事：真实系统里哪些代码来自开源中后台底座、哪些是本项目的自有开发成果。
+
+## 底座（保留许可声明）
+
+- 后端：RuoYi-Vue-Plus 6.0.0，MIT License，Copyright (c) 2019 RuoYi-Vue-Plus。许可全文随仓分发，见 [code/back-end/LICENSE](../code/back-end/LICENSE)。
+- 前端：RuoYi-Vue-Plus 配套管理台前端 plus-ui 6.0.0，同为 MIT License，Copyright (c) 2019 RuoYi-Vue-Plus。许可全文见 [code/front-end/LICENSE](../code/front-end/LICENSE)。
+- 覆盖范围：`code/back-end` 下除 `ruoyi-modules/agent-hub-ai` 与 `script/sql/agenthub-ai-*` 之外的全部模块目录，`code/front-end/src` 下除 `views/ai`、`api/ai` 之外的全部页面与组件，以及它们携带的 Spring 自动配置、i18n 词条与 MyBatis 映射文件。
+- 底座自带的版权与作者声明（源码注释中的 `@author`、`pom.xml` 与 `package.json` 的许可字段、启动 banner 里的框架标识）一并保留，不做删除或改写。
+- Maven 与 pnpm 引入的传递依赖按各自的开源许可分发，清单由构建工具生成，不在本页逐一列举。
+
+## AgentHub 自有开发范围
+
+- AI 能力域后端：`code/back-end/ruoyi-modules/agent-hub-ai`，含智能体内核装配、工具注册与调用、知识库检索与上下文装配、路由编排、安全合规与审计、SSE 事件契约。
+- AI 能力域前端：`code/front-end/src/views/ai`、`code/front-end/src/api/ai` 及其类型定义。
+- 数据契约：`code/back-end/script/sql/{postgres,mysql}/agenthub-ai-{ddl,seed,menu}.sql` 的 40 张 `ai_` 表、种子数据与菜单注册。
+- 交付门禁与部署：`scripts/checks` 下的校验脚本、`deploy/` 下的编排与 Nginx 配置。
+- 设计与规格文档：`docs/superpowers/specs` 与《开发总览手册.md》。
+
+上述范围为本项目原创，功能需求以《开发总览手册.md》为基线，架构与契约以[最终设计稿](superpowers/specs/2026-11-20-agenthub-decomposition-design.md)为准。
+
+## 变更记录
+
+- 2026-11-20：底座整树入仓，首次登记第三方许可与原创范围边界。
