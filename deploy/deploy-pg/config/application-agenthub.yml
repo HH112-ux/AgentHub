@@ -1,0 +1,36 @@
+# AgentHub PG 栈运行期配置覆盖。
+#
+# 为什么要这个文件：底座 6.0.0 的 application-prod.yml 把数据库写成 localhost:3306/ry-vue + root/root、
+# Redis 写成 localhost:6379 + ruoyi123，sa-token 与 api-decrypt 的密钥是仓库内明文。这些值不覆盖，
+# 栈只会去连不存在的本机 MySQL，且带着默认密钥上线（手册 §10.2 第 4 项直接判不通过）。
+#
+# 做法：底座自带 yml 一行不改（升级底座不会冲掉我们），改由本文件把属性路径接回 AGENTHUB_* 环境变量；
+# 值只存在于宿主机 .env，不入库不入仓。compose 用 SPRING_CONFIG_ADDITIONAL_LOCATION 挂载本目录，
+# 并把 agenthub 追加到激活 profile 之后——额外位置 + 后置 profile 在 Spring Boot 配置解析里都压过
+# classpath 的 application-prod.yml，已用 spring-boot 4.1.1 实测（见 docs/configuration.md）。
+#
+# 这里只映射「底座已存在的属性路径」。我们自己模块的配置项由 agent-hub-ai 的代码声明后再补进来，
+# 不放没人读的死键名。
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          driver-class-name: org.postgresql.Driver
+          url: ${AGENTHUB_DATASOURCE_URL}
+          username: ${AGENTHUB_DATASOURCE_USERNAME}
+          password: ${AGENTHUB_DATASOURCE_PASSWORD}
+  data:
+    redis:
+      host: ${AGENTHUB_REDIS_HOST}
+      port: ${AGENTHUB_REDIS_PORT:6379}
+      password: ${AGENTHUB_REDIS_PASSWORD}
+
+# JWT 与接口加解密密钥：底座的默认值必须整套换掉才允许对外。
+sa-token:
+  jwt-secret-key: ${AGENTHUB_SA_TOKEN_JWT_SECRET_KEY}
+
+api-decrypt:
+  publicKey: ${AGENTHUB_API_DECRYPT_PUBLIC_KEY}
+  privateKey: ${AGENTHUB_API_DECRYPT_PRIVATE_KEY}

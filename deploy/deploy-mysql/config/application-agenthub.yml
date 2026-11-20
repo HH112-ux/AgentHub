@@ -1,0 +1,27 @@
+# AgentHub MySQL 栈运行期配置覆盖——与 PG 栈同口径，只有驱动与数据源默认值不同。
+# 为什么要这个文件、以及「挂载目录 + 后置 profile 压过底座 classpath 明文默认值」的实测依据，
+# 见 deploy-pg/config/application-agenthub.yml 头部与 docs/configuration.md。
+# 这里只映射「底座已存在的属性路径」；我们自己的配置项由 agent-hub-ai 代码声明后再补。
+
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: ${AGENTHUB_DATASOURCE_URL}
+          username: ${AGENTHUB_DATASOURCE_USERNAME}
+          password: ${AGENTHUB_DATASOURCE_PASSWORD}
+  data:
+    redis:
+      host: ${AGENTHUB_REDIS_HOST}
+      port: ${AGENTHUB_REDIS_PORT:6379}
+      password: ${AGENTHUB_REDIS_PASSWORD}
+
+# JWT 与接口加解密密钥：底座的默认值必须整套换掉才允许对外。
+sa-token:
+  jwt-secret-key: ${AGENTHUB_SA_TOKEN_JWT_SECRET_KEY}
+
+api-decrypt:
+  publicKey: ${AGENTHUB_API_DECRYPT_PUBLIC_KEY}
+  privateKey: ${AGENTHUB_API_DECRYPT_PRIVATE_KEY}
