@@ -1,10 +1,12 @@
-# AgentHub 一周全量 · 三人协作开发计划
+# AgentHub 一周全量 · 交付计划（队长单线执行）
 
-> **For agentic workers:** REQUIRED SUB-SKILL: 用 superpowers:executing-plans 按任务逐条执行本计划；步骤用 `- [ ]` 复选框跟踪。逐功能的 TDD 细化任务见 §13 的三条线计划文件。
+> **分工变更**：三人排班已于 2026-11-20 取消，裁决记录见[设计稿 §8.1](../specs/2026-11-20-agenthub-decomposition-design.md)。本文件的「后端面 / 前端面」是工作面而非责任人，**均为队长单线执行**；`feature/lead-contracts`、`feature/backend-core`、`feature/frontend-shell` 三条长期分支未启用，实际交付改为按制品面开 PR：后端全树、前端全树、契约与门禁重冻。任务范围、验收标准与 §7.3 降级口径全部保留未动。
 
-**Goal:** 让 3 人在 5 个工作日内互不阻塞地交付《设计稿》§7.1 的一周全量范围（40 表、34 页、98 按钮权限、全部能力域），并按 §10.2 发版门禁上线。
+> **For agentic workers:** REQUIRED SUB-SKILL: 用 superpowers:executing-plans 按任务逐条执行本计划；步骤用 `- [ ]` 复选框跟踪。逐功能的 TDD 细化任务不再单列计划文件，直接由设计稿 §7.1 交付清单与 §12.7 C 段增量表驱动。
 
-**Architecture:** 契约先行 + 三条并行线（队长＝架构/契约/权限 HITL/RAG/MCP/安全/审计发布，队员 B＝后端业务与集成，队员 C＝前端 34 页与介绍页）。所有跨线协作通过 D1 冻结的代码侧常量与 SQL 完成，前端按契约 mock、不等后端；集成只在每日固定窗口发生。
+**Goal:** 在 5 个工作日内单线交付《设计稿》§7.1 的一周全量范围（40 表、34 页、98 按钮权限、全部能力域），并按 §10.2 发版门禁上线。
+
+**Architecture:** 契约先行 + 工作面并行（架构/契约/权限 HITL/RAG/MCP/安全/审计发布，后端业务与集成，前端 34 页与介绍页三条工作面）。跨面协作靠 D1 冻结的代码侧常量与 SQL 完成，前端按契约 mock、不等后端；集成只在每日固定窗口发生。单线执行下「并行」指工作面交替而非人力并行，契约面仍是所有改动的收敛点。
 
 **Tech Stack:** JDK 21、Spring Boot 4.1.1、AgentScope Java 2.0.4、开源中后台底座 6.0.0、Vue 3.5 + TypeScript + Element Plus + Vite + Pinia、pnpm（Node ≥ 20.19）、PostgreSQL 14 / MySQL 8.0、Redis、Milvus + etcd、MinIO/OSS、Nginx、Qoder Sites。
 
@@ -25,7 +27,7 @@
 - RAG 基线：hit@1 ≥ 75.0%、hit@3 ≥ 89.3%、hit@5 ≥ 98.2%、MRR@5 ≥ 0.829（56 用例 / 10 篇语料）。
 - 密钥：不入库不入仓；模型密钥密文落库不回显；测试机密放 `.env.local`（已 gitignore）。
 - Git：远程固定 `origin`＝`https://github.com/HH112-ux/AgentHub.git`；日常开发不直推 `main`，走 `feature/<scope>` / `fix/<scope>` + PR + 至少一名非作者评审；提交用约定式 `<type>: <中文简述>`。
-- 契约：§6 与 §12 冻结后改动需队长批准并同步三条线。
+- 契约：§6 与 §12（含 §12.7 效力修正）冻结后改动需队长批准，并同步后端、前端、契约三条工作面。
 - 节拍：站会 09:30（≤15 分钟，只讲当日验收点/阻塞/契约变更申请）；联调窗口 14:00–17:00；验收 18:00；降级裁定 20:00 前。
 
 ---
@@ -42,12 +44,13 @@
 | `.../org/dromara/ai/contract/AiDegradeReason.java` | 降级原因码唯一常量源 | 队长 |
 | `.../org/dromara/ai/contract/AiToolImpl.java` | 工具 impl 名唯一常量源 | 队长（B 追加常量） |
 | `.../org/dromara/ai/contract/AiPermissionKeys.java` | 权限标识唯一常量源 | 队长 |
-| `code/front-end/src/api/ai/stream.ts` | SSE 客户端 + 事件类型镜像（TS 联合） | 队员 C |
-| `code/front-end/src/types/ai-contract.ts` | 事件载荷、原因码、权限标识的 TS 镜像 | 队员 C |
-| `e2e/http/L00-contract-consistency.mjs` | 校验 Java 常量与 TS 镜像逐字一致 | 队员 C（队长评审） |
+| `code/front-end/src/api/ai/stream.ts` | SSE 客户端 + 事件类型镜像（TS 联合） | 前端面 |
+| `code/front-end/src/types/ai-contract.ts` | 事件载荷、原因码、权限标识的 TS 镜像 | 前端面 |
+| `e2e/http/L00-contract-consistency.mjs` | 校验 Java 常量与 TS 镜像逐字一致 | 前端面（队长） |
 | `deploy/deploy-pg/.env.example`、`deploy/deploy-mysql/.env.example` | 双栈环境变量清单 | 队长 |
 | `docs/superpowers/plans/2026-11-20-week1-daily-log.md` | 每日验收结果与降级记录（滚动追加，不改写历史） | 队长 |
-| `docs/superpowers/plans/2026-11-20-week1-{lead,backend,frontend}-plan.md` | 三条线逐功能任务清单 | 各线负责人 |
+| [设计稿 §12.7](../specs/2026-11-20-agenthub-decomposition-design.md) | 契约重冻后的效力修正与增量补齐清单 | 队长 |
+| [每日执行日志 D3 行](2026-11-20-week1-daily-log.md) | 三面 PR 的交付读数与本次契约变更明细 | 队长 |
 
 ---
 
@@ -59,17 +62,15 @@
 - Modify: `docs/superpowers/plans/2026-11-20-week1-daily-log.md`
 
 **Interfaces:**
-- Produces: 三条线的工作分支与首个基线提交；后续所有 PR 的目标基线。
+- Produces: 各工作面的短任务分支与首个基线提交；后续所有 PR 的目标基线。
 
-- [ ] **Step 1: 三人各自同步 main 并建自己的长期分支**
+- [x] **Step 1: 同步 main 并建任务分支（单线执行，三条长期分支未启用）**
 
 ```bash
 git fetch origin && git switch main && git pull --ff-only origin main
-git switch -c feature/lead-contracts     # 队长
-git switch -c feature/backend-core       # 队员 B
-git switch -c feature/frontend-shell     # 队员 C
+git switch -c feature/<scope>   # 一个分支只承载一个独立任务，做完即开 PR 合入 main
 ```
-预期：`git status` 干净，三条分支同起点。
+预期：`git status` 干净，任务分支从最新 `origin/main` 起。原计划的 `feature/lead-contracts`、`feature/backend-core`、`feature/frontend-shell` 三条长期分支不启用——单线下长分支会把返工攒到最后，改成短分支 + 频繁合入。
 
 - [x] **Step 2: 队长提供底座制品（D1 已完成）**
 
@@ -132,7 +133,7 @@ gh pr create --base main --title "chore: 三线基线与底座导入" --body "�
 - Test: `e2e/http/L00-contract-consistency.mjs`（本身即契约测试）
 
 **Interfaces:**
-- Produces: 三条线共享的唯一事实源——事件 13 型、原因码 11 个、权限标识、impl 常量、40 表 DDL。
+- Produces: 三条工作面共享的唯一事实源。D1 冻结读数为事件 13 型、原因码 11 个；后端与前端全树入仓后按设计稿 D11（§12.7）重冻为 SSE 事件 16 类、降级原因词表 8 项、权限标识 131 个、工具实现 30 个、40 表 DDL，重冻明细见[每日执行日志](2026-11-20-week1-daily-log.md) D3 行。
 
 - [ ] **Step 1: 先写契约一致性检查（此时必然失败——TS 镜像还不存在）**
 
@@ -337,9 +338,9 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 
 - [ ] **队长** 云服务器与中间件起栈、HTTPS 与域名、四类契约冻结（Task 1–2）、DDL 双方言幂等
   `docker compose -f deploy/deploy-pg/docker-compose.yml up -d --build`（MySQL 栈同）
-- [ ] **队员 B** 底座裁剪、模型配置（密文/连通性/整行复制/引用拦截）、会话与消息落库、SSE echo 主链路
+- [ ] **后端面** 底座裁剪、模型配置（密文/连通性/整行复制/引用拦截）、会话与消息落库、SSE echo 主链路
   `./mvnw -o -pl ruoyi-modules/agent-hub-ai test`
-- [ ] **队员 C** 前端骨架（登录/路由/权限显隐/模板化表格与表单引擎）、`stream.ts` SSE 客户端、工作台消息流
+- [ ] **前端面** 前端骨架（登录/路由/权限显隐/模板化表格与表单引擎）、`stream.ts` SSE 客户端、工作台消息流
   `pnpm build && node e2e/http/L00-contract-consistency.mjs`
 - [ ] **当日验收**：双栈可起可登录、40 表双方言幂等、模型连通性通过、echo 流打通、契约测试绿
 
@@ -347,9 +348,9 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 
 - [ ] **队长** 三层权限与 HITL 暂停/恢复、信任槽位、写工具去重；安全（敏感词/PII/注入/六场景与降级）
   `./mvnw -o -pl ruoyi-modules/agent-hub-ai test -Dtest='*Permission*,*HITL*,*Safety*'`
-- [ ] **队员 B** 工具两段式与内置工具集、工具标签、小Z `route_decision`、专家装配缓存与指纹、暂存件 72 小时回收任务与配额
+- [ ] **后端面** 工具两段式与内置工具集、工具标签、小Z `route_decision`、专家装配缓存与指纹、暂存件 72 小时回收任务与配额
   `./mvnw -o -pl ruoyi-modules/agent-hub-ai test -Dtest='*Tool*,*Route*,*Assembly*,*Attachment*'`
-- [ ] **队员 C** 工作台全部卡片（工具/专家/路由/确认/来源/进度）、资源选择器与附件上传、模型配置页、专家配置页（AI 辅助生成/9 模板/克隆/体检）
+- [ ] **前端面** 工作台全部卡片（工具/专家/路由/确认/来源/进度）、资源选择器与附件上传、模型配置页、专家配置页（AI 辅助生成/9 模板/克隆/体检）
   `pnpm exec playwright test e2e/ui/workbench.spec.ts`
 - [ ] **当日验收**：写工具走完「需确认→允许→落库」且拒绝路径无副作用；一句话路由到专家直答；输入侧敏感词阻断并留痕
 
@@ -357,9 +358,9 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 
 - [ ] **队长** RAG 全链（解析/切片/向量化/BM25/RRF/Rerank/装配/检索测试）+ 评测脚本与基线报告
   `node e2e/rag/run.mjs --report e2e/rag/report-$(date +%Y%m%d).md`
-- [ ] **队员 B** 长期记忆（§12.2 抽取/净化/水位/合并/版本恢复）、工作区、技能仓库、压缩与卸载、编排预算、用量配额、对话偏好
+- [ ] **后端面** 长期记忆（§12.2 抽取/净化/水位/合并/版本恢复）、工作区、技能仓库、压缩与卸载、编排预算、用量配额、对话偏好
   `./mvnw -o -pl ruoyi-modules/agent-hub-ai test -Dtest='*Memory*,*Skill*,*Compaction*,*Usage*'`
-- [ ] **队员 C** 知识库三页（库/文档切片/检索测试）、工具注册页、记忆三页签、工作区、技能页、模型运行时四页
+- [ ] **前端面** 知识库三页（库/文档切片/检索测试）、工具注册页、记忆三页签、工作区、技能页、模型运行时四页
   `pnpm exec playwright test e2e/ui/knowledge.spec.ts e2e/ui/memory.spec.ts`
 - [ ] **当日验收**：文档入库→检索命中→回答带来源卡片；评测报告产出；记忆跨会话生效；长会话触发压缩不爆 Token
 
@@ -367,9 +368,9 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 
 - [ ] **队长** MCP 出口（口令 fail-closed、只读暴露热生效、自演示）与客户端（白名单/归一化/回参逐块脱敏）、子智能体与场景包后端、无人值守白名单
   `./mvnw -o -pl ruoyi-modules/agent-hub-ai test -Dtest='*Mcp*,*Subagent*,*Scenario*'`
-- [ ] **队员 B** 四渠道（飞书/企微/GitHub Webhook + 钉钉/飞书长连接、身份与会话映射、媒体降级、回调幂等）、定时任务与日报生成、计划模式与任务清单
+- [ ] **后端面** 四渠道（飞书/企微/GitHub Webhook + 钉钉/飞书长连接、身份与会话映射、媒体降级、回调幂等）、定时任务与日报生成、计划模式与任务清单
   `./mvnw -o -pl ruoyi-modules/agent-hub-ai test -Dtest='*Channel*,*Task*,*Digest*'`
-- [ ] **队员 C** MCP 两页、渠道三页签、场景包/子智能体页、定时任务页与执行记录弹窗、日报页、首登检查清单
+- [ ] **前端面** MCP 两页、渠道三页签、场景包/子智能体页、定时任务页与执行记录弹窗、日报页、首登检查清单
   `pnpm exec playwright test e2e/ui/channel.spec.ts e2e/ui/task.spec.ts`
 - [ ] **当日验收**：MCP `initialize`/`tools/list`/`tools/call` 通过且错误口令被拒；飞书回调端到端一条消息进得来出得去；定时任务产出日报；无人值守写默认拒绝
 
@@ -377,9 +378,9 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 
 - [ ] **队长** 审计六类落库与保留清理（§12.4）、链路追踪、健康自检（§12.3）、生产密钥门禁；双栈上线 + Nginx + 介绍页发布；发版五道门禁执行
   `node e2e/http/L00-contract-consistency.mjs && ./mvnw -o -pl ruoyi-admin -am test`
-- [ ] **队员 B** 审计接口与统计、编排运行统计卡、Reaper 中断回收、单测补齐与 4 类集成测试、e2e 全量回归配合
+- [ ] **后端面** 审计接口与统计、编排运行统计卡、Reaper 中断回收、单测补齐与 4 类集成测试、e2e 全量回归配合
   `AGENTHUB_IT=true ./mvnw -o -pl ruoyi-admin -am test`
-- [ ] **队员 C** 审计六类页面（消息/工具/权限/追踪/编排运行/日报）、保留管理页、健康自检页、Sites 介绍页与云端 Agent 体验、34 页浏览器巡检
+- [ ] **前端面** 审计六类页面（消息/工具/权限/追踪/编排运行/日报）、保留管理页、健康自检页、Sites 介绍页与云端 Agent 体验、34 页浏览器巡检
   `pnpm exec playwright test e2e/ui --reporter=line`
 - [ ] **当日验收**：设计稿 §10.2 九条全绿（含 34 页无 console.error、e2e 零 FAIL、ERROR 计数 0、健康自检 0 FAIL、演示故事端到端）
 
@@ -436,4 +437,4 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 - **Spec 覆盖**：§7.1 全量清单 → Task 7 的 D1–D5 逐条对应；§10.2 九条验收 → Task 7 D5 + Task 9；§12 六条细则 → Task 7 的 D2（会话治理/附件回收）、D3（记忆）、D5（健康自检/审计保留）；§11 前置条件 → Task 1 Step 2 与 Task 7 D1。无遗漏。
 - **占位符扫描**：无「待定/后续补充」；所有命令、文件名、常量值与验收数字均已给全。
 - **类型一致性**：事件 13 型、原因码 11 个、权限标识 12 个在 Java、TS、契约测试三处字面一致（由 `L00` 机器校验）；表数 40、端口 8080/8081、RAG 四项基线与 spec 完全一致。
-- **待补**：三条线的逐功能 TDD 计划文件仍是 spec §13 的待办项，本计划只覆盖协作与交付节拍。
+- **待补**：设计稿 §12.7 C 段的 11 项增量（健康自检 40 表与缓存、审计保留下限与分批、会话并发保护与留痕、附件状态列与配额、记忆版本权限）尚未实现，逐条开 `feature/<scope>` 分支交付；本计划只覆盖节拍与验收。

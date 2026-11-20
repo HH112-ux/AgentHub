@@ -50,12 +50,14 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 
 | 序号 | 文件 | 内容 |
 |---|---|---|
-| `10` | `${RY_BASE_SQL}` | 底座基线（`sys_menu`/`sys_dict_*` 等真表与自带数据），B 线导入底座后落在 `code/back-end/script/sql/...` |
-| `20` | `agenthub-ai-ddl.sql` | 40 张 `ai_*` 表 |
-| `30` | `agenthub-ai-seed.sql` | 内置只读工具、示例模型、33 字典类型 / 127 字典项 |
-| `40` | `agenthub-ai-menu.sql` | 34 页菜单 + 98 按钮权限标识（132 个 `ai:{模块}:{动作}`） |
+| `10` | `script/sql/base/{dialect}/ruoyi-vue-base.sql` | 底座系统基线：`sys_menu`/`sys_dict_*`/`sys_user` 等真表与自带数据 |
+| `11` | `script/sql/base/{dialect}/ruoyi-job-base.sql` | 任务调度表（`schedule_job` 等） |
+| `12` | `script/sql/base/{dialect}/ruoyi-workflow-base.sql` | 工作流表 |
+| `20` | `script/sql/{dialect}/agenthub-ai-ddl.sql` | 40 张 `ai_*` 表 |
+| `30` | `script/sql/{dialect}/agenthub-ai-seed.sql` | 内置只读工具、示例模型、31 字典类型 / 108 字典项 |
+| `40` | `script/sql/{dialect}/agenthub-ai-menu.sql` | 139 行菜单（7 目录 + 34 页面 + 98 按钮）= 131 个 `ai:{模块}:{动作}` 权限标识 |
 
-`RY_BASE_SQL` 留空时挂 `/dev/null` 跳过——只有 `sys_menu`/`sys_dict_*` 不存在时 `30`/`40` 会报错，此路径仅用于单测 `ai_` 表，不是可用栈。
+底座基线随仓库存放在 `script/sql/base/`，compose 里按序号写死挂载（`deploy/deploy-{pg,mysql}/docker-compose.yml`），不再走外部路径变量：基线一旦缺失，`30`/`40` 因缺 `sys_menu`/`sys_dict_*` 直接报错，栈就起不来——把「缺文件」做成运行期变量等于把联调阻塞留到起栈那一刻。要换基线版本请直接改这三个挂载项（走 PR）。
 
 ### MySQL 必须挂 `conf.d/agenthub.cnf`
 
@@ -72,9 +74,10 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 项 | 方式 | 结果 |
 |---|---|---|
 | 40 表双方言幂等 | 底座真表 + 我方三脚本 × 两遍 × PG14/MySQL8.4，`ON_ERROR_STOP=1` | 两遍 0 错 |
-| 132 权限标识 | Java 常量 ↔ PG/MySQL 真表 `perms` 三向对照 | 缺失 0 多余 0，双方言差异 0 |
-| 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 138 / 33+127 行全部对齐 |
-| 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 132 perms / 中文无损 |
+| 131 权限标识 | 注解与常量类 ↔ 双方言菜单脚本对账（`e2e/http/L00-contract-consistency.mjs`） | 注解 ⊆ 菜单 = 常量，双方言差异 0 |
+| 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 139 菜单行 / 31+108 字典行 |
+| 状态字典 ↔ 实体常量 | `e2e/http/L00-contract-consistency.mjs` E 段：5 个 `ai_*_status` 的取值集合与实体 `STATUS_*` 常量双向比对，另断言取值不重复、词表不空、字典项不孤立 | 5 类逐字对齐；`ai_attachment_status` 不登记（`ai_message_attachment` 无 `status` 列），口径见设计稿 §12.7 |
+| 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损 |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
 | 部署门禁有效性 | 对 `deploy-static.mjs` 做 8 项变异（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件） | 8/8 如期变红且报错命中对应断言；无 docker 时渲染记为「未执行」而非静默通过 |
 
