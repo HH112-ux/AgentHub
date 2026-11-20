@@ -195,7 +195,7 @@ public enum AiDegradeReason {
 }
 ```
 
-`AiPermissionKeys.java` 为 `public static final String` 常量，值形如 `"ai:knowledge:search"`；至少含设计稿 §12 新增的 12 个标识（`ai:health:check`、`ai:audit:retention:view|edit|purge|unlimited`、`ai:session:governance:list|terminate|delete|export`、`ai:memory:version:restore`、`ai:attachment:recycle`、`ai:runtime:unattended:edit`）。`AiToolImpl.java` 同理，值为 impl 名（`deptQuery`、`announcementWrite`、`dailyDigestWrite`、`memorySearch`、`routeDecision` 等）。
+`AiPermissionKeys.java` 为 `public static final String` 常量，值形如 `"ai:knowledge:list"`，常量名由值按 `:` 转大写蛇形（`AI_KNOWLEDGE_LIST`），因此每段只允许 `[a-z0-9]`，不得含 `-`（原 `ai:audit:retention:dry-run` 已改名 `ai:audit:retention:preview`）；取值以 `agenthub-ai-menu.sql` 的 `sys_menu.perms` 为准，共 132 条，其中含设计稿 §12 新增的 12 个标识（`ai:health:check`、`ai:audit:retention:view|edit|purge|unlimited`、`ai:session:governance:list|terminate|delete|export`、`ai:memory:version:restore`、`ai:attachment:recycle`、`ai:runtime:unattended:edit`）。`AiToolImpl.java` 同理，值为 `ai_tool.impl_name` 的大写蛇形（内置 11 个：`GET_CURRENT_TIME`、`ROUTE_DECISION`、`MEMORY_SEARCH`、`TODO_WRITE` 等）；B 线新增的底座业务工具按同一风格追加（`DEPT_QUERY`、`ANNOUNCEMENT_WRITE`、`DAILY_DIGEST_WRITE`）。
 
 - [ ] **Step 4: C 写 TS 镜像（字符串必须与 Step 3 逐字相同）**
 
@@ -299,7 +299,7 @@ Expected: 每日收尾时 `main` 处于「可构建、可起栈、可登录」�
 | C 需要全部后端接口 | C | 按 `src/types/ai-contract.ts` 的 Vo 类型在 `src/api/ai/__mock__/{domain}.ts` 造 mock，页面先跑 mock 交付；接口就绪后只改一个 `VITE_USE_MOCK` 开关 |
 | B 需要 34 页交互验证 | B | 用 `e2e/http/L{nn}-*.mjs` 直接打接口断言，不依赖页面 |
 | 双方都需要 DDL | 队长 | D1 12:00 前冻结，之后 B/C 只在自己的表段追加索引脚本 |
-| C 需要权限点显隐 | 队长 + C | 菜单脚本先行，C 用 `ai:knowledge:search` 这类字面量硬编进页面，`L00` 保证与后端常量一致 |
+| C 需要权限点显隐 | 队长 + C | 菜单脚本先行，C 用 `ai:retrieval:test` 这类字面量硬编进页面，`L00` 保证与后端常量一致 |
 | 三方都依赖 `.env.example` | 队长 | 环境变量新增由队长在 D1 统一列出，中途新增走 Task 4 |
 
 **硬规则**：mock 文件只存在于 `__mock__` 目录且不得进生产构建（`vite build --mode production` 前由 `pnpm lint` 的导入检查拦截）。
