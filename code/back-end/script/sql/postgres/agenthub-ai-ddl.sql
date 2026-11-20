@@ -246,7 +246,7 @@ comment on column ai_message.reply_id is 'AgentScope replyId，用于聚合流�
 
 comment on column ai_message.streaming is '流式状态（0已完成 1流式中）';
 
-comment on column ai_message.status is '状态（0正常 1失败）';
+comment on column ai_message.status is '状态（0正常 1失败 2待确认 3已中断）';
 
 comment on column ai_message.error_msg is '失败原因';
 
@@ -344,7 +344,7 @@ comment on column ai_route_run.task_context is '下发给专家的任务片段�
 
 comment on column ai_route_run.expert_call_count is '本次编排的专家调用次数（含重试与换专家）';
 
-comment on column ai_route_run.status is '编排状态：running / success / degraded（降级自答）/ aborted';
+comment on column ai_route_run.status is '编排状态：pending（待人工确认收尾）/ running / success / degraded（降级自答）/ aborted';
 
 comment on column ai_route_run.degrade_reason is '降级或中止原因';
 

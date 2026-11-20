@@ -27,6 +27,16 @@ public class AiSession extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 会话状态：进行中（`ai_session.status`，字典 `ai_session_status`）
+     */
+    public static final String STATUS_ACTIVE = "0";
+
+    /**
+     * 会话状态：已结束
+     */
+    public static final String STATUS_CLOSED = "1";
+
+    /**
      * 置顶标志：普通
      */
     public static final String TOP_NORMAL = "0";
