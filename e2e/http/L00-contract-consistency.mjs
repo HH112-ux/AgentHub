@@ -3,7 +3,7 @@
 // 零依赖纯 ESM，本地与 CI 同一入口：node e2e/http/L00-contract-consistency.mjs
 // 只报违规位置（仓库 public，CI 日志公网可见）。
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
@@ -294,6 +294,52 @@ for (const [type, entity] of STATUS_DICTS) {
   }
 }
 
+// ---------- F. AI 表清单：DDL 建表 = 实体 @TableName = Mapper 覆盖（设计稿 §12.7 I-1） ----------
+// 为什么需要：健康自检「AI 业务表齐全」以实体 @TableName 为基准；基准与建库脚本各改一边时，
+// 这项只按其中一侧自证，缺表要等到起栈点开页面才暴露。
+// MyBatis-Plus 还要解析到 Mapper 才注册 TableInfo，所以「有实体没 Mapper」等于运行时清单少一张表——同样静默。
+const entityOfTable = new Map();
+const declOfTable = new Map();
+for (const file of javaFiles) {
+  const cls = basename(file, '.java');
+  readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+    const m = /@TableName\s*\(\s*(?:value\s*=\s*)?"(ai_[a-z0-9_]+)"/.exec(line);
+    if (!m) return;
+    if (entityOfTable.has(m[1]) && entityOfTable.get(m[1]) !== cls) {
+      fail(`${rel(file)}:${i + 1} 表 ${m[1]} 同时被 ${entityOfTable.get(m[1])} 与 ${cls} 映射，一张表只能有一个实体`);
+    }
+    entityOfTable.set(m[1], cls);
+    declOfTable.set(m[1], `${rel(file)}:${i + 1}`);
+  });
+}
+const mappedEntities = new Set(
+  javaFiles.flatMap((f) => [...readFileSync(f, 'utf8')
+    .matchAll(/extends\s+Base(?:Mapper|MapperPlus)\s*<\s*([A-Za-z0-9_]+)/g)].map((m) => m[1])),
+);
+for (const [table, cls] of entityOfTable) {
+  if (!mappedEntities.has(cls)) {
+    fail(`${declOfTable.get(table)} 实体 ${cls}（表 ${table}）没有 BaseMapperPlus<${cls}, …> 的 Mapper，`
+      + 'MyBatis-Plus 不会为它注册 TableInfo，健康自检的运行时表清单会漏掉这张表');
+  }
+}
+for (const dialect of DIALECTS) {
+  const abs = join(BACK, 'script/sql', dialect, 'agenthub-ai-ddl.sql');
+  const path = rel(abs);
+  const sql = readFileSync(abs, 'utf8');
+  const ddl = new Set([...sql.matchAll(/^create\s+table\s+(?:if\s+not\s+exists\s+)?[`"[]?([a-z0-9_.]+)/gim)]
+    .map((m) => m[1].toLowerCase().split('.').pop()));
+  for (const t of ddl) {
+    if (t.startsWith('ai_') && !entityOfTable.has(t)) {
+      fail(`${path} 建了 ai_ 表 ${t}，没有任何实体 @TableName 认领它——健康自检按实体清单，不会检查这张表`);
+    }
+  }
+  for (const [table, where] of declOfTable) {
+    if (!ddl.has(table)) {
+      fail(`${where} 实体映射 ai_ 表 ${table}，${dialect} 方言的 DDL 里没有它（起栈后 db.schema 判失败）`);
+    }
+  }
+}
+
 if (violations.length) {
   console.error(`\n✗ 契约一致性失败 ${violations.length} 项：`);
   for (const v of violations) console.error(`  - ${v}`);
@@ -303,5 +349,6 @@ if (violations.length) {
 console.log(
   `✓ 契约一致性通过（权限 注解 ${annotated.length} → 菜单 ${menuMysql.size} = 常量 ${keyValues.size}；` +
   `SSE ${typeWire.size} 类；工具 ${implValues.size} 个；降级原因词表 ${prefixes.length} 项、列宽 varchar(${ddlWidth})；` +
-  `状态字典 ${STATUS_DICTS.length} 类 ${[...dictData.values()].filter((r) => STATUS_DICTS.some(([t]) => t === r.type)).length / DIALECTS.length} 项 × ${DIALECTS.length} 方言）`
+  `状态字典 ${STATUS_DICTS.length} 类 ${[...dictData.values()].filter((r) => STATUS_DICTS.some(([t]) => t === r.type)).length / DIALECTS.length} 项 × ${DIALECTS.length} 方言；` +
+  `表清单 实体 ${entityOfTable.size} 张 = ${DIALECTS.join('/')} DDL，且 ${entityOfTable.size} 张都有 Mapper）`
 );

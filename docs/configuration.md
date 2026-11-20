@@ -74,12 +74,13 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 项 | 方式 | 结果 |
 |---|---|---|
 | 40 表双方言幂等 | 底座真表 + 我方三脚本 × 两遍 × PG14/MySQL8.4，`ON_ERROR_STOP=1` | 两遍 0 错 |
+| 40 表清单三方对齐 | `e2e/http/L00-contract-consistency.mjs` F 段：实体 `@TableName` ↔ 双方言 DDL ↔ Mapper 覆盖 | 40 张逐一命中，5 项漂移变异全红。运行期健康项 `db.schema` 用同一份实体清单与 `getTables` 求差集，缺表直接报名字（不再写死「四张核心表」） |
 | 131 权限标识 | 注解与常量类 ↔ 双方言菜单脚本对账（`e2e/http/L00-contract-consistency.mjs`） | 注解 ⊆ 菜单 = 常量，双方言差异 0 |
 | 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 139 菜单行 / 31+108 字典行 |
 | 状态字典 ↔ 实体常量 | `e2e/http/L00-contract-consistency.mjs` E 段：5 个 `ai_*_status` 的取值集合与实体 `STATUS_*` 常量双向比对，另断言取值不重复、词表不空、字典项不孤立 | 5 类逐字对齐；`ai_attachment_status` 不登记（`ai_message_attachment` 无 `status` 列），口径见设计稿 §12.7 |
 | 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损 |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
-| 部署门禁有效性 | 对 `deploy-static.mjs` 做 8 项变异（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件） | 8/8 如期变红且报错命中对应断言；无 docker 时渲染记为「未执行」而非静默通过 |
+| 部署门禁有效性 | 对 `deploy-static.mjs` 做 17 项变异：编排与 Nginx 8 项（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件）+ 镜像接线 9 项（compose 去 `SERVER_PORT`、`ENTRYPOINT` 不传端口、运行期镜像改 `-jre-alpine`、构建镜像 JDK 降 17、构建命令去 `-am`、`ruoyi-admin` 不依赖 `agent-hub-ai`、`/app/data` 退化 bind、删 `.dockerignore` 排除项、删 `Dockerfile`） | 17/17 如期变红且报错命中对应断言（判定按「rc=1 且报错含该断言措辞」，脚本自身崩溃不计通过）；无 docker 时渲染记为「未执行」而非静默通过 |
 
 两栈各跑一遍上述入口用例，探针串分别为 `agenthub-nginx-ok` / `agenthub-mysql-nginx-ok`，用于区分实际应答方。
 

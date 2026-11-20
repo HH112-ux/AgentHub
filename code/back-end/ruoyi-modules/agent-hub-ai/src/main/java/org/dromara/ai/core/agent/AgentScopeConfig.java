@@ -34,7 +34,7 @@ public class AgentScopeConfig {
     private static final String SKILL_SCHEMA = "public";
 
     /**
-     * 技能表名（列结构对框架保持兼容，见 script/sql/postgres/postgres_ry_ai.sql 第十六部分）
+     * 技能表名（列结构对框架保持兼容，见 script/sql/{dialect}/agenthub-ai-ddl.sql 的 ai_skill 表）
      */
     private static final String SKILL_TABLE = "ai_skill";
 

@@ -41,7 +41,7 @@ import java.util.Set;
 /**
  * AI 会话级资源集 Service 业务层处理。
  *
- * <p>口径见 {@code script/sql/postgres/postgres_ry_ai.sql} 第四十一部分：</p>
+ * <p>口径见 {@code script/sql/{dialect}/agenthub-ai-ddl.sql} 的 {@code ai_session_resource} 表：</p>
  * <ul>
  *   <li>资源集**对小Z 与专家同时可见**（专家改为继承会话资源集，取代原 {@code pack=null}）；</li>
  *   <li>场景包**会话内可变**、允许并集；{@code ai_session.scenario_pack_id} 停止写入、保留兼容读取；</li>

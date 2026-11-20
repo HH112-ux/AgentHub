@@ -44,12 +44,17 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -96,6 +101,9 @@ class AiHealthCheckServiceImplTest {
     private final RouteJudge routeJudge = mock(RouteJudge.class);
 
     private AiHealthCheckServiceImpl service;
+
+    /** 库内已有表名集合的测试替身：按实体清单造齐，个别用例再摘除几张模拟建库脚本没跑全。 */
+    private final Set<String> existingTables = new HashSet<>();
 
     private MockedStatic<RedisUtils> redisUtils;
 
@@ -318,6 +326,26 @@ class AiHealthCheckServiceImplTest {
         assertEquals(AiHealthCheckVo.STATUS_PASS, itemOf(report, "db").getStatus());
     }
 
+    @Test
+    @DisplayName("缺任意一张 ai_ 表即判失败，并在结论里点名缺表")
+    void shouldFailAndNameMissingTables() {
+        existingTables.remove("ai_trace");
+        existingTables.remove("ai_model_config");
+        AiHealthCheckVo item = itemOf(service.check(), "db.schema");
+        assertEquals(AiHealthCheckVo.STATUS_FAIL, item.getStatus());
+        assertTrue(item.getDetail().contains("ai_trace"), item.getDetail());
+        assertTrue(item.getDetail().contains("ai_model_config"), item.getDetail());
+    }
+
+    @Test
+    @DisplayName("缺表建议指向本项目建库脚本，而不是底座遗留脚本名")
+    void shouldPointMissingTablesAtAgenthubDdl() {
+        existingTables.remove("ai_trace");
+        AiHealthCheckVo item = itemOf(service.check(), "db.schema");
+        assertTrue(item.getSuggestion().contains("agenthub-ai-ddl.sql"), item.getSuggestion());
+        assertFalse(item.getSuggestion().contains("ry_ai"), "不得指向底座遗留脚本：" + item.getSuggestion());
+    }
+
     // ---------------------------------------------------------------- 探测
 
     @Test
@@ -526,11 +554,20 @@ class AiHealthCheckServiceImplTest {
         when(connection.getMetaData()).thenReturn(meta);
         when(meta.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(meta.getDatabaseProductVersion()).thenReturn("14.0");
+        // 真实驱动一次性返回库内全部表（pattern 为 "%"），也支持按表名点查；两种调用都要答得上。
+        existingTables.clear();
+        existingTables.addAll(AiHealthCheckServiceImpl.expectedAiTables());
+        assertEquals(40, existingTables.size(), "AI 实体表清单与设计稿 §5 的 40 张不一致，健康自检基准失准");
+        existingTables.addAll(List.of("sys_user", "sys_menu", "gen_table"));
         when(meta.getTables(any(), any(), anyString(), any())).thenAnswer(invocation -> {
-            String table = invocation.getArgument(2);
+            String pattern = invocation.getArgument(2);
+            List<String> rows = "%".equals(pattern)
+                ? new ArrayList<>(existingTables)
+                : existingTables.stream().filter(t -> t.equalsIgnoreCase(pattern)).toList();
+            AtomicInteger cursor = new AtomicInteger(-1);
             ResultSet rs = mock(ResultSet.class);
-            when(rs.next()).thenReturn(true, false);
-            when(rs.getString("TABLE_NAME")).thenReturn(table);
+            when(rs.next()).thenAnswer(x -> cursor.incrementAndGet() < rows.size());
+            when(rs.getString("TABLE_NAME")).thenAnswer(x -> rows.get(cursor.get()));
             return rs;
         });
 
