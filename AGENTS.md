@@ -24,3 +24,11 @@
 - 提交信息使用 Conventional Commits：`feat:`、`fix:`、`docs:`、`test:`、`refactor:`、`chore:`。
 - 完成代码任务后，运行相关检查，审查 `git status` 与 diff，只提交本次相关文件并推送当前任务分支到 `origin`。不得包含密钥、本地环境文件或他人的未提交改动。
 - 推送失败时先解决权限、分支或 hook 的根因；禁止强制推送、跳过 hooks 或关闭提交签名来绕过检查。
+
+## 交付门禁与 GitHub 协作
+
+- 合并门槛由两个文件各自执行，本节只路由不复述条目：PR 自查清单 `.github/pull_request_template.md`，CI 作业 `verify` `.github/workflows/ci.yml`。模板与 workflow 只在默认分支 `main` 上生效，改动它们本身也要走 PR。
+- 新增一条强制规则的标准路径：写零依赖校验脚本 `scripts/checks/{scope}.mjs`（本地与 CI 同一入口可跑）→ 在 `ci.yml` 登记为必过步骤 → 在设计稿 §3.2 命名表定位。只在文档里写「必须」而不落脚本，视为门禁缺口。
+- 校验脚本的豁免项（生态强制名、基线文档）必须在脚本内写明出处；不得为让 CI 变绿而放宽规则。
+- 仓库为 public 且 CI 日志公网可见：workflow 与校验脚本只报违规位置，不回显密钥或命中内容。
+- `main` 的分支保护（要求 PR、非作者评审通过、状态检查必过）属共享配置，改动需队长批准。
