@@ -1,0 +1,184 @@
+// A0 契约的前端 TS 镜像：取值由后端 org.dromara.ai.contract 下的 Java 唯一常量源逐字复制，
+// 顺序与后端声明保持一致，行尾注释标注对应的 Java 常量名。
+// 任一端改动都要按设计稿 §6 走契约变更流程；e2e/http/L00-contract-consistency.mjs 在 CI 校验 Java ↔ 本文件 ↔ 菜单 SQL 三方逐字一致。
+// 交付物地图为本文件另留了「事件载荷」类型：载荷字段名尚未按 §6 裁定，此处先落笔会造出第二套口径，
+// 随 SSE 客户端 src/api/ai/stream.ts 一并补，信封字段用 §6.2 的 type / sessionId / turnId / seq / payload。
+
+/** SSE 事件类型：后端 AiEventType 枚举的 wire 取值；SSE 帧 event 字段只能取这些值（13 项）。 */
+export type AiEventType =
+  | 'text_delta'       // TEXT_DELTA
+  | 'route_hint'       // ROUTE_HINT
+  | 'expert_start'     // EXPERT_START
+  | 'expert_result'    // EXPERT_RESULT
+  | 'tool_call_start'  // TOOL_CALL_START
+  | 'tool_call_end'    // TOOL_CALL_END
+  | 'confirm_request'  // CONFIRM_REQUEST
+  | 'confirm_result'   // CONFIRM_RESULT
+  | 'progress'         // PROGRESS
+  | 'sources'          // SOURCES
+  | 'stopped'          // STOPPED
+  | 'turn_done'        // TURN_DONE
+  | 'turn_error';      // TURN_ERROR
+
+/** 降级原因码：后端 AiDegradeReason 枚举的 code 取值；随 turn_error 与降级提示下发（11 项）。 */
+export type AiDegradeReason =
+  | 'EXPERT_FAILED'              // EXPERT_FAILED
+  | 'EXPERT_TIMEOUT'             // EXPERT_TIMEOUT
+  | 'EXPERT_EMPTY'               // EXPERT_EMPTY
+  | 'ROUTE_CONTRACT_INVALID'     // ROUTE_CONTRACT_INVALID
+  | 'BUDGET_EXCEEDED'            // BUDGET_EXCEEDED
+  | 'BM25_NOT_READY'             // BM25_NOT_READY
+  | 'RERANK_UNAVAILABLE'         // RERANK_UNAVAILABLE
+  | 'SAFETY_ENGINE_UNAVAILABLE'  // SAFETY_ENGINE_UNAVAILABLE
+  | 'MEDIA_FAILED'               // MEDIA_FAILED
+  | 'ADMIN_TERMINATED'           // ADMIN_TERMINATED
+  | 'STALE_REAPED';              // STALE_REAPED
+
+/** 工具实现标识：后端 AiToolImpl 常量取值，即 ai_tool.impl_name；出现在 tool_call_* 事件中（11 项）。 */
+export type AiToolImplName =
+  | 'GET_CURRENT_TIME'         // GET_CURRENT_TIME
+  | 'GET_CURRENT_USER'         // GET_CURRENT_USER
+  | 'GET_CURRENT_DEPT'         // GET_CURRENT_DEPT
+  | 'GET_CURRENT_PERMISSION'   // GET_CURRENT_PERMISSION
+  | 'ROUTE_DECISION'           // ROUTE_DECISION
+  | 'MEMORY_SEARCH'            // MEMORY_SEARCH
+  | 'LOAD_SKILL_THROUGH_PATH'  // LOAD_SKILL_THROUGH_PATH
+  | 'READ_SKILL'               // READ_SKILL
+  | 'TODO_WRITE'               // TODO_WRITE
+  | 'MEMORY_SAVE'              // MEMORY_SAVE
+  | 'SESSION_SEARCH';          // SESSION_SEARCH
+
+/** 权限标识：后端 AiPermissionKeys 常量取值，即 sys_menu.perms；驱动按钮显隐与三级授权（132 项）。 */
+export type AiPermissionKey =
+  | 'ai:attachment:recycle'            // AI_ATTACHMENT_RECYCLE
+  | 'ai:attachment:upload'             // AI_ATTACHMENT_UPLOAD
+  | 'ai:audit:message:export'          // AI_AUDIT_MESSAGE_EXPORT
+  | 'ai:audit:message:list'            // AI_AUDIT_MESSAGE_LIST
+  | 'ai:audit:permission:export'       // AI_AUDIT_PERMISSION_EXPORT
+  | 'ai:audit:permission:list'         // AI_AUDIT_PERMISSION_LIST
+  | 'ai:audit:retention:edit'          // AI_AUDIT_RETENTION_EDIT
+  | 'ai:audit:retention:preview'       // AI_AUDIT_RETENTION_PREVIEW
+  | 'ai:audit:retention:purge'         // AI_AUDIT_RETENTION_PURGE
+  | 'ai:audit:retention:unlimited'     // AI_AUDIT_RETENTION_UNLIMITED
+  | 'ai:audit:retention:view'          // AI_AUDIT_RETENTION_VIEW
+  | 'ai:audit:tool:export'             // AI_AUDIT_TOOL_EXPORT
+  | 'ai:audit:tool:list'               // AI_AUDIT_TOOL_LIST
+  | 'ai:channel:add'                   // AI_CHANNEL_ADD
+  | 'ai:channel:edit'                  // AI_CHANNEL_EDIT
+  | 'ai:channel:identity:bind'         // AI_CHANNEL_IDENTITY_BIND
+  | 'ai:channel:list'                  // AI_CHANNEL_LIST
+  | 'ai:channel:remove'                // AI_CHANNEL_REMOVE
+  | 'ai:chat:export'                   // AI_CHAT_EXPORT
+  | 'ai:chat:plan:confirm'             // AI_CHAT_PLAN_CONFIRM
+  | 'ai:chat:regenerate'               // AI_CHAT_REGENERATE
+  | 'ai:chat:send'                     // AI_CHAT_SEND
+  | 'ai:chat:session:list'             // AI_CHAT_SESSION_LIST
+  | 'ai:chat:session:manage'           // AI_CHAT_SESSION_MANAGE
+  | 'ai:chat:stop'                     // AI_CHAT_STOP
+  | 'ai:digest:export'                 // AI_DIGEST_EXPORT
+  | 'ai:digest:generate'               // AI_DIGEST_GENERATE
+  | 'ai:digest:view'                   // AI_DIGEST_VIEW
+  | 'ai:document:chunk:list'           // AI_DOCUMENT_CHUNK_LIST
+  | 'ai:document:list'                 // AI_DOCUMENT_LIST
+  | 'ai:document:rebuild'              // AI_DOCUMENT_REBUILD
+  | 'ai:document:remove'               // AI_DOCUMENT_REMOVE
+  | 'ai:document:upload'               // AI_DOCUMENT_UPLOAD
+  | 'ai:entry:edit'                    // AI_ENTRY_EDIT
+  | 'ai:entry:query'                   // AI_ENTRY_QUERY
+  | 'ai:expert:add'                    // AI_EXPERT_ADD
+  | 'ai:expert:assist'                 // AI_EXPERT_ASSIST
+  | 'ai:expert:copy'                   // AI_EXPERT_COPY
+  | 'ai:expert:edit'                   // AI_EXPERT_EDIT
+  | 'ai:expert:list'                   // AI_EXPERT_LIST
+  | 'ai:expert:remove'                 // AI_EXPERT_REMOVE
+  | 'ai:health:check'                  // AI_HEALTH_CHECK
+  | 'ai:knowledge:add'                 // AI_KNOWLEDGE_ADD
+  | 'ai:knowledge:bm25:rebuild'        // AI_KNOWLEDGE_BM25_REBUILD
+  | 'ai:knowledge:edit'                // AI_KNOWLEDGE_EDIT
+  | 'ai:knowledge:list'                // AI_KNOWLEDGE_LIST
+  | 'ai:knowledge:remove'              // AI_KNOWLEDGE_REMOVE
+  | 'ai:mcp:client:add'                // AI_MCP_CLIENT_ADD
+  | 'ai:mcp:client:edit'               // AI_MCP_CLIENT_EDIT
+  | 'ai:mcp:client:list'               // AI_MCP_CLIENT_LIST
+  | 'ai:mcp:client:remove'             // AI_MCP_CLIENT_REMOVE
+  | 'ai:mcp:client:test'               // AI_MCP_CLIENT_TEST
+  | 'ai:mcp:server:expose'             // AI_MCP_SERVER_EXPOSE
+  | 'ai:mcp:server:token'              // AI_MCP_SERVER_TOKEN
+  | 'ai:mcp:server:view'               // AI_MCP_SERVER_VIEW
+  | 'ai:memory:edit'                   // AI_MEMORY_EDIT
+  | 'ai:memory:explicit:save'          // AI_MEMORY_EXPLICIT_SAVE
+  | 'ai:memory:health:view'            // AI_MEMORY_HEALTH_VIEW
+  | 'ai:memory:version:list'           // AI_MEMORY_VERSION_LIST
+  | 'ai:memory:version:restore'        // AI_MEMORY_VERSION_RESTORE
+  | 'ai:memory:view'                   // AI_MEMORY_VIEW
+  | 'ai:model:add'                     // AI_MODEL_ADD
+  | 'ai:model:copy'                    // AI_MODEL_COPY
+  | 'ai:model:edit'                    // AI_MODEL_EDIT
+  | 'ai:model:list'                    // AI_MODEL_LIST
+  | 'ai:model:remove'                  // AI_MODEL_REMOVE
+  | 'ai:model:test'                    // AI_MODEL_TEST
+  | 'ai:onboarding:dismiss'            // AI_ONBOARDING_DISMISS
+  | 'ai:pack:add'                      // AI_PACK_ADD
+  | 'ai:pack:bind'                     // AI_PACK_BIND
+  | 'ai:pack:edit'                     // AI_PACK_EDIT
+  | 'ai:pack:list'                     // AI_PACK_LIST
+  | 'ai:pack:remove'                   // AI_PACK_REMOVE
+  | 'ai:permission:confirm:approve'    // AI_PERMISSION_CONFIRM_APPROVE
+  | 'ai:permission:confirm:reject'     // AI_PERMISSION_CONFIRM_REJECT
+  | 'ai:permission:confirm:remember'   // AI_PERMISSION_CONFIRM_REMEMBER
+  | 'ai:pref:edit'                     // AI_PREF_EDIT
+  | 'ai:pref:view'                     // AI_PREF_VIEW
+  | 'ai:retrieval:abtest'              // AI_RETRIEVAL_ABTEST
+  | 'ai:retrieval:test'                // AI_RETRIEVAL_TEST
+  | 'ai:route:export'                  // AI_ROUTE_EXPORT
+  | 'ai:route:list'                    // AI_ROUTE_LIST
+  | 'ai:runtime:budget:edit'           // AI_RUNTIME_BUDGET_EDIT
+  | 'ai:runtime:budget:view'           // AI_RUNTIME_BUDGET_VIEW
+  | 'ai:runtime:compress:edit'         // AI_RUNTIME_COMPRESS_EDIT
+  | 'ai:runtime:compress:view'         // AI_RUNTIME_COMPRESS_VIEW
+  | 'ai:runtime:config:edit'           // AI_RUNTIME_CONFIG_EDIT
+  | 'ai:runtime:config:view'           // AI_RUNTIME_CONFIG_VIEW
+  | 'ai:runtime:unattended:edit'       // AI_RUNTIME_UNATTENDED_EDIT
+  | 'ai:safety:config:edit'            // AI_SAFETY_CONFIG_EDIT
+  | 'ai:safety:config:view'            // AI_SAFETY_CONFIG_VIEW
+  | 'ai:safety:event:export'           // AI_SAFETY_EVENT_EXPORT
+  | 'ai:safety:event:list'             // AI_SAFETY_EVENT_LIST
+  | 'ai:safety:word:add'               // AI_SAFETY_WORD_ADD
+  | 'ai:safety:word:edit'              // AI_SAFETY_WORD_EDIT
+  | 'ai:safety:word:list'              // AI_SAFETY_WORD_LIST
+  | 'ai:safety:word:remove'            // AI_SAFETY_WORD_REMOVE
+  | 'ai:session:governance:delete'     // AI_SESSION_GOVERNANCE_DELETE
+  | 'ai:session:governance:export'     // AI_SESSION_GOVERNANCE_EXPORT
+  | 'ai:session:governance:list'       // AI_SESSION_GOVERNANCE_LIST
+  | 'ai:session:governance:terminate'  // AI_SESSION_GOVERNANCE_TERMINATE
+  | 'ai:skill:add'                     // AI_SKILL_ADD
+  | 'ai:skill:edit'                    // AI_SKILL_EDIT
+  | 'ai:skill:list'                    // AI_SKILL_LIST
+  | 'ai:skill:remove'                  // AI_SKILL_REMOVE
+  | 'ai:skill:resource'                // AI_SKILL_RESOURCE
+  | 'ai:subagent:add'                  // AI_SUBAGENT_ADD
+  | 'ai:subagent:edit'                 // AI_SUBAGENT_EDIT
+  | 'ai:subagent:list'                 // AI_SUBAGENT_LIST
+  | 'ai:subagent:remove'               // AI_SUBAGENT_REMOVE
+  | 'ai:task:add'                      // AI_TASK_ADD
+  | 'ai:task:edit'                     // AI_TASK_EDIT
+  | 'ai:task:list'                     // AI_TASK_LIST
+  | 'ai:task:remove'                   // AI_TASK_REMOVE
+  | 'ai:task:run'                      // AI_TASK_RUN
+  | 'ai:tool:add'                      // AI_TOOL_ADD
+  | 'ai:tool:edit'                     // AI_TOOL_EDIT
+  | 'ai:tool:expose'                   // AI_TOOL_EXPOSE
+  | 'ai:tool:list'                     // AI_TOOL_LIST
+  | 'ai:tool:remove'                   // AI_TOOL_REMOVE
+  | 'ai:tool:tag:add'                  // AI_TOOL_TAG_ADD
+  | 'ai:tool:tag:bind'                 // AI_TOOL_TAG_BIND
+  | 'ai:tool:tag:edit'                 // AI_TOOL_TAG_EDIT
+  | 'ai:tool:tag:remove'               // AI_TOOL_TAG_REMOVE
+  | 'ai:trace:export'                  // AI_TRACE_EXPORT
+  | 'ai:trace:list'                    // AI_TRACE_LIST
+  | 'ai:usage:export'                  // AI_USAGE_EXPORT
+  | 'ai:usage:list'                    // AI_USAGE_LIST
+  | 'ai:usage:quota:edit'              // AI_USAGE_QUOTA_EDIT
+  | 'ai:workspace:edit'                // AI_WORKSPACE_EDIT
+  | 'ai:workspace:override:clear'      // AI_WORKSPACE_OVERRIDE_CLEAR
+  | 'ai:workspace:view';               // AI_WORKSPACE_VIEW
