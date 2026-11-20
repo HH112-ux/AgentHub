@@ -8,7 +8,7 @@
 
 **Tech Stack:** JDK 21、Spring Boot 4.1.1、AgentScope Java 2.0.4、开源中后台底座 6.0.0、Vue 3.5 + TypeScript + Element Plus + Vite + Pinia、pnpm（Node ≥ 20.19）、PostgreSQL 14 / MySQL 8.0、Redis、Milvus + etcd、MinIO/OSS、Nginx、Qoder Sites。
 
-**Spec:** [docs/superpowers/specs/2026-11-20-agenthub-decomposition-design.md](file:///Users/caspian/Projects/ai-agent/active/AgentHub/docs/superpowers/specs/2026-11-20-agenthub-decomposition-design.md)
+**Spec:** [docs/superpowers/specs/2026-11-20-agenthub-decomposition-design.md](../specs/2026-11-20-agenthub-decomposition-design.md)
 
 ## Global Constraints
 
@@ -73,7 +73,7 @@ git switch -c feature/frontend-shell     # 队员 C
 
 - [x] **Step 2: 队长提供底座制品（D1 已完成）**
 
-开源中后台底座 6.0.0 的后端与前端发行包已放入 `vendor/`（不入库，`.gitignore` 已补 `vendor/`），解包为 `vendor/back-end` 与 `vendor/front-end`，sha256 与解包事实见[每日执行日志 D1 备注](file:///Users/caspian/Projects/ai-agent/active/AgentHub/docs/superpowers/plans/2026-11-20-week1-daily-log.md)。
+开源中后台底座 6.0.0 的后端与前端发行包已放入 `vendor/`（不入库，`.gitignore` 已补 `vendor/`），解包为 `vendor/back-end` 与 `vendor/front-end`，sha256 与解包事实见[每日执行日志 D1 备注](2026-11-20-week1-daily-log.md)。
 
 - [ ] **Step 3: B 导入后端并做首个基线提交**
 
