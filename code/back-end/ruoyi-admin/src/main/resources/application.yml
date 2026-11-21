@@ -293,6 +293,11 @@ agenthub:
       mcp-server-token: AgentHub
       # 未发送暂存附件的保留时长（小时）：上传后未发送也未移除的附件由后台任务按此阈值回收；<=0 关闭
       pending-attachment-ttl-hours: 24
+      # 单用户未发送暂存附件的配额（§12.6）：个数与合计字节两条上限同时生效，超限拒绝新上传并提示先清理
+      pending-attachment-max-count: 20
+      pending-attachment-max-bytes: 52428800
+      # 附件随会话/整轮删除转 ORPHANED 后的留档宽限（小时）：期内对象仍在，到期删对象仅留元数据行
+      orphan-attachment-ttl-hours: 72
       # 会话模型侧记忆（Redis 中的 AgentScope 状态）闲置过期天数：超过该天数无活动的会话由后台任务清理状态；
       # 历史消息仍保留可查，只是模型不再记得该会话的既往上下文；<=0 关闭
       session-state-idle-days: 30

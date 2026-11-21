@@ -266,7 +266,7 @@ create index if not exists idx_ai_message_session on ai_message (session_id, id)
 
 create index if not exists idx_ai_message_create_time on ai_message (create_time);
 
-create table if not exists ai_message_attachment ( id bigint not null, session_id bigint not null, message_id bigint, file_type varchar(16) not null, file_name varchar(255) not null, file_suffix varchar(32), file_size bigint, mime_type varchar(64), oss_id bigint, parsed_content text, create_dept bigint, create_by bigint, create_time timestamp, update_by bigint, update_time timestamp, del_flag char(1) default '0', constraint pk_ai_message_attachment primary key (id) );
+create table if not exists ai_message_attachment ( id bigint not null, session_id bigint not null, message_id bigint, file_type varchar(16) not null, file_name varchar(255) not null, file_suffix varchar(32), file_size bigint, mime_type varchar(64), oss_id bigint, parsed_content text, status varchar(16) not null default 'PENDING', expire_at timestamp, create_dept bigint, create_by bigint, create_time timestamp, update_by bigint, update_time timestamp, del_flag char(1) default '0', constraint pk_ai_message_attachment primary key (id) );
 
 comment on table ai_message_attachment is 'AI 会话消息附件表（聊天上传的图片/文档）';
 
@@ -288,11 +288,15 @@ comment on column ai_message_attachment.oss_id is '对象存储主键（sys_oss.
 
 comment on column ai_message_attachment.parsed_content is '文档解析后的纯文本（图片为空）';
 
+comment on column ai_message_attachment.status is '生命周期状态（PENDING 暂存未发送 / BOUND 已随消息绑定 / ORPHANED 随会话或整轮删除而孤立 / RECYCLED 对象已回收仅留元数据）';
+
+comment on column ai_message_attachment.expire_at is '回收期限（PENDING＝上传时间＋暂存 TTL；ORPHANED＝转孤立时间＋留档宽限；BOUND 保留原值但不参与扫描，回收扫描按 status 过滤）';
+
 create index if not exists idx_ai_message_attachment_session on ai_message_attachment (session_id);
 
 create index if not exists idx_ai_message_attachment_message on ai_message_attachment (message_id);
 
-create index if not exists idx_ai_message_attachment_pending on ai_message_attachment (create_time) where message_id is null;
+create index if not exists idx_ai_message_attachment_reclaim on ai_message_attachment (status, expire_at);
 
 create table if not exists ai_tool_call_log ( id bigint not null, session_id bigint not null, message_id bigint, user_id bigint, tool_call_id varchar(64), tool_name varchar(100) not null, tool_input text, tool_output text, state varchar(20), duration_ms bigint, remark varchar(500), create_dept bigint, create_by bigint, create_time timestamp, update_by bigint, update_time timestamp, agent_id bigint, constraint pk_ai_tool_call_log primary key (id) );
 

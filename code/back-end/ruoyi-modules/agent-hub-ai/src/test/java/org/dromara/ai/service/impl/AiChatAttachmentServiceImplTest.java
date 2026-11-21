@@ -1,6 +1,8 @@
 package org.dromara.ai.service.impl;
 
 import cn.hutool.http.HttpUtil;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.dromara.ai.config.AiProperties;
 import org.dromara.ai.core.agent.AiVisionGuard;
 import org.dromara.ai.core.chat.AiAttachmentReclaimer;
@@ -17,15 +19,19 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -233,6 +239,183 @@ class AiChatAttachmentServiceImplTest {
             ServiceException ex = assertThrows(ServiceException.class, () -> register(1L));
             assertEquals("图片需要「支持视觉」的对话模型", ex.getMessage());
         }
+    }
+
+    @Test
+    @DisplayName("登记即写入 PENDING 与到期时刻（上传时间 + 暂存 TTL）")
+    void shouldStampPendingLifecycleOnRegister() {
+        stubDocumentUpload("你好");
+
+        try (MockedStatic<HttpUtil> http = mockStatic(HttpUtil.class)) {
+            http.when(() -> HttpUtil.downloadBytes(anyString())).thenReturn("你好".getBytes(StandardCharsets.UTF_8));
+            register(1L);
+        }
+
+        AiMessageAttachment saved = captureInserted();
+        assertEquals(AiMessageAttachment.STATUS_PENDING, saved.getStatus());
+        int ttlHours = aiProperties.getChat().getPendingAttachmentTtlHours();
+        LocalDateTime before = LocalDateTime.now().plusHours(ttlHours).minusMinutes(5);
+        LocalDateTime after = LocalDateTime.now().plusHours(ttlHours).plusMinutes(5);
+        assertTrue(!saved.getExpireAt().isBefore(before) && !saved.getExpireAt().isAfter(after),
+            "到期时刻应为「登记时间 + " + ttlHours + " 小时」：" + saved.getExpireAt());
+    }
+
+    @Test
+    @DisplayName("暂存 TTL 关闭（<=0）时不写到期时刻")
+    void shouldLeaveExpireAtNullWhenTtlDisabled() {
+        aiProperties.getChat().setPendingAttachmentTtlHours(0);
+        aiProperties.getChat().setPendingAttachmentMaxCount(0);
+        aiProperties.getChat().setPendingAttachmentMaxBytes(0);
+        stubDocumentUpload("你好");
+
+        try (MockedStatic<HttpUtil> http = mockStatic(HttpUtil.class)) {
+            http.when(() -> HttpUtil.downloadBytes(anyString())).thenReturn("你好".getBytes(StandardCharsets.UTF_8));
+            register(1L);
+        }
+
+        assertNull(captureInserted().getExpireAt(), "关闭回收时不得写期限，否则扫描会把永不过期的件当成到期件");
+    }
+
+    @Test
+    @DisplayName("未发送附件个数超配额：拒绝登记且不落库")
+    void shouldRejectWhenPendingCountQuotaExceeded() {
+        stubDocumentUpload("你好");
+        when(baseMapper.selectCount(any())).thenReturn((long) aiProperties.getChat().getPendingAttachmentMaxCount());
+
+        try (MockedStatic<HttpUtil> http = mockStatic(HttpUtil.class)) {
+            http.when(() -> HttpUtil.downloadBytes(anyString())).thenReturn("你好".getBytes(StandardCharsets.UTF_8));
+            ServiceException ex = assertThrows(ServiceException.class, () -> register(1L));
+            assertEquals("未发送的附件已达上限（20 个），请先删除暂存附件或把它们随消息发送出去", ex.getMessage());
+        }
+
+        verify(baseMapper, never()).insert(any(AiMessageAttachment.class));
+    }
+
+    @Test
+    @DisplayName("未发送附件合计字节超配额：本次字节计入后再比上限")
+    void shouldRejectWhenPendingBytesQuotaExceeded() {
+        stubDocumentUpload("你好");
+        // 已用额度差一字节就满，加上本次上传即越界：配额必须算「已用 + 本次」而不是「已用」
+        when(baseMapper.sumFileSizeByUserAndStatus(USER_ID, AiMessageAttachment.STATUS_PENDING))
+            .thenReturn(aiProperties.getChat().getPendingAttachmentMaxBytes() - 1);
+
+        try (MockedStatic<HttpUtil> http = mockStatic(HttpUtil.class)) {
+            http.when(() -> HttpUtil.downloadBytes(anyString())).thenReturn("你好".getBytes(StandardCharsets.UTF_8));
+            ServiceException ex = assertThrows(ServiceException.class, () -> register(1L));
+            assertEquals("未发送的附件合计已达上限（50MB），请先删除暂存附件或把它们随消息发送出去", ex.getMessage());
+        }
+
+        verify(baseMapper, never()).insert(any(AiMessageAttachment.class));
+    }
+
+    @Test
+    @DisplayName("两条配额上限都关闭时不查配额")
+    void shouldSkipQuotaWhenLimitsDisabled() {
+        aiProperties.getChat().setPendingAttachmentMaxCount(0);
+        aiProperties.getChat().setPendingAttachmentMaxBytes(0);
+        stubDocumentUpload("你好");
+
+        try (MockedStatic<HttpUtil> http = mockStatic(HttpUtil.class)) {
+            http.when(() -> HttpUtil.downloadBytes(anyString())).thenReturn("你好".getBytes(StandardCharsets.UTF_8));
+            register(1L);
+        }
+
+        verify(baseMapper, never()).selectCount(any());
+        verify(baseMapper, never()).sumFileSizeByUserAndStatus(any(), anyString());
+        verify(baseMapper).insert(any(AiMessageAttachment.class));
+    }
+
+    @Test
+    @DisplayName("随消息发送即转 BOUND，脱离暂存配额与到期扫描")
+    void shouldMarkBoundWhenSent() {
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(attachment(AiMessageAttachment.STATUS_PENDING)));
+
+        service().bindToMessage(1L, 100L, List.of(7L));
+
+        ArgumentCaptor<AiMessageAttachment> captor = ArgumentCaptor.forClass(AiMessageAttachment.class);
+        verify(baseMapper).updateById(captor.capture());
+        assertEquals(AiMessageAttachment.STATUS_BOUND, captor.getValue().getStatus());
+        assertEquals(100L, captor.getValue().getMessageId());
+    }
+
+    @Test
+    @DisplayName("已进入回收流程的附件不能随消息发送")
+    void shouldRejectRecyclingAttachmentWhenBinding() {
+        for (String status : List.of(AiMessageAttachment.STATUS_ORPHANED, AiMessageAttachment.STATUS_RECYCLED)) {
+            when(baseMapper.selectByIds(any())).thenReturn(List.of(attachment(status)));
+
+            ServiceException ex = assertThrows(ServiceException.class,
+                () -> service().bindToMessage(1L, 100L, List.of(7L)));
+            assertEquals("附件已进入回收流程，请重新上传", ex.getMessage(), "status=" + status);
+        }
+        verify(baseMapper, never()).updateById(any(AiMessageAttachment.class));
+    }
+
+    @Test
+    @DisplayName("历史回显排除已回收留档行，孤立留档行仍可见")
+    void shouldExcludeRecycledFromHistory() {
+        service().listByMessageId(5L);
+        LambdaQueryWrapper<AiMessageAttachment> query = historyQuery();
+        assertTrue(query.getSqlSegment().contains("<>"), "已回收行必须从历史查询里排掉");
+        assertTrue(query.getParamNameValuePairs().containsValue(AiMessageAttachment.STATUS_RECYCLED));
+        assertTrue(!query.getParamNameValuePairs().containsValue(AiMessageAttachment.STATUS_ORPHANED),
+            "留档宽限期内的孤立附件文件还在桶里，不能一起排掉");
+    }
+
+    @Test
+    @DisplayName("已进入回收流程的暂存件不再手动删除，交给回收任务")
+    void shouldRejectDeleteWhenAlreadyRecycling() {
+        AiMessageAttachment orphaned = attachment(AiMessageAttachment.STATUS_ORPHANED);
+        when(baseMapper.selectById(7L)).thenReturn(orphaned);
+
+        ServiceException ex = assertThrows(ServiceException.class, () -> service().deletePending(1L, 7L));
+        assertEquals("附件已进入回收流程，无需重复删除", ex.getMessage());
+        verify(attachmentReclaimer, never()).reclaim(any());
+    }
+
+    /**
+     * 造一条属于本会话、未绑定消息的附件。
+     *
+     * @param status 生命周期状态
+     */
+    private AiMessageAttachment attachment(String status) {
+        AiMessageAttachment attachment = new AiMessageAttachment();
+        attachment.setId(7L);
+        attachment.setSessionId(1L);
+        attachment.setOssId(OSS_ID);
+        attachment.setStatus(status);
+        return attachment;
+    }
+
+    /**
+     * 取历史查询下发的条件。
+     */
+    @SuppressWarnings("unchecked")
+    private LambdaQueryWrapper<AiMessageAttachment> historyQuery() {
+        ArgumentCaptor<Wrapper<AiMessageAttachment>> captor = ArgumentCaptor.forClass(Wrapper.class);
+        verify(baseMapper).selectList(captor.capture());
+        return (LambdaQueryWrapper<AiMessageAttachment>) captor.getValue();
+    }
+
+    /**
+     * 取落库的那条附件行。
+     */
+    private AiMessageAttachment captureInserted() {
+        ArgumentCaptor<AiMessageAttachment> captor = ArgumentCaptor.forClass(AiMessageAttachment.class);
+        verify(baseMapper).insert(captor.capture());
+        return captor.getValue();
+    }
+
+    /**
+     * 打通「文本文件登记」所需的 OSS 元信息（不校验配额时的最小桩）。
+     *
+     * @param fileName 登记文件名
+     */
+    private void stubDocumentUpload(String fileName) {
+        OssDTO oss = oss("txt");
+        oss.setOriginalName(fileName);
+        when(ossService.selectByIds(String.valueOf(OSS_ID))).thenReturn(List.of(oss));
+        when(ossService.selectInternalUrlByIds(String.valueOf(OSS_ID))).thenReturn("http://minio/x.txt");
     }
 
     private AiChatAttachmentBo bo() {

@@ -368,8 +368,8 @@ public class AiSessionServiceImpl implements IAiSessionService {
             }
             throw new ServiceException("该轮回答仍在生成中，请先停止后再删除");
         }
-        // 附件不随消息逻辑删除级联：先回收对象存储文件与附件行，避免永久孤儿
-        attachmentReclaimer.reclaimByMessageIds(List.of(messageId));
+        // 附件不随消息逻辑删除级联：转 ORPHANED 进入留档宽限期，对象由回收任务到期后删（§12.6）
+        attachmentReclaimer.orphanByMessageIds(List.of(messageId));
         boolean flag = messageMapper.deleteByIds(doomed) > 0;
         if (flag) {
             decrementMessageCount(sessionId, doomed.size());
@@ -1029,8 +1029,8 @@ public class AiSessionServiceImpl implements IAiSessionService {
         }
         requireReasonForOthers("删除", reason, list.stream().map(AiSession::getUserId).toList());
         rejectWhileGenerating(list);
-        // 附件不随会话级联：先回收对象存储文件与附件行，避免永久孤儿
-        attachmentReclaimer.reclaimBySessionIds(ids);
+        // 附件不随会话级联：转 ORPHANED 保留留档窗口，对象文件由回收任务到期后删（§12.5 删除语义 / §12.6）
+        attachmentReclaimer.orphanBySessionIds(ids);
         boolean flag = baseMapper.deleteByIds(ids) > 0;
         if (flag) {
             LambdaQueryWrapper<AiMessage> lqw = Wrappers.lambdaQuery();
