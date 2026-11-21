@@ -27,6 +27,10 @@ jobs:
       - name: 双方言 SQL 一致性与幂等
         run: node scripts/checks/schema-dialect-parity.mjs
 
+      # §12.4 保留窗口是运行期可改的配置，改小一天就等于少留一天，只能靠门禁守住（§12.7 I-5）。
+      - name: 审计保留策略下限
+        run: node scripts/checks/audit-retention-guards.mjs
+
       - name: 文件与目录命名规范
         run: node scripts/checks/naming-convention.mjs
 
@@ -151,6 +155,7 @@ jobs:
             echo "| 门禁 | 本次状态 |"
             echo "|---|---|"
             echo "| 双方言 SQL 一致性与幂等 | 恒定执行 |"
+            echo "| 审计保留策略下限（§12.4 / I-5） | 恒定执行 |"
             echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
             echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
             echo "| 文档交叉引用（绝对链接/死链/锚点） | 恒定执行 |"

@@ -27,7 +27,7 @@ public class AiAuditRetentionBo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 审计 / 运行明细保留天数（0＝不限，不清理）
+     * 审计 / 运行明细保留天数（0＝不限，不清理；非 0 时不得低于 30 天，由服务层校验拦截）
      */
     @Min(value = 0, message = "保留天数不能为负")
     @Max(value = 3650, message = "保留天数不能超过 3650")

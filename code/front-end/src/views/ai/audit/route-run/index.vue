@@ -7,7 +7,15 @@
         <span class="text-muted" style="font-size: 12px">{{ retentionTip }}</span>
         <div style="margin-left: auto; display: flex; align-items: center; gap: 8px">
           <span class="text-muted" style="font-size: 12px">保留天数</span>
-          <el-input-number v-model="retentionDays" :min="0" :max="3650" size="small" controls-position="right" style="width: 120px" />
+          <el-input-number
+            v-model="retentionDays"
+            :min="0"
+            :max="3650"
+            size="small"
+            controls-position="right"
+            style="width: 120px"
+            @change="clampRetentionDays"
+          />
           <el-button v-hasPermi="['ai:audit:retention:edit']" size="small" :loading="retentionSaving" @click="saveRetention">
             保存
           </el-button>
@@ -399,6 +407,15 @@ const RETENTION_TABLES: Record<string, string> = {
   ai_route_expert_call: '专家调用'
 };
 
+/** 保留期下限（§12.4：非 0 时不得少于 30 天，0＝不限）：越界就地抬到下限，免得点保存才被后端拒 */
+const RETENTION_MIN_DAYS = 30;
+const clampRetentionDays = (val?: number) => {
+  if (val && val < RETENTION_MIN_DAYS) {
+    retentionDays.value = RETENTION_MIN_DAYS;
+    modal.msgWarning(`保留天数不能少于 ${RETENTION_MIN_DAYS} 天（0＝不限，自动清理将跳过）`);
+  }
+};
+
 /** 保留策略提示：0 天＝不限（自动清理跳过）；否则列出各表超期行数与截止时间 */
 const retentionTip = computed<string>(() => {
   if (!retentionDays.value) {
@@ -406,7 +423,7 @@ const retentionTip = computed<string>(() => {
   }
   const pending = retention.value.pending || {};
   const parts = Object.entries(RETENTION_TABLES).map(([key, label]) => `${label} ${pending[key] ?? 0}`);
-  return `超期行数（截止 ${retention.value.cutoff || '-'}，每日 03:30 自动清理）：${parts.join(' / ')}`;
+  return `超期行数（截止 ${retention.value.cutoff || '-'}，每日 03:30 自动清理；下限 ${RETENTION_MIN_DAYS} 天）：${parts.join(' / ')}`;
 });
 
 /** 加载当前保留策略与超期行数 */
