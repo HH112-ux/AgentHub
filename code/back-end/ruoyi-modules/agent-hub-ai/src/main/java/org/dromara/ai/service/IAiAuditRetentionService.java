@@ -15,6 +15,10 @@ import org.dromara.ai.domain.vo.AiAuditRetentionVo;
  * {@code ai_permission_decision_log}、{@code ai_agent_task_run}、{@code ai_route_run}、
  * {@code ai_route_expert_call}；**不含会话正文 {@code ai_message}**。</p>
  *
+ * <p>删除按 {@code create_time} 索引分片、单条 DELETE 封顶 5000 行循环执行（§12.4 / §12.7 I-6），
+ * 逐批行数累计成逐表总数后写清理记录：手动清理由 Controller 的 {@code @Log} 切面落底座操作日志，
+ * 自动清理由 {@code AiAuditRetentionTask} 投递同一条操作日志事件，两档在「操作日志」页合并可查。</p>
+ *
  * @author AgentHub
  */
 public interface IAiAuditRetentionService {
