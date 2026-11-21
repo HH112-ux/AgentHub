@@ -107,6 +107,17 @@ public interface IAiAgentService {
     List<AiAgentVo> queryOptions();
 
     /**
+     * 查询启用中的智能体选项的平台全量视图（入口 + 全部启用专家，<b>忽略可见范围</b>）。
+     *
+     * <p>给运维口径用：健康自检要回答「平台上有哪个智能体绑的模型坏了」，与谁在看不有关；
+     * 该方法也不读登录上下文——体检报告按 60 秒缓存跨请求复用，按登录用户过滤的取数
+     * 会把某个人的视野串给另一个人。</p>
+     *
+     * @return 智能体列表（含 {@code role}）
+     */
+    List<AiAgentVo> queryPlatformOptions();
+
+    /**
      * 查询当前用户可见的**自动候选**专家清单。
      *
      * <p>＝启用 ∩ 按提问用户可见 ∩ {@code auto_route='1'}，与入口智能体编排时现算的清单同源。</p>

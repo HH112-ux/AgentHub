@@ -466,11 +466,14 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
 
     /**
      * 智能体绑定的模型是否可用（入口失效＝平台不可对话，专家失效＝该专家不可用）。
+     *
+     * <p>取平台全量视图而不是 {@code queryOptions()}：后者按登录用户的可见范围过滤专家，
+     * 会让同一项在不同人眼里结论不同，而报告还要按 §12.3 缓存 60 秒跨请求复用。</p>
      */
     private AiHealthCheckVo checkAgentModels() {
         String key = "agent.model";
         String name = "智能体绑定模型";
-        List<AiAgentVo> agents = agentService.queryOptions();
+        List<AiAgentVo> agents = agentService.queryPlatformOptions();
         if (agents == null || agents.isEmpty()) {
             return fail(key, name, CATEGORY_AGENT, "未查询到启用中的智能体",
                 "到「小Z配置」完成入口智能体配置");

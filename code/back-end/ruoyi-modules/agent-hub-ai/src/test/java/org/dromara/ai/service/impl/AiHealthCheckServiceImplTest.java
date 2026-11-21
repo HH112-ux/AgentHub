@@ -338,7 +338,7 @@ class AiHealthCheckServiceImplTest {
     @Test
     @DisplayName("入口智能体模型失效判失败，专家模型失效只告警")
     void shouldFailEntryButWarnExpertWhenModelMissing() {
-        when(agentService.queryOptions()).thenReturn(List.of(
+        when(agentService.queryPlatformOptions()).thenReturn(List.of(
             agent(AiAgent.ROLE_ENTRY, "小Z", 999L, null, null, null),
             agent(AiAgent.ROLE_EXPERT, "公告专家", 998L, 997L, null, null)));
         AiHealthCheckVo item = itemOf(service.check(), "agent.model");
@@ -350,12 +350,26 @@ class AiHealthCheckServiceImplTest {
     @Test
     @DisplayName("专家槽位模型失效时告警")
     void shouldWarnWhenExpertSlotModelMissing() {
-        when(agentService.queryOptions()).thenReturn(List.of(
+        when(agentService.queryPlatformOptions()).thenReturn(List.of(
             agent(AiAgent.ROLE_ENTRY, "小Z", 1L, null, null, null),
             agent(AiAgent.ROLE_EXPERT, "公告专家", 1L, 997L, null, null)));
         AiHealthCheckVo item = itemOf(service.check(), "agent.model");
         assertEquals(AiHealthCheckVo.STATUS_WARN, item.getStatus());
         assertTrue(item.getDetail().contains("记忆抽取模型"));
+    }
+
+    @Test
+    @DisplayName("智能体项按平台全量判定，不取登录用户可见范围")
+    void shouldCheckAgentModelsPlatformWide() {
+        when(agentService.queryPlatformOptions()).thenReturn(List.of(
+            agent(AiAgent.ROLE_ENTRY, "小Z", 1L, null, null, null),
+            agent(AiAgent.ROLE_EXPERT, "他部门专家", 999L, null, null, null)));
+
+        AiHealthCheckVo item = itemOf(service.check(), "agent.model");
+
+        assertEquals(AiHealthCheckVo.STATUS_WARN, item.getStatus());
+        assertTrue(item.getDetail().contains("他部门专家"));
+        verify(agentService, never()).queryOptions();
     }
 
     @Test
@@ -657,7 +671,7 @@ class AiHealthCheckServiceImplTest {
         when(modelConfigService.queryOptions("chat")).thenReturn(List.of(chat));
         when(modelConfigService.queryOptions("embedding")).thenReturn(List.of(embedding));
         when(knowledgeBaseService.queryOptions()).thenReturn(List.of());
-        when(agentService.queryOptions())
+        when(agentService.queryPlatformOptions())
             .thenReturn(List.of(agent(AiAgent.ROLE_ENTRY, "小Z", 1L, null, null, null)));
 
         AiMcpServerVo server = new AiMcpServerVo();
