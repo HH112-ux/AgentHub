@@ -1,5 +1,6 @@
 package org.dromara.ai.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.dromara.ai.config.AiProperties;
 import org.dromara.ai.core.agent.AgentRegistry;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import java.util.Arrays;
@@ -311,6 +313,27 @@ class AiAgentServiceImplTest {
         when(expertMapper.selectList(any())).thenReturn(List.of(expert));
 
         assertEquals(2, service.queryOptions().size());
+    }
+
+    @Test
+    @DisplayName("平台级选项查询不读登录上下文")
+    void shouldQueryPlatformOptionsWithoutLoginContext() {
+        when(entryMapper.selectList(any())).thenReturn(List.of(entry(1L, "0")));
+        AiExpertAgent expert = new AiExpertAgent();
+        expert.setId(2L);
+        when(expertMapper.selectList(any())).thenReturn(List.of(expert));
+
+        assertEquals(2, service.queryPlatformOptions().size());
+        // 报告会被缓存 60 秒跨请求复用，任何按登录用户过滤的取数都会把某个人的视野串给其他人
+        loginHelper.verifyNoInteractions();
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaQueryWrapper<AiExpertAgent>> wrapper = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(expertMapper).selectList(wrapper.capture());
+        assertFalse(wrapper.getValue().getSqlSegment().contains("visible_scope"),
+            "平台全量视图一旦带上可见范围过滤，健康自检就变成「按人报错」");
+        assertFalse(wrapper.getValue().getParamNameValuePairs().containsValue(9L)
+                || wrapper.getValue().getParamNameValuePairs().containsValue(3L),
+            "查询条件里出现了登录用户/部门主键，说明又在按人过滤");
     }
 
     @Test

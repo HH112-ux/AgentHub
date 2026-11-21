@@ -494,7 +494,7 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 ### 12.3 健康自检（A12）
 
-接口 `GET /ai/health/check`（权限按 §3.2 冻结为 `ai:health:query`，本行原写的 `ai:health:check` 是 D1 重冻前的旧名，已更正）；单项超时 3 秒、总预算 30 秒（未落地，记 §12.7 I-14）；结果缓存 60 秒（已落地，见 §12.7 I-2）；分支三档，页面按分支展开明细。
+接口 `GET /ai/health/check`（权限按 §3.2 冻结为 `ai:health:query`，本行原写的 `ai:health:check` 是 D1 重冻前的旧名，已更正）；单项超时 3 秒、总预算 30 秒（未落地，记 §12.7 I-14）；结果缓存 60 秒（已落地，见 §12.7 I-2），这份缓存是全局的，因此检项取数一律用平台全量视图而不是按登录用户可见范围过滤的选项查询（§12.7 I-15）；分支三档，页面按分支展开明细。
 
 | 档 | 检查项 |
 |---|---|
@@ -584,9 +584,10 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | I-12 | 底座示例菜单的空挂载 | 基线 `sys_menu` 里 7 个页面级菜单（`ai/chat`、`tool/gen`、`monitor/admin`、`monitor/snailjob`、`monitor/snailai`、`demo/demo`、`demo/tree`）在本项目没有对应前端页面：底座自带的 `ruoyi-ai` 与 `ruoyi-demo`/代码生成模块按 D1 备注裁掉，`agent-hub-ai` 的工作台另有自己的命名空间。**点开这些菜单是白屏**，且底座基线脚本不改，删除只能由我方脚本承担 | 新增 `script/sql/{dialect}/agenthub-base-menu-prune.sql`（按 `component` 命中删除，连带 `sys_role_menu` 授权，幂等），initdb 序号排在基线之后；`menu-component` 门禁把覆盖面对象扩到全部 `sys_menu` 行。**属产品面裁剪（去掉底座示例功能），待队长批准后再落** |
 | I-13 | 忽略规则吃掉源码 | 仓库根 `.gitignore` 的未锚定 `data/` 把前端 `src/api/system/dict/data/` 整目录挡在仓外，构建期才暴露（`utils/dict.ts` 的 `getDicts` 解析失败），AI 五个状态字典的渲染同链路依赖它 | 已修：模式锚定为 `/data/`，模块补回，并落 `scripts/checks/gitignore-hygiene.mjs`（未锚定的目录级模式 + 源码被忽略清单命中即红）为必过步骤 |
 | I-14 | §12.3 单项超时与总预算 | 全量自检串行跑 15 项，只有 `connection.isValid(2)` 一处显式超时；单项没有 3 秒上限、整屏没有 30 秒预算，某个卡住的检项（如元数据查询、OSS 域名解析）会把「进页面」拖成白屏 | 单项判定 3 秒超时、整体 30 秒预算；超时项记 `UNKNOWN` 并写明「判定超时」，其余项照常返回，页面不因超时降级为报错。I-2 交付时发现，按 §7.3 排期 |
+| I-15 | §12.3 检项取数的可见范围 | I-2 把报告全局缓存 60 秒之后，`agent.model` 检项仍在调 `queryOptions()`，而后者按登录用户的 `visible_scope` 与部门过滤专家。结果是谁先点刷新，谁的视野就被缓存 60 秒串给下一个人：同一个坏模型在 A 眼里报警、在 B 眼里正常，且报错内容带着别人的专家名 | 已交付：新增 `IAiAgentService.queryPlatformOptions()`——只按 `status` 取入口与全部启用专家，不读 `LoginHelper`；自检的 `agent.model` 改用它，页面下拉与授权面继续用 `queryOptions()`。落点是必过单测：`AiAgentServiceImplTest` 对平台视图同时断言「没碰登录上下文」「SQL 片段不含 `visible_scope`」「查询参数值里不出现用户/部门主键」，`AiHealthCheckServiceImplTest` 断言他部门专家出现在结论里且 `queryOptions()` 不再被调用；3 项变异（自检改回 `queryOptions()` / 平台视图偷偷加 `visible_scope` / 平台视图又读 `LoginHelper`）全部变红 |
 | I-16 | L00 E 段状态字典机械对账的撤除 | E 段原本做四类断言：种子 `sys_dict_data` 取值与实体 `STATUS_*` 常量双向比对、同一方言内取值不得重复、词表登记了却没有任何字典项、字典项属于未登记的词表。**队长 2026-11-21 指示撤除**（原话「直接无视门禁给他删了」，在选项里选定「删 L00 的 E 段状态字典对账」）。撤除的代价已量化：把 mysql 种子里 `ai_route_run_status` 的 `pending` 改成 `Pending`，带 E 段时 `node e2e/http/L00-contract-consistency.mjs` rc=1 并报出两条（缺 `pending`、「Pending」无代码写入），删掉 E 段后同一条漂移 rc=0 静默通过。此后字典少一个取值会让页面显示裸码、多出一个代码从不写入的取值也没人发现，改字典只能人工对照本节 A 段的表 | 已撤除，且按 AGENTS.md「豁免项必须在脚本内写明出处」在 `L00` 原位留了撤除说明。删的是断言不是字典本身：31 类 / 108 项种子、双方言逐字一致、A 段的取值口径全部保留。要恢复就把四类断言重新接进 `e2e/http/L00-contract-consistency.mjs`，A 段那张表就是对账基准，种子不需要回改 |
 
-I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。I-1 的对账断言落在**既有**必过步骤 L00 的 F 段（该脚本已在 §3.2「契约」行与 `ci.yml` 登记为必过），因此不新增脚本文件；落点变化不放宽任何既有条目。 I-2 的落点是**必过单测**（`mvn test` 已在 `ci.yml` 的 `verify` 里）加 6 项变异验证：缓存复用、TTL 与穿透都是运行期行为，静态脚本只能自证「常量存在」，写在 `scripts/checks/` 里反而是一条不会报警的假门禁，因此不新增脚本文件。两处落点变化都不放宽任何既有条目。
+I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。I-1 的对账断言落在**既有**必过步骤 L00 的 F 段（该脚本已在 §3.2「契约」行与 `ci.yml` 登记为必过），因此不新增脚本文件；落点变化不放宽任何既有条目。 I-2 的落点是**必过单测**（`mvn test` 已在 `ci.yml` 的 `verify` 里）加 6 项变异验证：缓存复用、TTL 与穿透都是运行期行为，静态脚本只能自证「常量存在」，写在 `scripts/checks/` 里反而是一条不会报警的假门禁，因此不新增脚本文件。I-15 同理落在必过单测加 3 项变异——「检项有没有按人过滤」要看一次真实调用的取数路径，静态扫源码既抓不住改调 `queryOptions()`，也躲不开别名的包装方法。三处落点都不放宽任何既有条目。
 
 ---
 

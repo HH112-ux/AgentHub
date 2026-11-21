@@ -290,6 +290,26 @@ public class AiAgentServiceImpl implements IAiAgentService {
     }
 
     @Override
+    public List<AiAgentVo> queryPlatformOptions() {
+        List<AiAgentVo> result = new ArrayList<>();
+        AiEntryAgent entry = selectEntry();
+        if (entry != null && STATUS_NORMAL.equals(entry.getStatus())) {
+            AiEntryAgentVo vo = MapstructUtils.convert(entry, AiEntryAgentVo.class);
+            vo.setRole(AiAgent.ROLE_ENTRY);
+            result.add(vo);
+        }
+        LambdaQueryWrapper<AiExpertAgent> lqw = Wrappers.lambdaQuery();
+        lqw.eq(AiExpertAgent::getStatus, STATUS_NORMAL);
+        lqw.orderByAsc(AiExpertAgent::getId);
+        for (AiExpertAgent expert : expertMapper.selectList(lqw)) {
+            AiExpertAgentVo vo = MapstructUtils.convert(expert, AiExpertAgentVo.class);
+            vo.setRole(AiAgent.ROLE_EXPERT);
+            result.add(vo);
+        }
+        return result;
+    }
+
+    @Override
     public List<AiExpertVo> queryExperts() {
         LambdaQueryWrapper<AiExpertAgent> lqw = visibleWrapper(LoginHelper.getUserId(), LoginHelper.getDeptId());
         lqw.eq(AiExpertAgent::getAutoRoute, AiExpertAgent.AUTO_ROUTE_ON);
