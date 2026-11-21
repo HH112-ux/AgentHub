@@ -488,6 +488,8 @@ class AiSessionServiceImplTest {
 
         assertTrue(service.deleteChatRound(1L, 1L));
         verify(messageMapper).deleteByIds(any());
+        // 附件随这一轮进入留档宽限期，而不是随消息逻辑删除一起失联（§12.6）
+        verify(attachmentReclaimer).orphanByMessageIds(List.of(1L));
     }
 
     @Test
@@ -500,6 +502,8 @@ class AiSessionServiceImplTest {
         when(messageMapper.selectList(any())).thenReturn(List.of(user, assistant));
 
         assertThrows(ServiceException.class, () -> service.deleteChatRound(1L, 1L));
+        // 守卫没全过就不能先把附件推进回收：否则这一轮还能继续用，对象却被判了刑
+        verify(attachmentReclaimer, never()).orphanByMessageIds(any());
     }
 
     @Test
@@ -653,6 +657,8 @@ class AiSessionServiceImplTest {
 
         verify(messageMapper).delete(any());
         verify(aiAgentStateStore).delete("9", "1");
+        // 会话内附件转孤立，留档宽限期到了再由回收任务删对象（§12.5 删除语义）
+        verify(attachmentReclaimer).orphanBySessionIds(List.of(1L));
     }
 
     @Test
@@ -667,6 +673,7 @@ class AiSessionServiceImplTest {
         assertEquals(409, error.getCode());
         assertTrue(error.getMessage().contains("请先终止后再删除"));
         verify(baseMapper, never()).deleteByIds(any());
+        verify(attachmentReclaimer, never()).orphanBySessionIds(any());
     }
 
     @Test

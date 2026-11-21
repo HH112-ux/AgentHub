@@ -15,14 +15,17 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 未发送暂存附件的自动回收任务。
+ * 附件到期回收任务（§12.6 / §12.7 I-10）。
  *
- * <p>补上「上传后未发送也未移除的附件永久残留」的缺口：应用就绪后每小时扫描一次
- * {@code ai_message_attachment} 中 {@code message_id} 为空且超过 TTL 的行，先删对象存储文件、
- * 再物理删行。TTL 由 {@code agenthub.ai.chat.pending-attachment-ttl-hours} 控制，&lt;=0 时关闭自动回收。</p>
+ * <p>补上「上传后未发送也未移除的附件永久残留、删除后的附件对象无人收」两个缺口：应用就绪后每小时跑一轮，
+ * 每轮先收到期 {@code PENDING}（删对象 + 删行），再收到期 {@code ORPHANED}（删对象 + 转 {@code RECYCLED} 留元数据）。
+ * 顺序不能反：{@code PENDING} 占着作者配额，配额堵住的是「这位用户还能不能上传」，所以它先出血。</p>
  *
- * <p>多副本用 Redis 键抢占：同一时刻只允许一个实例执行，异常时由 TTL 自动释放。
- * 已发送且会话仍存在的附件不在此任务范围（仅随删除会话 / 删除整轮回收）。</p>
+ * <p>暂存阈值由 {@code agenthub.ai.chat.pending-attachment-ttl-hours} 控制，&lt;=0 时**只关闭暂存件那一遍**；
+ * 孤立件的宽限由 {@code orphan-attachment-ttl-hours} 控制（&lt;=0 表示不留宽限、下一轮即删对象），
+ * 不受前者影响——会话删完了就不再产生暂存件，把两遍捆在一个开关上会让已转孤立的对象永远留在桶里。</p>
+ *
+ * <p>多副本用 Redis 键抢占：同一时刻只允许一个实例执行，异常时由 TTL 自动释放。</p>
  *
  * @author AgentHub
  */
@@ -52,7 +55,7 @@ public class AiAttachmentReclaimTask {
     private static final Duration INITIAL_DELAY = Duration.ofMinutes(5);
 
     /**
-     * 单次最多扫描批数（每批 {@link AiAttachmentReclaimer#BATCH_SIZE} 条）
+     * 每遍扫描的最多批数（每批 {@link AiAttachmentReclaimer#BATCH_SIZE} 条；暂存件与孤立件各算一遍）
      */
     private static final int MAX_BATCHES = 20;
 
@@ -75,27 +78,27 @@ public class AiAttachmentReclaimTask {
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         int ttlHours = aiProperties.getChat().getPendingAttachmentTtlHours();
-        if (ttlHours <= 0) {
-            log.info("暂存附件自动回收已关闭（agenthub.ai.chat.pending-attachment-ttl-hours<=0）");
-            return;
-        }
+        int graceHours = aiProperties.getChat().getOrphanAttachmentTtlHours();
         scheduler.scheduleAtFixedRate(this::runQuietly, INITIAL_DELAY.toMillis(), INTERVAL.toMillis(),
             TimeUnit.MILLISECONDS);
-        log.info("暂存附件自动回收已启动：每小时执行，保留 {} 小时", ttlHours);
+        log.info("附件到期回收已启动：每小时一轮；暂存件保留 {} 小时（<=0 关闭暂存件那一遍），孤立件留档宽限 {} 小时",
+            ttlHours, graceHours);
     }
 
     /**
-     * 立即执行一轮回收（幂等，可重复调用）。
+     * 立即执行一轮回收（幂等，可重复调用）：先暂存件、后孤立件，两遍都最旧的先收。
      *
      * @return 回收统计；其它实例正在执行时返回 null
      */
     public AiAttachmentReclaimer.ReclaimResult runNow() {
         if (!Boolean.TRUE.equals(RedisUtils.setObjectIfAbsent(LOCK_KEY, "1", LOCK_TTL))) {
-            log.debug("暂存附件回收跳过：其它实例正在执行");
+            log.debug("附件到期回收跳过：其它实例正在执行");
             return null;
         }
         try {
-            return reclaimer.reclaimPending(aiProperties.getChat().getPendingAttachmentTtlHours(), MAX_BATCHES);
+            int ttlHours = aiProperties.getChat().getPendingAttachmentTtlHours();
+            return reclaimer.reclaimPending(ttlHours, MAX_BATCHES)
+                .plus(reclaimer.reclaimOrphans(MAX_BATCHES));
         } finally {
             RedisUtils.deleteObject(LOCK_KEY);
         }

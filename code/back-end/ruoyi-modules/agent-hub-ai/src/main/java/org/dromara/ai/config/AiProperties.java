@@ -677,6 +677,27 @@ public class AiProperties {
         private int pendingAttachmentTtlHours = 24;
 
         /**
+         * 聊天上传：单用户未发送暂存附件（{@code PENDING}）的数量上限，默认 20。
+         *
+         * <p>暂存件既占库行也占对象存储，用户上传后不发送也不移除就会一直堆着；
+         * 数量与字节两条上限同时生效，超限拒绝新上传并提示先清理（§12.6 暂存配额）。</p>
+         */
+        private int pendingAttachmentMaxCount = 20;
+
+        /**
+         * 聊天上传：单用户未发送暂存附件（{@code PENDING}）的合计字节上限，默认 50MB。
+         */
+        private long pendingAttachmentMaxBytes = 50 * 1024 * 1024L;
+
+        /**
+         * 聊天上传：附件随会话 / 整轮删除转 {@code ORPHANED} 后的留档宽限（小时），默认 72。
+         *
+         * <p>宽限期内对象文件不删，导出留档与误删回看仍能取到附件；到期由回收任务删对象并转
+         * {@code RECYCLED}。&lt;=0 表示不留宽限，下一轮回收即删对象（元数据行仍保留）。</p>
+         */
+        private int orphanAttachmentTtlHours = 72;
+
+        /**
          * 会话模型侧记忆（Redis 中的 AgentScope 状态）的闲置过期天数，默认 30；&lt;=0 表示不过期。
          *
          * <p>状态键没有 TTL，只有删除会话时才清理；只「终止」不「删除」的会话会让状态永久驻留。

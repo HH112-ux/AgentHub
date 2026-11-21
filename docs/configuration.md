@@ -24,6 +24,7 @@
 
 AgentHub 自有的配置项（模型密钥根密钥、安全守卫模式、向量库与对象存储入口）不借用底座键名，由 `agent-hub-ai` 侧属性类声明后读取，因此不出现在映射文件里。
 §12.7 I-3 新增的两个键同属此类：`agenthub.ai.health.error-log-path`（默认 `./logs/sys-error.log`，须与 logback 的 `log.path` 对齐；对不上时检项直接记 `UNKNOWN` 并提示两处配置不一致，不会假装「无错误日志」）与 `agenthub.ai.health.low-watermark-percent`（默认 `15`，即 §12.3 的冻结水位；开成配置只为让余量边界用例不取决于跑测试那台机器的磁盘，生产不改）。
+§12.7 I-10 新增的三个键同属此类，都在 `agenthub.ai.chat.*` 下：`pending-attachment-max-count`（默认 `20`）与 `pending-attachment-max-bytes`（默认 `52428800`，即 50MB）是未发送暂存件的单用户配额，两条各自独立生效、先撞哪个按哪个提示，且只在 `PENDING` 上计数——随消息发送转 `BOUND` 即脱离配额；`pending-attachment-ttl-hours`（默认 `24`）与 `orphan-attachment-ttl-hours`（默认 `72`）是两个到期时限，前者写进登记时的 `expire_at`、后者写进转孤立时的 `expire_at`。**`pending-attachment-ttl-hours <= 0` 只关「暂存件那一遍」回收，不关调度本身**：会话删完就不再产生新的暂存件，把两遍捆在同一开关上会让已转孤立的对象永远留在桶里。回收周期固定 1 小时（代码常量，不开配置），因为留档宽限与到期判定共用 `expire_at`，周期只影响延迟不影响结果。
 
 ### 覆盖优先级实测
 

@@ -20,6 +20,7 @@ import org.dromara.system.api.OssService;
 import org.dromara.system.api.domain.OssDTO;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -121,6 +122,8 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
         entity.setFileSize((long) bytes.length);
         entity.setMimeType(image ? IMAGE_MIME.get(suffix) : null);
         entity.setOssId(bo.getOssId());
+        entity.setStatus(AiMessageAttachment.STATUS_PENDING);
+        entity.setExpireAt(pendingExpireAt());
         if (document) {
             String text = AiDocumentParser.extract(bytes, suffix);
             if (StringUtils.isBlank(text)) {
@@ -128,8 +131,60 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
             }
             entity.setParsedContent(text);
         }
+        // 配额拦在落库之前：登记成功后这行就算作者的暂存件，先查后插才不会把上限挤过去一格
+        assertPendingQuota(bytes.length);
         baseMapper.insert(entity);
         return toVo(entity, resolveUrlQuietly(entity.getOssId()));
+    }
+
+    /**
+     * 暂存件的到期时刻：{@code expire_at = 上传时间 + pending-attachment-ttl-hours}（§12.6）。
+     *
+     * <p>阈值 &lt;=0 表示关闭暂存件自动回收，此时不写期限——回收任务按 {@code expire_at} 取片，
+     * 空值即不参与，语义与 {@link AiAttachmentReclaimer#reclaimPending(int, int)} 的开关一致。</p>
+     */
+    private LocalDateTime pendingExpireAt() {
+        int ttlHours = aiProperties.getChat().getPendingAttachmentTtlHours();
+        return ttlHours <= 0 ? null : LocalDateTime.now().plusHours(ttlHours);
+    }
+
+    /**
+     * 单用户暂存件配额（§12.6「单用户 {@code PENDING} ≤20 个且 ≤50MB；超限拒绝新上传并提示清理」）。
+     *
+     * <p>算的是**已经登记的**暂存件，本次上传的字节另加：两条上限各自独立生效，哪个先撞就按哪个提示。
+     * 只数 {@code PENDING}——已随消息发送的 {@code BOUND} 与删除后转 {@code ORPHANED} 的都不该占用户的上传额度。
+     * 任一路上限 &lt;=0 表示该条不限。</p>
+     *
+     * @param incomingBytes 本次上传的实际字节数
+     */
+    private void assertPendingQuota(long incomingBytes) {
+        int maxCount = aiProperties.getChat().getPendingAttachmentMaxCount();
+        long maxBytes = aiProperties.getChat().getPendingAttachmentMaxBytes();
+        if (maxCount <= 0 && maxBytes <= 0) {
+            return;
+        }
+        Long userId = LoginHelper.getUserId();
+        if (userId == null) {
+            // 取不到登录身份时不比对配额：后面的写库同样按登录态鉴权，此处不为拿不到的身份造一条拦截口径
+            return;
+        }
+        if (maxCount > 0) {
+            Long used = baseMapper.selectCount(Wrappers.<AiMessageAttachment>lambdaQuery()
+                .eq(AiMessageAttachment::getCreateBy, userId)
+                .eq(AiMessageAttachment::getStatus, AiMessageAttachment.STATUS_PENDING));
+            long pending = used == null ? 0L : used;
+            if (pending + 1 > maxCount) {
+                throw new ServiceException("未发送的附件已达上限（" + maxCount + " 个），请先删除暂存附件或把它们随消息发送出去");
+            }
+        }
+        if (maxBytes > 0) {
+            Long used = baseMapper.sumFileSizeByUserAndStatus(userId, AiMessageAttachment.STATUS_PENDING);
+            long pendingBytes = used == null ? 0L : used;
+            if (pendingBytes + incomingBytes > maxBytes) {
+                throw new ServiceException("未发送的附件合计已达上限（" + humanSize(maxBytes)
+                    + "），请先删除暂存附件或把它们随消息发送出去");
+            }
+        }
     }
 
     /**
@@ -175,6 +230,10 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
             if (attachment.getMessageId() != null && !attachment.getMessageId().equals(messageId)) {
                 throw new ServiceException("附件已被其他消息使用，请重新上传");
             }
+            // 会话或整轮删除后附件进入回收流程：对象文件可能已经被删掉，绑上去就是一条永远打不开的引用
+            if (isRecycling(attachment)) {
+                throw new ServiceException("附件已进入回收流程，请重新上传");
+            }
         }
         for (AiMessageAttachment attachment : list) {
             if (messageId.equals(attachment.getMessageId())) {
@@ -183,9 +242,22 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
             AiMessageAttachment update = new AiMessageAttachment();
             update.setId(attachment.getId());
             update.setMessageId(messageId);
+            // 发送即脱离暂存配额：BOUND 不参与到期扫描，expire_at 保留登记时的原值只作展示
+            update.setStatus(AiMessageAttachment.STATUS_BOUND);
             baseMapper.updateById(update);
         }
         return list;
+    }
+
+    /**
+     * 是否已进入回收流程（{@code ORPHANED} 待宽限到期、{@code RECYCLED} 对象已回收）。
+     *
+     * @param attachment 附件
+     * @return 是否不可再被发送或手动移除
+     */
+    private boolean isRecycling(AiMessageAttachment attachment) {
+        return AiMessageAttachment.STATUS_ORPHANED.equals(attachment.getStatus())
+            || AiMessageAttachment.STATUS_RECYCLED.equals(attachment.getStatus());
     }
 
     @Override
@@ -195,6 +267,7 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
         }
         return baseMapper.selectList(Wrappers.<AiMessageAttachment>lambdaQuery()
             .eq(AiMessageAttachment::getMessageId, messageId)
+            .ne(AiMessageAttachment::getStatus, AiMessageAttachment.STATUS_RECYCLED)
             .orderByAsc(AiMessageAttachment::getId));
     }
 
@@ -203,8 +276,11 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
         if (messageIds == null || messageIds.isEmpty()) {
             return Map.of();
         }
+        // 对象已回收（RECYCLED）的行只剩元数据，回显出来是一个点开就报错的气泡，不再列出；
+        // ORPHANED 仍在留档宽限期内、文件还在桶里，照旧可见
         List<AiMessageAttachment> list = baseMapper.selectList(Wrappers.<AiMessageAttachment>lambdaQuery()
             .in(AiMessageAttachment::getMessageId, messageIds)
+            .ne(AiMessageAttachment::getStatus, AiMessageAttachment.STATUS_RECYCLED)
             .orderByAsc(AiMessageAttachment::getId));
         Map<Long, List<AiChatAttachmentVo>> result = new LinkedHashMap<>();
         for (AiMessageAttachment attachment : list) {
@@ -249,6 +325,10 @@ public class AiChatAttachmentServiceImpl implements IAiChatAttachmentService {
         }
         if (attachment.getMessageId() != null) {
             throw new ServiceException("附件已随消息发送，无法删除");
+        }
+        // 会话或整轮已删除、进入回收流程的暂存件由任务按留档期限收，不在这里抢：手动再收一遍只会和任务争同一批对象
+        if (isRecycling(attachment)) {
+            throw new ServiceException("附件已进入回收流程，无需重复删除");
         }
         // 统一回收口径：先删对象存储文件，再物理删行（失败时保留行等任务重试）
         attachmentReclaimer.reclaim(List.of(attachment));
