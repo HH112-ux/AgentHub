@@ -56,17 +56,30 @@ class DateNetDesensitizedUtilsTest {
     }
 
     /**
-     * 验证友好时间处理空值、刚刚、分钟前以及未来时间，并确保未来时间使用目标日期。
+     * 验证友好时间处理空值、刚刚、分钟前、跨零点的昨天以及未来时间，并确保未来时间使用目标日期。
      */
     @Test
     @DisplayName("格式化友好时间")
     void shouldFormatFriendlyTimeUsingTargetDate() {
         Date now = new Date();
         Date future = DateUtil.offsetDay(now, 2);
+        Date fiveMinutesAgo = DateUtil.offsetMinute(now, -5);
 
         assertEquals("", DateUtils.formatFriendlyTime(null));
         assertEquals("刚刚", DateUtils.formatFriendlyTime(DateUtil.offsetSecond(now, -10)));
-        assertTrue(DateUtils.formatFriendlyTime(DateUtil.offsetMinute(now, -5)).endsWith("分钟前"));
+        // 实现按自然日而非分钟数分支：零点后的「5 分钟前」落在昨天。两种窗口各自断言对应的输出，而不是放宽。
+        if (DateUtil.isSameDay(now, fiveMinutesAgo)) {
+            assertTrue(DateUtils.formatFriendlyTime(fiveMinutesAgo).endsWith("分钟前"),
+                "同一天内的 5 分钟前应格式化为「N分钟前」，实际：" + DateUtils.formatFriendlyTime(fiveMinutesAgo));
+        } else {
+            assertEquals("昨天 " + DateUtil.format(fiveMinutesAgo, "HH:mm"),
+                DateUtils.formatFriendlyTime(fiveMinutesAgo));
+        }
+        // 昨天分支再用 now−1 天锁一次，任何时刻都会走到，不必等到零点跑测试才报警；实现里「非今年」优先于「昨天」，跨年时按完整日期时间显示。
+        Date yesterday = DateUtil.offsetDay(now, -1);
+        if (DateUtil.year(yesterday) == DateUtil.year(now)) {
+            assertEquals("昨天 " + DateUtil.format(yesterday, "HH:mm"), DateUtils.formatFriendlyTime(yesterday));
+        }
         assertEquals(DateUtils.formatDateTime(future), DateUtils.formatFriendlyTime(future));
     }
 
