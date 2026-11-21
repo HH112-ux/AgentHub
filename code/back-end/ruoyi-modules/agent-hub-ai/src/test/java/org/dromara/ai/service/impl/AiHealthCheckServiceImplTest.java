@@ -4,6 +4,7 @@ import org.dromara.ai.config.AiProperties;
 import org.dromara.ai.core.AiMilvusProbe;
 import org.dromara.ai.core.AiVectorStore;
 import org.dromara.ai.core.agent.AiRuntimeConfigStore;
+import org.dromara.ai.core.health.AiHealthItemInvoker;
 import org.dromara.ai.core.route.RouteJudge;
 import org.dromara.ai.core.route.RouteJudgeRequest;
 import org.dromara.ai.core.route.RouteJudgeVerdict;
@@ -55,6 +56,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -126,7 +129,7 @@ class AiHealthCheckServiceImplTest {
         aiProperties.getChat().setCurrentTimeZone(TimeZone.getDefault().getID());
         service = new AiHealthCheckServiceImpl(dataSource, modelConfigService, knowledgeBaseService,
             agentService, mcpServerService, mcpClientService, mcpClientMapper, runtimeConfigStore,
-            aiProperties, vectorStore, milvusProbe, ossService, routeJudge);
+            aiProperties, vectorStore, milvusProbe, ossService, routeJudge, AiHealthItemInvoker.direct());
         stubHealthy();
     }
 
@@ -233,6 +236,93 @@ class AiHealthCheckServiceImplTest {
         cached.setOverall(AiHealthCheckVo.STATUS_PASS);
         cached.setCheckedAt(LocalDateTime.now().minusSeconds(30));
         return JsonUtils.toJsonString(cached);
+    }
+
+    // -------------------------------- 超时与预算（设计稿 §12.3 / §12.7 I-14：单项 3 秒、整屏 30 秒）
+
+    @Test
+    @DisplayName("单项判定超时：该项记 UNKNOWN 并写明判定超时，其余项照常执行")
+    void shouldMarkUnknownWhenItemExceedsTimeout() throws Exception {
+        AtomicInteger executed = new AtomicInteger();
+        // 第 3 项（redis）超时：证明「一项卡住」不会让后面的检项一起消失，也不会让页面报错。
+        AiHealthCheckServiceImpl timingOut = withInvoker((body, timeoutMillis) -> {
+            if (executed.incrementAndGet() == 3) {
+                throw new TimeoutException("stubbed");
+            }
+            return body.call();
+        });
+
+        AiHealthReportVo report = timingOut.check();
+
+        assertEquals(15, executed.get(), "超时之后剩余检项仍要执行");
+        assertEquals(15, report.getTotal());
+        AiHealthCheckVo timedOut = itemOf(report, "redis");
+        assertEquals(AiHealthCheckVo.STATUS_UNKNOWN, timedOut.getStatus(),
+            "单项超时要记 UNKNOWN（未判定），不能按检项自身失败算 FAIL");
+        assertTrue(timedOut.getDetail().contains("判定超时"), "超时行要写明判定超时，实际：" + timedOut.getDetail());
+        assertEquals(AiHealthCheckVo.STATUS_PASS, itemOf(report, "db").getStatus(), "超时项之前的检项不受影响");
+        assertEquals(AiHealthCheckVo.STATUS_PASS, itemOf(report, "crypto.key").getStatus(), "超时项之后的检项不受影响");
+        assertEquals(2, report.getUnknownCount(), "基线的向量库「待探测」之外，只多出超时这一项");
+    }
+
+    @Test
+    @DisplayName("单项预算取「3 秒上限」与「整屏剩余」的较小值")
+    void shouldCapItemBudgetByRemainingTotal() {
+        List<Long> budgets = new ArrayList<>();
+        AiHealthItemInvoker capturing = (body, timeoutMillis) -> {
+            budgets.add(timeoutMillis);
+            return body.call();
+        };
+
+        withInvoker(capturing).runChecks(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(60_000));
+        assertEquals(15, budgets.size());
+        assertTrue(budgets.stream().allMatch(budget -> budget == 3_000L),
+            "整屏预算充裕时每项应按单项上限 3000 毫秒下发，实际：" + budgets);
+
+        budgets.clear();
+        withInvoker(capturing).runChecks(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1_000));
+        assertEquals(15, budgets.size());
+        assertTrue(budgets.stream().allMatch(budget -> budget > 0 && budget <= 1_000L),
+            "整屏只剩 1 秒时不该再按 3 秒给单项预算，实际：" + budgets);
+    }
+
+    @Test
+    @DisplayName("整屏 30 秒预算耗尽：剩余检项不再执行，全部记 UNKNOWN 并写明预算用尽")
+    void shouldSkipRemainingItemsWhenTotalBudgetExhausted() {
+        AtomicInteger executed = new AtomicInteger();
+        AiHealthCheckServiceImpl skipped = withInvoker((body, timeoutMillis) -> {
+            executed.incrementAndGet();
+            return body.call();
+        });
+
+        AiHealthReportVo report = skipped.runChecks(System.nanoTime() - 1L);
+
+        assertEquals(0, executed.get(), "预算已用尽时一个检项都不该再执行");
+        assertEquals(15, report.getTotal());
+        assertEquals(15, report.getUnknownCount());
+        assertTrue(report.getItems().stream().allMatch(item ->
+                AiHealthCheckVo.STATUS_UNKNOWN.equals(item.getStatus())
+                    && item.getDetail().contains("判定超时")
+                    && item.getDetail().contains("30 秒")),
+            "每行都要写明是整屏 30 秒预算用尽，实际：" + report.getItems());
+    }
+
+    @Test
+    @DisplayName("每项耗时由实现按真实执行时间写入，压过检项自带的占位值")
+    void shouldStampElapsedMillisOnItem() {
+        AiHealthCheckServiceImpl slow = withInvoker((body, timeoutMillis) -> {
+            AiHealthCheckVo vo = body.call();
+            vo.setElapsedMs(1L);
+            Thread.sleep(20);
+            return vo;
+        });
+
+        AiHealthReportVo report = slow.check();
+
+        assertEquals(15, report.getTotal());
+        assertNotNull(itemOf(report, "db").getElapsedMs());
+        assertTrue(itemOf(report, "db").getElapsedMs() >= 15L,
+            "每行耗时要按真实执行时间回填，接口里少了它就分不清是哪一项在拖，实际：" + itemOf(report, "db").getElapsedMs());
     }
 
     // ---------------------------------------------------------------- 逐项判据
@@ -743,6 +833,13 @@ class AiHealthCheckServiceImplTest {
         bo.setTarget(target);
         bo.setId(id);
         return bo;
+    }
+
+    /** 换一个检项执行接缝重建服务：超时与预算的用例要靠假接缝注入「第 N 项卡住」「预算已耗尽」。 */
+    private AiHealthCheckServiceImpl withInvoker(AiHealthItemInvoker invoker) {
+        return new AiHealthCheckServiceImpl(dataSource, modelConfigService, knowledgeBaseService,
+            agentService, mcpServerService, mcpClientService, mcpClientMapper, runtimeConfigStore,
+            aiProperties, vectorStore, milvusProbe, ossService, routeJudge, invoker);
     }
 
     private AiHealthCheckVo itemOf(AiHealthReportVo report, String key) {

@@ -9,6 +9,7 @@ import org.dromara.ai.config.AiProperties;
 import org.dromara.ai.core.AiMilvusProbe;
 import org.dromara.ai.core.AiVectorStore;
 import org.dromara.ai.core.agent.AiRuntimeConfigStore;
+import org.dromara.ai.core.health.AiHealthItemInvoker;
 import org.dromara.ai.core.route.JevSystemOneSupport;
 import org.dromara.ai.core.route.RouteJudge;
 import org.dromara.ai.core.route.RouteJudgeMode;
@@ -62,7 +63,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
-import java.util.function.Supplier;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -74,6 +77,9 @@ import java.util.stream.Collectors;
  *       需要真实连接的项返回 {@code UNKNOWN} 并标记可探测，由 {@link #probe(AiHealthProbeBo)} 按需验证。</li>
  *   <li><b>永不 500</b>：每个体检项各自 try/catch，单点异常降级为该行的 FAIL（并写明原因），
  *       不影响其余项，也不让页面整体报错。</li>
+ *   <li><b>单点卡死也拖不垮整屏</b>：检项由 {@link AiHealthItemInvoker} 在单项 3 秒、全量 30 秒的
+ *       预算内执行（§12.3 / §12.7 I-14）。超时项记 {@code UNKNOWN} 并写明「判定超时」，
+ *       预算用尽后的剩余项直接出结论、不再执行。</li>
  *   <li><b>结果缓存 60 秒</b>：一次全量自检要遍历 15 项、多次查库，进页面与切回来不必每次重算。
  *       缓存读写同样按「永不 500」处理：Redis 坏了就当没缓存。页面「重新自检」带
  *       {@code refresh=true} 穿透，改完配置立刻能看到新结论。</li>
@@ -117,6 +123,18 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
      */
     private static final Duration REPORT_CACHE_TTL = Duration.ofSeconds(60);
 
+    /**
+     * 单个检项的判定超时（设计稿 §12.3 / §12.7 I-14）。取 3 秒是因为最慢的合法检项是一次
+     * Milvus 建连列集合；超过它就不再等——一个依赖卡住不该把整屏拖成白屏。
+     */
+    private static final long ITEM_TIMEOUT_MILLIS = Duration.ofSeconds(3).toMillis();
+
+    /**
+     * 整屏体检的总预算（设计稿 §12.3 / §12.7 I-14）。15 项 × 3 秒 = 45 秒是「每项都刚好卡满」
+     * 的最坏值，页面等不起；预算耗尽后剩余检项直接记 UNKNOWN 且不再执行，因此实际耗时上界是 30 秒。
+     */
+    private static final long TOTAL_BUDGET_MILLIS = Duration.ofSeconds(30).toMillis();
+
     private static final String CATEGORY_INFRA = "基础设施";
 
     private static final String CATEGORY_MODEL = "模型与向量";
@@ -154,6 +172,11 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     private final OssService ossService;
 
     private final RouteJudge routeJudge;
+
+    /**
+     * 检项执行接缝：生产注入带硬超时的实现，单测注入同线程直调（理由见 {@link AiHealthItemInvoker}）
+     */
+    private final AiHealthItemInvoker itemInvoker;
 
     /**
      * 平台版本（构建时由 Maven 过滤写入 {@code application.yml}，缺失时回退 unknown）
@@ -214,22 +237,30 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
      * 逐项体检并汇总（不含缓存判定）。
      */
     private AiHealthReportVo runChecks() {
+        return runChecks(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TOTAL_BUDGET_MILLIS));
+    }
+
+    /**
+     * @param deadlineNanos 整屏预算的截止时刻（{@link System#nanoTime()} 基准）。
+     *                      开成包内可见是测试接缝：真实等满 30 秒的用例不该留在 CI 里。
+     */
+    AiHealthReportVo runChecks(long deadlineNanos) {
         List<AiHealthCheckVo> items = new ArrayList<>();
-        items.add(safe("db", "数据库连通", CATEGORY_INFRA, this::checkDb));
-        items.add(safe("db.schema", "AI 业务表齐全", CATEGORY_INFRA, this::checkSchema));
-        items.add(safe("redis", "Redis 连通", CATEGORY_INFRA, this::checkRedis));
-        items.add(safe("model.chat.key", "对话模型密钥", CATEGORY_MODEL, this::checkChatKeys));
-        items.add(safe("model.embedding", "向量模型密钥与维度", CATEGORY_MODEL, this::checkEmbedding));
-        items.add(safe("vector.milvus", "向量库（Milvus）", CATEGORY_MODEL, this::checkMilvus));
-        items.add(safe("agent.model", "智能体绑定模型", CATEGORY_AGENT, this::checkAgentModels));
-        items.add(safe("mcp.server", "MCP 出口口令与工具", CATEGORY_INTEGRATION, this::checkMcpServer));
-        items.add(safe("mcp.client", "外部 MCP 连接", CATEGORY_INTEGRATION, this::checkMcpClients));
-        items.add(safe("safety.engine", "内容安全引擎", CATEGORY_RUNTIME, this::checkSafetyEngine));
-        items.add(safe("rag.rerank", "检索重排（Rerank）", CATEGORY_RUNTIME, this::checkRerank));
-        items.add(safe("runtime.timezone", "时区一致性", CATEGORY_RUNTIME, this::checkTimezone));
-        items.add(safe("structured-decision", "结构化决策连通性", CATEGORY_RUNTIME, this::checkStructuredDecision));
-        items.add(safe("storage.domain", "对象存储对外域名", CATEGORY_STORAGE, this::checkStorageDomain));
-        items.add(safe("crypto.key", "加密根密钥收口", CATEGORY_RUNTIME, this::checkCryptoKey));
+        items.add(safe("db", "数据库连通", CATEGORY_INFRA, this::checkDb, deadlineNanos));
+        items.add(safe("db.schema", "AI 业务表齐全", CATEGORY_INFRA, this::checkSchema, deadlineNanos));
+        items.add(safe("redis", "Redis 连通", CATEGORY_INFRA, this::checkRedis, deadlineNanos));
+        items.add(safe("model.chat.key", "对话模型密钥", CATEGORY_MODEL, this::checkChatKeys, deadlineNanos));
+        items.add(safe("model.embedding", "向量模型密钥与维度", CATEGORY_MODEL, this::checkEmbedding, deadlineNanos));
+        items.add(safe("vector.milvus", "向量库（Milvus）", CATEGORY_MODEL, this::checkMilvus, deadlineNanos));
+        items.add(safe("agent.model", "智能体绑定模型", CATEGORY_AGENT, this::checkAgentModels, deadlineNanos));
+        items.add(safe("mcp.server", "MCP 出口口令与工具", CATEGORY_INTEGRATION, this::checkMcpServer, deadlineNanos));
+        items.add(safe("mcp.client", "外部 MCP 连接", CATEGORY_INTEGRATION, this::checkMcpClients, deadlineNanos));
+        items.add(safe("safety.engine", "内容安全引擎", CATEGORY_RUNTIME, this::checkSafetyEngine, deadlineNanos));
+        items.add(safe("rag.rerank", "检索重排（Rerank）", CATEGORY_RUNTIME, this::checkRerank, deadlineNanos));
+        items.add(safe("runtime.timezone", "时区一致性", CATEGORY_RUNTIME, this::checkTimezone, deadlineNanos));
+        items.add(safe("structured-decision", "结构化决策连通性", CATEGORY_RUNTIME, this::checkStructuredDecision, deadlineNanos));
+        items.add(safe("storage.domain", "对象存储对外域名", CATEGORY_STORAGE, this::checkStorageDomain, deadlineNanos));
+        items.add(safe("crypto.key", "加密根密钥收口", CATEGORY_RUNTIME, this::checkCryptoKey, deadlineNanos));
 
         AiHealthReportVo report = new AiHealthReportVo();
         report.setItems(items);
@@ -926,12 +957,33 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     // ---------------------------------------------------------------- 工具方法
 
     /**
-     * 逐项兜底：单点异常降级为该行 FAIL，绝不让整页 500。
+     * 单项兜底：异常降级为该行 FAIL、超时降级为 UNKNOWN，绝不让整页 500。
+     *
+     * <p>本项预算取「单项上限」与「整屏剩余」的较小值：卡住的是第 14 项时，
+     * 不该再给满 3 秒把整屏拖到预算之外。</p>
      */
-    private AiHealthCheckVo safe(String key, String name, String category, Supplier<AiHealthCheckVo> supplier) {
+    private AiHealthCheckVo safe(String key, String name, String category,
+                                 Callable<AiHealthCheckVo> body, long deadlineNanos) {
+        long remainingMillis = TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
+        if (remainingMillis <= 0) {
+            return unknown(key, name, category,
+                "判定超时：整屏 " + TimeUnit.MILLISECONDS.toSeconds(TOTAL_BUDGET_MILLIS) + " 秒预算已用尽，本项未执行",
+                "点「重新自检」或逐项「测试」定位卡住的依赖");
+        }
+        long budgetMillis = Math.min(ITEM_TIMEOUT_MILLIS, remainingMillis);
+        long startedAt = System.nanoTime();
         try {
-            AiHealthCheckVo vo = supplier.get();
-            return vo == null ? fail(key, name, category, "体检项未返回结果", "查看应用日志定位") : vo;
+            AiHealthCheckVo vo = itemInvoker.invoke(body, budgetMillis);
+            if (vo == null) {
+                return fail(key, name, category, "体检项未返回结果", "查看应用日志定位");
+            }
+            vo.setElapsedMs(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt));
+            return vo;
+        } catch (TimeoutException e) {
+            log.warn("健康自检项判定超时：key={}, budgetMillis={}", key, budgetMillis);
+            return unknown(key, name, category,
+                "判定超时：单项超过 " + budgetMillis + " 毫秒未返回",
+                "点「重新自检」或逐项「测试」，并检查该依赖是否可达");
         } catch (Exception e) {
             log.warn("健康自检项执行失败：key={}, cause={}", key, e.getMessage());
             return fail(key, name, category, "体检异常：" + e.getMessage(), "查看应用日志定位具体原因");
