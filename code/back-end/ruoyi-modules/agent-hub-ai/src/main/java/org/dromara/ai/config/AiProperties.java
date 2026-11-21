@@ -85,6 +85,32 @@ public class AiProperties {
     private Reaper reaper = new Reaper();
 
     /**
+     * 健康自检配置（§12.3）：WARN 档里少数几项需要读本地文件，路径在此声明而不是写死
+     */
+    private Health health = new Health();
+
+    /**
+     * 健康自检配置。
+     */
+    @Data
+    public static class Health {
+
+        /**
+         * ERROR 日志文件路径，与 logback 的 {@code log.path} + {@code file_error} 保持一致；
+         * 滚动归档（{@code .log.gz}）不解析，自检只覆盖当前文件的时间窗。
+         */
+        private String errorLogPath = "./logs/sys-error.log";
+
+        /**
+         * 磁盘 / Redis 内存余量的告警水位（百分比），默认 15 为设计稿 §12.3 的冻结值。
+         *
+         * <p>开成配置而不是写死：单测要在「正好 15%」与「14%」两侧判边界，不能去赌跑测试那台机器的磁盘余量。</p>
+         */
+        private int lowWatermarkPercent = 15;
+
+    }
+
+    /**
      * 审计与运行数据保留策略。
      */
     @Data

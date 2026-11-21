@@ -6,6 +6,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.ai.config.AiProperties;
+import org.dromara.ai.core.health.AiTaskHeartbeat;
 import org.dromara.ai.domain.AiAgentTaskRun;
 import org.dromara.ai.domain.AiDocument;
 import org.dromara.ai.domain.AiRouteRun;
@@ -68,6 +69,11 @@ public class AiStaleRunReaper {
      */
     private static final int MIN_SCAN_INTERVAL_SECONDS = 30;
 
+    /**
+     * 心跳任务名，拼成 Redis 键 {@code agenthub:ai:heartbeat:run-reaper}；自检项 {@code runtime.reaper} 引用本常量读同一键
+     */
+    public static final String HEARTBEAT_TASK = "run-reaper";
+
     private final AiDocumentMapper documentMapper;
 
     private final AiRouteRunMapper routeRunMapper;
@@ -95,7 +101,7 @@ public class AiStaleRunReaper {
             log.info("中断任务回收器已关闭（agenthub.ai.reaper.enabled=false）");
             return;
         }
-        int interval = Math.max(MIN_SCAN_INTERVAL_SECONDS, config.getScanIntervalSeconds());
+        int interval = (int) scanIntervalSeconds();
         scheduler.scheduleWithFixedDelay(this::reapQuietly, 0, interval, TimeUnit.SECONDS);
         log.info("中断任务回收器已启动：staleMinutes={}，scanIntervalSeconds={}", config.getStaleMinutes(), interval);
     }
@@ -223,13 +229,27 @@ public class AiStaleRunReaper {
 
     /**
      * 周期任务入口：任何异常只记日志，不能让调度线程退出。
+     *
+     * <p>每轮结束都写一次心跳（含失败轮）——健康自检要区分「扫描本身报错」和「调度线程已经不跑了」，
+     * 前者仍有心跳、后者没有。</p>
      */
     private void reapQuietly() {
         try {
             reapNow();
         } catch (Exception e) {
             log.warn("中断任务回收失败：{}", e.getMessage(), e);
+        } finally {
+            AiTaskHeartbeat.beat(HEARTBEAT_TASK, scanIntervalSeconds());
         }
+    }
+
+    /**
+     * 生效的扫描间隔（秒）：下限 {@value #MIN_SCAN_INTERVAL_SECONDS}，与 {@link #start()} 注册调度时同源。
+     *
+     * @return 间隔秒数
+     */
+    private long scanIntervalSeconds() {
+        return Math.max(MIN_SCAN_INTERVAL_SECONDS, aiProperties.getReaper().getScanIntervalSeconds());
     }
 
     /**
