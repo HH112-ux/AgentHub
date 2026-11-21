@@ -465,7 +465,7 @@
           <template #default="scope">
             <el-button link type="primary" @click="handleViewVersion(scope.row)">查看</el-button>
             <el-button
-              v-hasPermi="['ai:memory:edit']"
+              v-hasPermi="['ai:memory:version:restore']"
               link
               type="warning"
               :disabled="scope.row.current"
@@ -513,10 +513,22 @@
         <el-form-item label="备注">
           <el-input v-model="restoreForm.note" maxlength="200" show-word-limit placeholder="可选，记录本次恢复原因" />
         </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="restoreForm.confirmed">
+            我已确认：目标版本的正文将覆盖当前 MEMORY.md，当前内容会先自动存为一个新版本
+          </el-checkbox>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="restoreVisible = false">取消</el-button>
-        <el-button type="warning" :loading="restoring" @click="confirmRestore">确认恢复</el-button>
+        <el-button
+          type="warning"
+          :loading="restoring"
+          :disabled="!restoreForm.confirmed"
+          @click="confirmRestore"
+        >
+          确认恢复
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -637,7 +649,8 @@ const restoreForm = ref<{
   versionId: string;
   mode: 'CONTENT' | 'CONTENT_AND_WATERMARK';
   note: string;
-}>({ versionId: '', mode: 'CONTENT', note: '' });
+  confirmed: boolean;
+}>({ versionId: '', mode: 'CONTENT', note: '', confirmed: false });
 
 /** 版本来源中文标签 */
 const VERSION_SOURCE_LABELS: Record<string, string> = {
@@ -686,7 +699,7 @@ const handleViewVersion = async (row: MemoryVersion) => {
 
 /** 打开恢复确认 */
 const handleRestoreVersion = (row: MemoryVersion) => {
-  restoreForm.value = { versionId: row.versionId, mode: 'CONTENT', note: '' };
+  restoreForm.value = { versionId: row.versionId, mode: 'CONTENT', note: '', confirmed: false };
   restoreVisible.value = true;
 };
 
@@ -701,7 +714,8 @@ const confirmRestore = async () => {
       agentId: query.value.agentId,
       userId: query.value.userId,
       mode: restoreForm.value.mode,
-      note: restoreForm.value.note
+      note: restoreForm.value.note,
+      confirmed: restoreForm.value.confirmed
     };
     await restoreMemoryVersion(restoreForm.value.versionId, payload);
     modal.msgSuccess('已恢复；恢复前版本已自动保存');

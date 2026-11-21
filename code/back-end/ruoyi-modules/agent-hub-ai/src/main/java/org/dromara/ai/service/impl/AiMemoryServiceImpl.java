@@ -702,7 +702,13 @@ public class AiMemoryServiceImpl implements IAiMemoryService {
 
     @Override
     public AiMemoryVersionVo restoreVersion(Long agentId, Long userId, String versionId,
-                                            String mode, String note) {
+                                            String mode, String note, boolean confirmed) {
+        // 二次确认排在任何副作用之前（§12.2 / §12.7 I-11）：未确认的请求不能留下 PRE_RESTORE 快照、
+        // 不能覆盖 MEMORY.md，也不能合并水位——判据放服务层而非只靠入口注解，是为了让日后新增的
+        // 批量或渠道入口绕不过这条要求。
+        if (!confirmed) {
+            throw new ServiceException(RESTORE_CONFIRM_REQUIRED);
+        }
         AiAgent definition = agentService.getEnabledAgent(agentId);
         WorkspaceManager workspace = workspaceOf(definition);
         RuntimeContext ctx = contextOf(userId);

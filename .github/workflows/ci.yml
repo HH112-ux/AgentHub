@@ -39,6 +39,11 @@ jobs:
       - name: 附件生命周期（状态机 / 配额 / 到期回收）
         run: node scripts/checks/attachment-lifecycle-guards.mjs
 
+      # §12.2 的版本恢复会整篇覆盖用户长期记忆且历史只增不删：权限标识、菜单登记、@Log 留痕、服务层确认判据与前端勾选分处五个文件，
+      # 少任一处都不报错——注解退回「记忆修改」等于人人可覆盖，判据挪到自动快照之后则被拒请求也留下了版本行（§12.7 I-11）。
+      - name: 记忆版本恢复（独立权限 / 二次确认 / 留痕）
+        run: node scripts/checks/memory-version-restore.mjs
+
       - name: 文件与目录命名规范
         run: node scripts/checks/naming-convention.mjs
 
@@ -166,6 +171,7 @@ jobs:
             echo "| 审计保留策略（§12.4 / I-5 / I-6 / I-7） | 恒定执行 |"
             echo "| 会话治理留痕（§12.5 / I-9） | 恒定执行 |"
             echo "| 附件生命周期（§12.6 / I-10：状态机 / 配额 / 到期回收） | 恒定执行 |"
+            echo "| 记忆版本恢复（§12.2 / I-11：独立权限 / 二次确认 / 留痕） | 恒定执行 |"
             echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
             echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
             echo "| 文档交叉引用（绝对链接/死链/锚点） | 恒定执行 |"

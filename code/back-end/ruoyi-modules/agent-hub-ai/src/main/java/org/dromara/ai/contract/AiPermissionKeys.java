@@ -136,6 +136,8 @@ public final class AiPermissionKeys {
     public static final String AI_MEMORY_QUERY = "ai:memory:query";
     /** 菜单「记忆删除」 */
     public static final String AI_MEMORY_REMOVE = "ai:memory:remove";
+    /** 菜单「记忆版本恢复」 */
+    public static final String AI_MEMORY_VERSION_RESTORE = "ai:memory:version:restore";
 
     // ---- ai:model ----
     /** 菜单「模型配置新增」 */
