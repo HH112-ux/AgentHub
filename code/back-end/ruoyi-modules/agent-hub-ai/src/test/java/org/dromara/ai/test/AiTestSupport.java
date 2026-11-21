@@ -11,7 +11,11 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.context.support.GenericApplicationContext;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * AI 模块单元测试的公共支撑：静态依赖初始化。
@@ -128,7 +132,12 @@ public final class AiTestSupport {
         // RedisUtils / IdGeneratorUtil 的静态字段在类初始化时即从容器取 Bean，缺它会让类初始化永久失败，
         // 之后每个 mockStatic(RedisUtils.class) 都抛错并污染 Mockito 的 matcher 栈（后续用例报 InvalidUseOfMatchers）。
         context.getBeanFactory().registerSingleton("redissonClient", mock(RedissonClient.class));
-        context.getBeanFactory().registerSingleton("identifierGenerator", mock(IdentifierGenerator.class));
+        // 主键生成器不能停在裸 mock：`nextId` 回 null 会让任何走到「插入新行」的用例在
+        // `IdGeneratorUtil.nextLongId()` 上抛 NPE（例如日报 upsert 的首插分支），这里给一段自增假 id。
+        IdentifierGenerator identifierGenerator = mock(IdentifierGenerator.class);
+        AtomicLong idSequence = new AtomicLong();
+        when(identifierGenerator.nextId(any())).thenAnswer(invocation -> idSequence.incrementAndGet());
+        context.getBeanFactory().registerSingleton("identifierGenerator", identifierGenerator);
         context.refresh();
         new SpringUtils().setApplicationContext(context);
         return context;

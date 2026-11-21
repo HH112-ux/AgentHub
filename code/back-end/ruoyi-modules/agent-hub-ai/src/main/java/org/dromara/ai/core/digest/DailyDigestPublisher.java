@@ -10,6 +10,7 @@ import org.dromara.ai.mapper.AiDailyDigestMapper;
 import org.dromara.ai.service.IPlatformDigestService;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.utils.IdGeneratorUtil;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 平台运行日报落库服务（**只落库**，不做通知/推送）。
+ * 平台运行日报落库服务（**只落库**，不做通知/推送；落库成功后只发一条进程内事件，供健康自检串跑一次）。
  *
  * <p><b>声明式产出</b>：调用方（写工具 {@code write_daily_digest}）只提供**日期**与**日报正文**；
  * <b>五块数值一律由本服务现取</b>（{@link IPlatformDigestService}，与只读工具同一口径），
@@ -60,6 +61,8 @@ public class DailyDigestPublisher {
 
     private final AiDailyDigestMapper digestMapper;
 
+    private final ApplicationEventPublisher eventPublisher;
+
     /**
      * 落库某日运行日报（按 {@code date} upsert）。
      *
@@ -82,10 +85,28 @@ public class DailyDigestPublisher {
             AiDailyDigest entity = buildDigest(vo, digestDate, level, text, sessionId);
             upsert(entity, digestDate);
             log.info("运行日报已落库：date={}, level={}, sessionId={}", digestDate, level, sessionId);
+            publishLandedEvent(digestDate, level);
             return entity;
         } catch (Exception e) {
             log.error("运行日报落库失败：date={}, sessionId={}", digestDate, sessionId, e);
             return null;
+        }
+    }
+
+    /**
+     * 通报「日报已落库」，供健康自检侧串一次体检（§12.3 触发时机 / §12.7 I-4）。
+     *
+     * <p>单独兜异常：日报此时**已经落库**，不能因为后续动作起不来而让上面那条 catch 把它报成
+     * 「落库失败」并返回 {@code null}——那会让模型如实复述一条没发生过的失败。</p>
+     *
+     * @param digestDate 日报日期
+     * @param level      结论级别
+     */
+    private void publishLandedEvent(LocalDate digestDate, String level) {
+        try {
+            eventPublisher.publishEvent(new DailyDigestPublishedEvent(digestDate, level));
+        } catch (Exception e) {
+            log.warn("运行日报落库后的体检触发失败：date={}, error={}", digestDate, e.getMessage());
         }
     }
 
