@@ -73,6 +73,10 @@ export interface AuditRetentionVO {
   pending?: Record<string, number>;
   /** 本次清理各表实际删除行数（未执行清理时为空） */
   purged?: Record<string, number> | null;
+  /** 本次清理各表的删除批数（§12.4 / I-6 分批删除，未执行清理时为空） */
+  purgedBatches?: Record<string, number> | null;
+  /** 本轮触到单轮上限、留待下次清理继续的表名（未执行清理时为空，全清完时为空数组） */
+  partialTables?: string[] | null;
 }
 
 /**

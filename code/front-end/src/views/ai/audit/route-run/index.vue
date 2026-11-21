@@ -463,7 +463,12 @@ const purgeRetention = async () => {
     const res = await purgeAuditRetention();
     const purged = res.data?.purged || {};
     const detail = Object.entries(RETENTION_TABLES).map(([key, label]) => `${label} ${purged[key] ?? 0}`).join(' / ');
-    modal.msgSuccess(`清理完成：${detail}`);
+    // 单轮有批数上限（§12.4 / I-6 的分批删除），触顶的表如实说明剩余留到下一轮，不让「清理完成」骗人
+    const partial = res.data?.partialTables || [];
+    const partialTip = partial.length
+      ? `；${partial.map((key) => RETENTION_TABLES[key] || key).join('、')}本轮已达单轮上限，剩余留待下次清理`
+      : '';
+    modal.msgSuccess(`清理完成：${detail}${partialTip}`);
     await getRetention();
   } finally {
     purging.value = false;
