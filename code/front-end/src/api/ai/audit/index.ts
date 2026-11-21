@@ -62,6 +62,28 @@ export const optionAuditAgents = (): AxiosPromise<AgentVO[]> => {
 };
 
 /**
+ * 一次清理的留痕（后端只保留最近一次；每日自动清理没有请求上下文，落不进底座操作日志）
+ */
+export interface AuditPurgeRecord {
+  /** 清理完成时间 */
+  at?: string;
+  /** 本次使用的截止时间 */
+  cutoff?: string;
+  /** 本次生效的保留天数 */
+  retentionDays?: number;
+  /** 触发方式：manual（页面按钮）/ auto（每日 03:30 定时） */
+  trigger?: string;
+  /** 操作人（自动清理为空） */
+  operatorId?: number | null;
+  /** 各表删除行数（逐批累计） */
+  purged?: Record<string, number>;
+  /** 合计删除行数 */
+  total?: number;
+  /** 用到的批次数（跨全部表累计） */
+  batches?: number;
+}
+
+/**
  * 审计保留策略视图：保留天数 + 各表超期行数（清理后另带逐表删除行数）
  */
 export interface AuditRetentionVO {
@@ -73,6 +95,8 @@ export interface AuditRetentionVO {
   pending?: Record<string, number>;
   /** 本次清理各表实际删除行数（未执行清理时为空） */
   purged?: Record<string, number> | null;
+  /** 上次清理记录（从未清理过时为空） */
+  lastPurge?: AuditPurgeRecord | null;
 }
 
 /**

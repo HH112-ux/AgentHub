@@ -30,6 +30,8 @@ public final class AiPermissionKeys {
     public static final String AI_AUDIT_RETENTION_CLEANUP = "ai:audit:retention:cleanup";
     /** 菜单「审计保留修改」 */
     public static final String AI_AUDIT_RETENTION_EDIT = "ai:audit:retention:edit";
+    /** 菜单「审计保留不限」：把保留天数设为 0（永不清理）的额外权限（§12.4） */
+    public static final String AI_AUDIT_RETENTION_UNLIMITED = "ai:audit:retention:unlimited";
     /** 菜单「编排运行」 */
     public static final String AI_AUDIT_ROUTE = "ai:audit:route";
     /** 菜单「编排运行详情」 */

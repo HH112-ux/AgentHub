@@ -23,6 +23,7 @@
           </el-button>
         </div>
       </div>
+      <div class="text-muted" style="font-size: 12px; margin-top: 6px">{{ retentionFootnote }}</div>
     </el-card>
     <div class="search-wrap">
       <el-card shadow="hover" class="search-panel" :class="{ 'is-collapsed': !showSearch }">
@@ -409,6 +410,20 @@ const retentionTip = computed<string>(() => {
   return `超期行数（截止 ${retention.value.cutoff || '-'}，每日 03:30 自动清理）：${parts.join(' / ')}`;
 });
 
+/** 保留策略脚注：上次清理留痕 + 取值口径（下限 30 天；0＝不限需独立权限） */
+const retentionFootnote = computed<string>(() => {
+  const last = retention.value.lastPurge;
+  const rules = '保留天数非 0 时不得低于 30 天；设为 0＝不限（永不清理）需「审计保留不限」权限';
+  if (!last?.at) {
+    return `尚未执行过清理；${rules}`;
+  }
+  const detail = Object.entries(RETENTION_TABLES)
+    .map(([key, label]) => `${label} ${last.purged?.[key] ?? 0}`)
+    .join(' / ');
+  const operator = last.operatorId ? `操作人 ${last.operatorId}` : '定时任务';
+  return `上次清理 ${last.at}（${last.trigger === 'auto' ? '自动' : '手动'}，${operator}，截止 ${last.cutoff || '-'}）删除 ${last.total ?? 0} 行 / ${last.batches ?? 0} 批：${detail}；${rules}`;
+});
+
 /** 加载当前保留策略与超期行数 */
 const getRetention = async () => {
   const res = await getAuditRetention();
@@ -416,11 +431,16 @@ const getRetention = async () => {
   retentionDays.value = res.data?.retentionDays ?? 0;
 };
 
-/** 保存保留天数（运行期生效） */
+/** 保存保留天数（运行期生效；下限与「不限」权限由后端判定，这里只提前拦一次） */
 const saveRetention = async () => {
+  const days = retentionDays.value ?? 0;
+  if (days > 0 && days < 30) {
+    modal.msgWarning('保留天数不得低于 30 天；确需永不清理请设为 0（不限，需「审计保留不限」权限）');
+    return;
+  }
   retentionSaving.value = true;
   try {
-    await saveAuditRetention(retentionDays.value);
+    await saveAuditRetention(days);
     modal.msgSuccess('保留天数已保存');
     await getRetention();
   } finally {

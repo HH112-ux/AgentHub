@@ -14,6 +14,7 @@ import org.dromara.ai.domain.bo.AiRouteBudgetConfigBo;
 import org.dromara.ai.domain.bo.AiSecurityConfigBo;
 import org.dromara.ai.domain.bo.AiSecurityConfigPatchBo;
 import org.dromara.ai.domain.bo.AiWorkspaceConfigBo;
+import org.dromara.ai.domain.vo.AiAuditRetentionVo;
 import org.dromara.common.json.utils.JsonUtils;
 import org.dromara.common.redis.utils.RedisUtils;
 import org.dromara.common.core.utils.StringUtils;
@@ -81,6 +82,11 @@ public class AiRuntimeConfigStore {
      * 审计与运行数据保留策略的 Redis 键
      */
     private static final String AUDIT_RETENTION_KEY = "agenthub:ai:runtime:audit-retention";
+
+    /**
+     * 审计清理记录键（最近一次清理的时间、截止日、逐表行数与批次数）
+     */
+    private static final String AUDIT_PURGE_RECORD_KEY = "agenthub:ai:runtime:audit-purge-record";
 
     private final AiProperties aiProperties;
 
@@ -491,6 +497,37 @@ public class AiRuntimeConfigStore {
     public void updateAuditRetention(AiAuditRetentionBo bo) {
         RedisUtils.setCacheObject(AUDIT_RETENTION_KEY, JsonUtils.toJsonString(bo));
         log.info("审计保留策略已更新：retentionDays={}", bo.getRetentionDays());
+    }
+
+    /**
+     * 读取最近一次审计清理记录。
+     *
+     * @return 清理记录；从未清理过或缓存值损坏时返回 {@code null}
+     */
+    public AiAuditRetentionVo.LastPurge auditPurgeRecord() {
+        try {
+            String cached = RedisUtils.getCacheObject(AUDIT_PURGE_RECORD_KEY);
+            return JsonUtils.parseObject(cached, AiAuditRetentionVo.LastPurge.class);
+        } catch (Exception e) {
+            log.warn("审计清理记录读取失败，按「无记录」处理：{}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 写入最近一次审计清理记录（设计稿 §12.4 操作面要求页面能看到上次清理）。
+     *
+     * <p>无 TTL：这是一条运行事实而不是缓存，删掉就等于「从没清理过」，会误导下一次操作。
+     * 写失败只记日志——数据已经删完了，不能因为留痕失败把清理结果报成异常。</p>
+     *
+     * @param record 清理记录
+     */
+    public void recordAuditPurge(AiAuditRetentionVo.LastPurge record) {
+        try {
+            RedisUtils.setCacheObject(AUDIT_PURGE_RECORD_KEY, JsonUtils.toJsonString(record));
+        } catch (Exception e) {
+            log.warn("审计清理记录写入失败：{}", e.getMessage());
+        }
     }
 
     /**

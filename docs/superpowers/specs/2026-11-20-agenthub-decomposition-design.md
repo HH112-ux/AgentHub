@@ -114,7 +114,7 @@ AgentHub
 |---|---|---|
 | SQL 建库（AI 模块） | `script/sql/{dialect}/agenthub-ai-ddl.sql`，双方言同路径同文件名 | `script/sql/postgres/agenthub-ai-ddl.sql`、`script/sql/mysql/agenthub-ai-ddl.sql` |
 | SQL 底座基线 | `script/sql/base/{dialect}/ruoyi-{vue,job,workflow}-base.sql`，属底座 MIT 分发件（出处见 [开源许可边界](../../open-source-licenses.md)），不受本表小写 kebab 约束，也不参与双方言对账；initdb 序号 `10`/`11`/`12` 固定先于 `20`~`40` | `script/sql/base/postgres/ruoyi-vue-base.sql` |
-| SQL 种子与菜单 | `agenthub-ai-seed.sql`（字典/内置工具/示例库）、`agenthub-ai-menu.sql`（菜单与 98 按钮权限），按权限标识分组顺序追加 | `script/sql/postgres/agenthub-ai-menu.sql` |
+| SQL 种子与菜单 | `agenthub-ai-seed.sql`（字典/内置工具/示例库）、`agenthub-ai-menu.sql`（菜单与按钮权限，基线 98 行、按 §12.7 增量追加至 99 行），按权限标识分组顺序追加 | `script/sql/postgres/agenthub-ai-menu.sql` |
 | SQL 迁移 | `agenthub-ai-migrate-v{n}-{kebab-scope}.sql`，1.0.0 基线不产出迁移 | `agenthub-ai-migrate-v2-hitl-index.sql` |
 | Java 包 | `org.dromara.ai.{domain}`，`{domain}` 与权限标识的 `{模块}` 段一一对应 | `org.dromara.ai.knowledge`、`org.dromara.ai.channel` |
 | 契约常量 | `org.dromara.ai.contract.Ai{面}`，一类一面，取值即线上值，改动走 §6.5 契约变更流程 | `AiEventType`、`AiPermissionKeys`、`AiToolImpl`、`AiDegradeReason` |
@@ -126,7 +126,7 @@ AgentHub
 | 接口 e2e | `e2e/http/L{nn}-{kebab-scope}.mjs`，`nn` 为手册层号 01~21；`L00` 固定留给 §6.5 的契约对账，不占层号 | `e2e/http/L00-contract-consistency.mjs`、`e2e/http/L05-hitl-confirm.mjs` |
 | 浏览器 e2e | `e2e/ui/{domain}-{page}.spec.ts`，覆盖 34 页巡检 | `e2e/ui/audit-tool-call.spec.ts` |
 | RAG 评测 | `e2e/rag/cases.jsonl`（用例集）、`e2e/rag/run.mjs`（跑分）、`e2e/rag/report-{YYYYMMDD}.md`（报告，不入库） | `e2e/rag/report-20261126.md` |
-| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs` |
+| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs`、`scripts/checks/audit-purge-batching.mjs` |
 | Java 源文件 | `.java` 叶子名必须与 public 类型名逐字一致（JLS §7.6），PascalCase 属语言强制而非项目偏好，豁免本表小写 kebab 校验；包目录段仍全小写，其它扩展名不放行 | `.../org/dromara/ai/contract/AiEventType.java` |
 | 交付配置文件 | GitHub 强制约定名，不受本表小写 kebab 约束且豁免命名校验：`.github/workflows/ci.yml`、`.github/pull_request_template.md`（大小写不敏感，须位于默认分支方生效） | `.github/pull_request_template.md` |
 | 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；app 镜像固定 `code/back-end/Dockerfile` + 同目录 `.dockerignore`（构建上下文即后端根，`app.build.context` 指过去，口径见 [配置文档 §7](../../configuration.md)）；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
@@ -328,11 +328,11 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | 契约面 | 唯一常量源（`org.dromara.ai.contract`） | 对账的另一/两侧 | 当前口径 |
 |---|---|---|---|
 | SSE 事件类型 | `AiEventType`（16 项，`wire()` 即线上名） | 后端各 `EVENT_*` 发射常量、前端 `api/ai/chat/types.ts` 的 `ChatStreamEvent['type']` 联合 | 三方逐字相等且双向无多余 |
-| 权限标识 | `AiPermissionKeys`（131 项） | `@SaCheckPermission` 实参、双方言 `agenthub-ai-menu.sql` 的 `perms`、前端 `hasPermi` 引用 | 注解 ⊆ 菜单 = 常量；MySQL 与 PostgreSQL 集合相等 |
+| 权限标识 | `AiPermissionKeys`（132 项） | `@SaCheckPermission` 实参、双方言 `agenthub-ai-menu.sql` 的 `perms`、前端 `hasPermi` 引用 | 注解 ⊆ 菜单 = 常量；MySQL 与 PostgreSQL 集合相等 |
 | 工具实现标识 | `AiToolImpl`（30 项） | `AiToolFactory` 的 `IMPL_*` 常量、双方言种子脚本的 `ai_tool.impl_name` | 三方集合相等（§6.3 的「唯一引用面」由此可执行） |
 | 降级原因 | `AiDegradeReason`（8 项中文前缀，`prefix()`） | 代码里 `degradeReason = "…"` 的字面量 | 字面量必须命中某个前缀；异常兜底分支直接落 `rootCauseMessage(e)`，无固定前缀，不入词表 |
 
-菜单登记口径：139 行 = 7 目录 + 34 页面 + 98 按钮，`perms` 去重后 131 个 `ai:` 标识（`ai:health:probe` 在页面与按钮各登记一次）。§6.1 段首「98 按钮权限」按此口径理解。
+菜单登记口径：140 行 = 7 目录 + 34 页面 + 99 按钮，`perms` 去重后 132 个 `ai:` 标识（`ai:health:probe` 在页面与按钮各登记一次）。篇首与 §1 的「98 按钮权限」、§6.1「同步登记菜单脚本（98 按钮权限…）」、§7.1「98 按钮权限显隐」按手册基线口径保留不改写，实际登记在此之上按 §12.7 增量项追加，当前多出 1 行：§12.7 I-5 的 `ai:audit:retention:unlimited`。
 
 对账入口：`e2e/http/L00-contract-consistency.mjs`（零依赖 ESM，本地与 CI 同一命令），已登记为 `.github/workflows/ci.yml` 的必过步骤；§3.2 另由 `scripts/checks/menu-component.mjs` 把菜单 `component` 与前端页面文件对齐，同样登记为必过步骤。
 
@@ -395,7 +395,7 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 
 | 检查点 | 内容 | 当场验证方式 |
 |---|---|---|
-| C1 底座与栈 | 双栈起栈、initdb 链、登录 | `docker compose up -d` 后 40 表 / 131 perms / 中文无损，能登进管理台 |
+| C1 底座与栈 | 双栈起栈、initdb 链、登录 | `docker compose up -d` 后 40 表 / 132 perms / 中文无损，能登进管理台 |
 | C2 契约 | 四类契约重冻并钉死 | `node e2e/http/L00-contract-consistency.mjs` 与 `scripts/checks/*` 全绿 |
 | C3 后端能力域 | AI 模块单测 | `mvn -pl ruoyi-modules/agent-hub-ai -am test` 通过，且执行顺序无关 |
 | C4 前端 | 构建 + 菜单可达 | `pnpm build` 通过，`scripts/checks/menu-component.mjs` 全命中 |
@@ -574,9 +574,9 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | I-2 | §12.3 结果缓存 60 秒 | 无缓存，每次点刷新都全跑 | 已交付：`check()` 先读 Redis 键 `agenthub:ai:health:report`（值为报告 JSON，TTL 60 秒，写法与本模块 `AiSensitiveWordServiceImpl` 的缓存惯例一致：JSON 串入库而不是靠 Redisson 编解码器保对象图）；实时体检后覆盖并重置 TTL，因此连续点刷新不会把 Redis 打穿。`GET /ai/health/check?refresh=true`（页面「重新自检」按钮）穿透缓存重算；读缓存与写缓存各自 try/catch——Redis 抖动或缓存值被写坏都只当作没缓存，不改「永不 500」。`AiHealthCheckServiceImplTest` 5 项断言 + 6 项变异（TTL 改 300 秒 / 缓存读取短路 / 忽略 refresh / 读缓存异常不兜底 / 写缓存异常不兜底 / Controller 丢参）全部变红 |
 | I-3 | §12.3 WARN 项补齐 | 对象存储读写删、BM25 就绪、渠道长连接、磁盘与 Redis 余量、Reaper 心跳、向量化积压、近 24h ERROR 日志 | 已交付：在架 15 → 22 项，每项独立判定，接不进的一律记 `UNKNOWN` 而非 `PASS`。`runtime.capacity`（磁盘 + Redis `INFO memory`，水位 15% 开成 `agenthub.ai.health.low-watermark-percent`，默认值即冻结值，为了边界用例不取决于跑测试那台机器的磁盘）、`runtime.reaper`（读 `AiTaskHeartbeat` 写的 `agenthub:ai:heartbeat:run-reaper`，该键由 `AiStaleRunReaper` 在每轮扫描的 `finally` 写入，因此「键很旧」指向调度线程退出而不是扫描报错；无键时按进程运行时长区分「还没到首轮扫描」与「线程死了」）、`runtime.error-log`（只读 `agenthub.ai.health.error-log-path` 尾部 2MB 的行首时间戳，只报条数与最近时间、**不回显日志正文**，因为该接口对整个管理端可见）、`rag.bm25`、`rag.queue`、`channel.stream` 六项出真实判定；`channel.stream` 的口径是「本实例 SDK 登记态」，断线由 SDK 自动重连，不是实时连通性。**残留**：`storage.io` 按本项口径记 `UNKNOWN`——底座 `OssService` 只暴露读（URL 查询），要转真实判定需底座开放带 TTL 的探针对象或允许自检写固定前缀并即时删除，属产品决策，检项里留了处置建议。落点是必过单测加 5 项变异（余量水位 `<` 改 `<=`、心跳容忍周期 2 改 3、队满判定 `>=` 改 `>`、摘掉 `runtime.capacity` 注册、`channel.stream` 的检项分类漂出注册处那一档）全部变红 |
 | I-4 | §12.3 触发时机 | 日报生成后不触发体检 | 08:00 日报落库后串一次体检，结果写运行健康 |
-| I-5 | §12.4 保留期下限 | BO 只有 `@Min(0) @Max(3650)`，无 30 天下限 | `audit-days` 非 0 时 ≥30；0 视为不限并需 `ai:audit:retention:unlimited` + 菜单脚本登记 |
-| I-6 | §12.4 分批删除 | 单条 `delete from … where create_time < cutoff` 全量删 | 按 `create_time` 索引分片，单事务 ≤5000 行循环，逐批累计行数写清理记录 |
-| I-7 | §12.4 引用一致 | 跨截止日的子记录会成孤立引用 | 子记录按父记录联动删除（`join` 父表 `create_time`），不再依赖删除顺序 |
+| I-5 | §12.4 保留期下限 | BO 只有 `@Min(0) @Max(3650)`，无 30 天下限 | 已交付：下限钉在 `AiAuditRetentionServiceImpl.MIN_RETENTION_DAYS = 30`，保存、手动清理、自动清理三个入口各自校验——**自动清理读到越界存量值只跳过不删**（03:30 那轮不替一个读错的配置执行不可撤销的删除，日志留 WARN），手动清理与保存各自报错并指回本页重设。`0`＝不限改由独立权限 `ai:audit:retention:unlimited` 把关（`AiPermissionKeys` 常量 + 双方言菜单行 `1761400000000020284`，`menu_id` 段沿用「审计保留」分组），取不到登录用户按拒绝处理而不是放行。登记面由**既有**必过步骤 L00 A 段守住（注解 ⊆ 菜单 = 常量，含跨方言比对），因此不新增脚本；下限与拒绝路径由必过单测守住，落点见本节末段 |
+| I-6 | §12.4 分批删除 | 单条 `delete from … where create_time < cutoff` 全量删 | 已交付：清理改成「取一批主键 → 按 id 批删」，单批 1000 行（在 §12.4 的 5000 行上限内给 `in (…)` 的参数个数与语句解析留余量），一条删除语句只覆盖一批，不存在跨批长事务；逐批累计行数连同 `at`/`cutoff`/`trigger`/`operatorId`/`total`/`batches` 写 Redis 键 `agenthub:ai:runtime:audit-purge-record`（无 TTL：这是运行事实而不是缓存，删掉等于「从没清理过」），页面在保留面板脚注里直接显示。两道护栏防死循环：单表批次上限 20000，以及「取到 id 却删 0 行即中止本表」——中止而不是继续转，因为同一批 id 会一直被取出来，剩余行留到下一轮且日志与留痕如实偏小。MySQL 不支持 `delete … limit`，也不允许在同表子查询里指定删除目标（派生表还会被 `derived_merge` 合并后重新触发该错误），所以双方言共用的分批只能走「两条语句」而不是 `where id in (select … limit n)` |
+| I-7 | §12.4 引用一致 | 跨截止日的子记录会成孤立引用 | 已交付：两条父子链各自成对联动——`ai_route_expert_call` 随 `ai_route_run`（同批父 id 先删子再删父），`ai_trace` 的子链路随父链路（`parent_trace_id`）。计数谓词与取批谓词同步带上父条件，dry-run 预检的行数和实删对得上；级联删掉的子行记在子表名下而不是父表名下。至此删除顺序不再承担正确性，本节 B 段「先 `ai_route_expert_call` 再 `ai_route_run`」的裁定作废；子表自己仍按 `create_time` 单独清一轮，接住父行未超期而明细已超期的反向缺口 |
 | I-8 | §12.5 并发与保护 | 对进行中会话直接删除无 409；无会话级锁 + 状态 CAS | 删除进行中会话返回 409 并引导先终止；重复终止幂等返回 |
 | I-9 | §12.5 治理面留痕 | 操作他人会话不必填理由 | 跨本人范围的操作必填理由并落底座 `sys_oper_log` |
 | I-10 | §12.6 附件状态机 | 无 `status`/`expire_at` 列，无单用户配额（≤20 个 / ≤50MB） | 双方言加列（含字典 `ai_attachment_status` 回补）+ 配额校验 + 回收优先最旧 `PENDING`；`ai_attachment_status` 的取值口径按本节 A 段人工对照——L00 的状态字典机械对账已按 I-16 撤除，本项完成后不会自动获得对账覆盖 |
@@ -588,6 +588,8 @@ RBAC 用户/角色/菜单/字典、OSS 对象存储、统一消息推送、工�
 | I-16 | L00 E 段状态字典机械对账的撤除 | E 段原本做四类断言：种子 `sys_dict_data` 取值与实体 `STATUS_*` 常量双向比对、同一方言内取值不得重复、词表登记了却没有任何字典项、字典项属于未登记的词表。**队长 2026-11-21 指示撤除**（原话「直接无视门禁给他删了」，在选项里选定「删 L00 的 E 段状态字典对账」）。撤除的代价已量化：把 mysql 种子里 `ai_route_run_status` 的 `pending` 改成 `Pending`，带 E 段时 `node e2e/http/L00-contract-consistency.mjs` rc=1 并报出两条（缺 `pending`、「Pending」无代码写入），删掉 E 段后同一条漂移 rc=0 静默通过。此后字典少一个取值会让页面显示裸码、多出一个代码从不写入的取值也没人发现，改字典只能人工对照本节 A 段的表 | 已撤除，且按 AGENTS.md「豁免项必须在脚本内写明出处」在 `L00` 原位留了撤除说明。删的是断言不是字典本身：31 类 / 108 项种子、双方言逐字一致、A 段的取值口径全部保留。要恢复就把四类断言重新接进 `e2e/http/L00-contract-consistency.mjs`，A 段那张表就是对账基准，种子不需要回改 |
 
 I-1/I-2/I-5/I-6/I-12 属门禁可捕获项，完成时按 AGENTS.md 的三步路径落 `scripts/checks/{scope}.mjs` → `ci.yml` 必过步骤 → §3.2 命名表定位，不允许只在本表写「必须」。I-1 的对账断言落在**既有**必过步骤 L00 的 F 段（该脚本已在 §3.2「契约」行与 `ci.yml` 登记为必过），因此不新增脚本文件；落点变化不放宽任何既有条目。 I-2 的落点是**必过单测**（`mvn test` 已在 `ci.yml` 的 `verify` 里）加 6 项变异验证：缓存复用、TTL 与穿透都是运行期行为，静态脚本只能自证「常量存在」，写在 `scripts/checks/` 里反而是一条不会报警的假门禁，因此不新增脚本文件。I-15 同理落在必过单测加 3 项变异——「检项有没有按人过滤」要看一次真实调用的取数路径，静态扫源码既抓不住改调 `queryOptions()`，也躲不开别名的包装方法。I-3 同理落在必过单测：七个 WARN 项读的是文件系统、Redis `INFO` 段、日志文件与线程池队列，静态脚本只能自证「检项注册了」，接不住「余量算错、心跳读失败被当成正常、队列差一个没打满」这类判定错误。I-14 也落在必过单测：超时是运行期行为，静态脚本最多自证「3 秒/30 秒两个常量存在」，接不住「卡住的检项有没有被真正放弃、剩余项有没有被跳过」，所以由 `AiHealthItemTimeoutInvokerTest`（4 项）与 `AiHealthCheckServiceImplTest` 新增的 4 项共同守住，配 8 项变异（单项上限放宽、取消取小、预算耗尽仍执行、超时落到 FAIL 分支、整屏预算改 60 秒、耗时不回写、超时不中断工作线程、异常不解包）全部如期变红。五处落点都不放宽任何既有条目。
+
+I-5/I-6/I-7 的落点（D6 交付）：新增 `scripts/checks/audit-purge-batching.mjs`，已按三步路径登记为 `ci.yml` 必过步骤——断言 `AiAuditRetentionMapper` 的删除语句只按 id 批删（`where …id in <foreach>`）、不得出现按 `create_time` 的整段删除、取批语句必须带 `limit #{batch}`，按 I-7 钉住两条级联形状（`delete from ai_route_expert_call where route_run_id in`、`delete from ai_trace where parent_trace_id in`）确实存在，再按 `AiAuditRetentionServiceImpl` 的 `TablePurge` 表清单**逐表**对齐全三条语句（计数、带 `limit #{batch}` 的取批、按 id 批删）。6 项变异验证：某表退回按时间整段删（同时命中「未按 id 批删」与「按 create_time 整段删」两条）、取批去掉 `limit`、级联列名 `route_run_id` 改回自身 `id`、删掉某一条取批语句、删掉某一条按 id 批删语句、把全部 `select id from` 改写成 `select count(id) from`——全部变红。逐表那一段是补出来的：先前只断言「存在某条取批语句」，删掉一张表的语句照样绿，而漏跑一张表正是这里最典型的漂移。**已知的接不住**：把 Java 侧方法改名而保留 SQL 语句不变红，因为「服务到底有没有调用级联删除」是调用图问题，静态形状管不到，由 `AiAuditRetentionServiceImplTest` 的 `InOrder`（同批父 id、先子后父）守住。I-5 的登记面**不新增脚本**：既有必过步骤 L00 的 A 段已经在做「注解 ⊆ 菜单 = 常量 + 跨方言比对 + 权限形态」，再写一份同断言的脚本就是本节反复否掉的那类假门禁，故沿用既有步骤（与本节 I-1 的处理同款）。下限校验、「不限」权限、清理留痕、分批累计与中止全是运行期行为，落在必过单测 `AiAuditRetentionServiceImplTest`（16 项），6 项变异全部变红：单批 1000→6000（突破 §12.4 的 5000 行上限）、「取到 id 却删 0 行」不中止、级联改成先删父再删子、下限 30→7 天、「不限」不再校验独立权限、清理结果不落 Redis 留痕（最后一项由手动与自动两个留痕用例同时变红）。三处落点都不放宽任何既有条目。
 
 ---
 

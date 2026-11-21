@@ -56,7 +56,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | `12` | `script/sql/base/{dialect}/ruoyi-workflow-base.sql` | 工作流表 |
 | `20` | `script/sql/{dialect}/agenthub-ai-ddl.sql` | 40 张 `ai_*` 表 |
 | `30` | `script/sql/{dialect}/agenthub-ai-seed.sql` | 内置只读工具、示例模型、31 字典类型 / 108 字典项 |
-| `40` | `script/sql/{dialect}/agenthub-ai-menu.sql` | 139 行菜单（7 目录 + 34 页面 + 98 按钮）= 131 个 `ai:{模块}:{动作}` 权限标识 |
+| `40` | `script/sql/{dialect}/agenthub-ai-menu.sql` | 140 行菜单（7 目录 + 34 页面 + 99 按钮）= 132 个 `ai:{模块}:{动作}` 权限标识（手册基线 98 按钮 / 131 标识，另加 §12.7 I-5 的 `ai:audit:retention:unlimited`） |
 
 底座基线随仓库存放在 `script/sql/base/`，compose 里按序号写死挂载（`deploy/deploy-{pg,mysql}/docker-compose.yml`），不再走外部路径变量：基线一旦缺失，`30`/`40` 因缺 `sys_menu`/`sys_dict_*` 直接报错，栈就起不来——把「缺文件」做成运行期变量等于把联调阻塞留到起栈那一刻。要换基线版本请直接改这三个挂载项（走 PR）。
 
@@ -76,14 +76,15 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 |---|---|---|
 | 40 表双方言幂等 | 底座真表 + 我方三脚本 × 两遍 × PG14/MySQL8.4，`ON_ERROR_STOP=1` | 两遍 0 错 |
 | 40 表清单三方对齐 | `e2e/http/L00-contract-consistency.mjs` F 段：实体 `@TableName` ↔ 双方言 DDL ↔ Mapper 覆盖 | 40 张逐一命中，5 项漂移变异全红。运行期健康项 `db.schema` 用同一份实体清单与 `getTables` 求差集，缺表直接报名字（不再写死「四张核心表」） |
-| 131 权限标识 | 注解与常量类 ↔ 双方言菜单脚本对账（`e2e/http/L00-contract-consistency.mjs`） | 注解 ⊆ 菜单 = 常量，双方言差异 0 |
+| 132 权限标识 | 注解与常量类 ↔ 双方言菜单脚本对账（`e2e/http/L00-contract-consistency.mjs`） | 注解 ⊆ 菜单 = 常量，双方言差异 0 |
 | 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 139 菜单行 / 31+108 字典行 |
 | 状态字典 ↔ 实体常量 | **机械对账已按队长 2026-11-21 指示撤除**（原 `e2e/http/L00-contract-consistency.mjs` E 段：5 个 `ai_*_status` 取值与实体 `STATUS_*` 双向比对，另断言取值不重复、词表不空、字典项不孤立） | 撤除前后各跑过一次同一条漂移：把 mysql 种子 `ai_route_run_status` 的 `pending` 改成 `Pending`，带 E 段 rc=1 报两条，删掉后 rc=0 通过——这类漂移今后不会报警，改字典要人工对照设计稿 §12.7 A 段的表（31 类 / 108 项种子与双方言一致性本身不变）。台账见 §12.7 I-16 |
 | 体检报告 60 秒缓存 | `AiHealthCheckServiceImplTest` 5 项断言（缓存复用、TTL=60s、`refresh=true` 穿透、缓存值损坏回退实时、写缓存失败降级）+ 6 项变异：TTL 改 300 秒、缓存读取短路、忽略 refresh、读/写缓存异常不再兜底、Controller 丢掉 refresh 参数 | 6/6 如期变红且报错命中对应断言；缓存键 `agenthub:ai:health:report`，每次实时体检覆盖并重置 TTL，页面「重新自检」不受 60 秒限制 |
 | 体检检项取数视野 | `AiAgentServiceImplTest` 平台全量视图三重断言（未碰登录上下文、SQL 片段不含 `visible_scope`、查询参数值里不出现用户与部门主键）+ `AiHealthCheckServiceImplTest` 他部门专家出现在结论里且 `queryOptions()` 不再被调用 | 3/3 变异（自检改回 `queryOptions()`、平台视图偷偷加 `visible_scope`、平台视图又读 `LoginHelper`）如期变红。报告按 §12.3 全局缓存 60 秒，检项取数因此必须与登录用户无关，否则某个人的视野会串给下一个人 |
 | 体检超时与整屏预算（§12.7 I-14） | `AiHealthItemTimeoutInvokerTest` 4 项（检项跑在工作线程、到点抛 `TimeoutException` 且调用方不陪跑、超时后 `cancel(true)` 中断工作线程、检项异常原样解包）+ `AiHealthCheckServiceImplTest` 新增 4 项（单项超时记 `UNKNOWN` 并写明「判定超时」、单项预算取 3 秒上限与整屏剩余的较小值、30 秒预算耗尽后剩余项不再执行、每行按真实耗时回填 `elapsedMs`）+ 8 项变异：单项上限放宽到 300 秒、取消取小、预算耗尽仍执行、超时落到 FAIL 分支、整屏预算改 60 秒、耗时不回写、超时不中断工作线程、异常不解包 | 8/8 如期变红且报错命中对应断言；硬超时要把检项搬到工作线程，前提是该线程没有登录上下文——`AiHealthItemInvoker` 的类注释写明这条约束由 I-15 的平台全量视图守住，本模块 ai_ Mapper 也不带 `@DataPermission` |
 | 体检 WARN 项（§12.7 I-3） | `AiHealthCapacityProbeTest` 17 项（磁盘/Redis 两路读数各自缺失、余量正好 15% 与 14%、未设 `maxmemory`、工作区未创建时向上取父目录、心跳缺失按运行时长分「未到首轮」与「线程退出」、超 2 个周期报警、日志文件缺失/无行首时间戳的续行/尾部 2MB 截断）+ `AiTaskHeartbeatTest` 6 项（TTL = 4×间隔且不低于 60 秒、写失败不影响扫描、读失败原样抛出）+ `AiHealthCheckServiceImplTest` 新增 7 项检项接线断言 + 5 项变异：余量水位 `<` 改 `<=`、心跳容忍周期 2 改 3、队满判定 `>=` 改 `>`、摘掉 `runtime.capacity` 注册、`channel.stream` 分类漂出注册处那一档 | 5/5 如期变红；`storage.io` 按「接不进记 `UNKNOWN`」的口径接入且断言其 `suggestion` 非空，不允许伪造 PASS。错误日志检项只报条数与最近时间，响应与 CI 日志都不含日志正文（仓库 public） |
-| 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损 |
+| 审计保留分批清理（§12.7 I-5~I-7） | 静态形状：`scripts/checks/audit-purge-batching.mjs`（删除语句只按 id 批删、不得按 `create_time` 整段删、取批必带 `limit #{batch}`、两条级联形状存在，并按 `AiAuditRetentionServiceImpl` 的 `TablePurge` 清单逐表对齐全三条语句）；运行期：`AiAuditRetentionServiceImplTest` 16 项（下限 30 天、「不限」需独立权限、逐批累计、删 0 行中止、先子后父、留痕落 Redis） | 形状门禁 6/6 变异变红、单测 6/6 变异变红；「服务是否真的调了级联删除」属调用图问题，静态形状接不住，由单测 `InOrder` 守住 |
+| 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损。**该读数为 §12.7 I-5 之前实测**：菜单脚本随后加了 1 行按钮权限，当前口径应为 140 行 / 132 perms，云服务器起栈时复验（任务线「联调启动」） |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
 | 部署门禁有效性 | 对 `deploy-static.mjs` 做 17 项变异：编排与 Nginx 8 项（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件）+ 镜像接线 9 项（compose 去 `SERVER_PORT`、`ENTRYPOINT` 不传端口、运行期镜像改 `-jre-alpine`、构建镜像 JDK 降 17、构建命令去 `-am`、`ruoyi-admin` 不依赖 `agent-hub-ai`、`/app/data` 退化 bind、删 `.dockerignore` 排除项、删 `Dockerfile`） | 17/17 如期变红且报错命中对应断言（判定按「rc=1 且报错含该断言措辞」，脚本自身崩溃不计通过）；无 docker 时渲染记为「未执行」而非静默通过 |
 
