@@ -24,7 +24,7 @@ import java.util.function.Function;
  * 自动清理，页面按钮保留为人工立即清理。清理逐表按 {@code create_time < 截止时间} **物理删除**
  * 并回带逐表行数。</p>
  *
- * <p><b>口径</b>：① 0＝不清理（自动跳过、手动被拒）；② 只清运行 / 审计明细 6 表，不含会话正文
+ * <p><b>口径</b>：① 0＝不清理（自动跳过、手动被拒），非 0 时不得低于 30 天（§12.4，保存侧硬拦）；② 只清运行 / 审计明细 6 表，不含会话正文
  * {@code ai_message}；③ 逐表 DELETE 各自原子、不加跨表事务（避免长事务持锁）；④ 父表与子表
  * （{@code ai_route_run} 与 {@code ai_route_expert_call}）各自按时间清理，同一保留天数下基本对齐，
  * 极端边界（父行早于截止、子行晚于截止）可能出现孤儿明细，审计场景不做级联。</p>
@@ -41,6 +41,13 @@ public class AiAuditRetentionServiceImpl implements IAiAuditRetentionService {
      */
     private static final DateTimeFormatter CUTOFF_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /**
+     * 保留期下限（§12.4 越权约束）：低于 30 天等于把审计留档窗口缩到不足一个月，
+     * 事后回溯还没开始就结束了；因此 1~29 天一律拒绝保存。
+     * {@code 0} 是显式的「不限」（自动清理跳过、手动清理被拒），不走下限。
+     */
+    private static final int MIN_RETENTION_DAYS = 30;
+
     private final AiRuntimeConfigStore runtimeConfigStore;
 
     private final AiAuditRetentionMapper retentionMapper;
@@ -52,6 +59,11 @@ public class AiAuditRetentionServiceImpl implements IAiAuditRetentionService {
 
     @Override
     public void saveRetention(AiAuditRetentionBo bo) {
+        int days = bo.getRetentionDays();
+        if (days > 0 && days < MIN_RETENTION_DAYS) {
+            throw new ServiceException("保留天数不能少于 " + MIN_RETENTION_DAYS
+                + " 天；如需长期保留请设为 0（不限，自动清理将跳过）");
+        }
         runtimeConfigStore.updateAuditRetention(bo);
     }
 

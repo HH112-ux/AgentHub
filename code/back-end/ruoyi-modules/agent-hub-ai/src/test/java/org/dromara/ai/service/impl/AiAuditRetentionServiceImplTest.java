@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -91,15 +92,34 @@ class AiAuditRetentionServiceImplTest {
     @Test
     @DisplayName("保存保留天数写入运行期配置")
     void shouldSaveRetention() {
-        AiAuditRetentionBo bo = bo(7);
+        AiAuditRetentionBo bo = bo(30);
         service.saveRetention(bo);
         verify(runtimeConfigStore).updateAuditRetention(bo);
     }
 
     @Test
+    @DisplayName("保存保留天数：1~29 天低于下限被拒且不落配置")
+    void shouldRejectRetentionBelowFloor() {
+        ServiceException error = assertThrows(ServiceException.class, () -> service.saveRetention(bo(7)));
+        assertTrue(error.getMessage().contains("30"));
+        assertThrows(ServiceException.class, () -> service.saveRetention(bo(29)));
+        assertThrows(ServiceException.class, () -> service.saveRetention(bo(1)));
+        verify(runtimeConfigStore, never()).updateAuditRetention(any());
+    }
+
+    @Test
+    @DisplayName("保存保留天数：0（不限）不受下限约束，30 天边界可保存")
+    void shouldAcceptUnlimitedAndFloorRetention() {
+        service.saveRetention(bo(0));
+        service.saveRetention(bo(30));
+        verify(runtimeConfigStore).updateAuditRetention(bo(0));
+        verify(runtimeConfigStore).updateAuditRetention(bo(30));
+    }
+
+    @Test
     @DisplayName("清理：6 张表各按截止时间物理删除并回带逐表行数")
     void shouldPurgeByRetentionDays() {
-        when(runtimeConfigStore.auditRetention()).thenReturn(bo(7));
+        when(runtimeConfigStore.auditRetention()).thenReturn(bo(30));
         when(retentionMapper.purgeTrace(any())).thenReturn(3);
         when(retentionMapper.purgeRouteRun(any())).thenReturn(5);
 
@@ -122,7 +142,7 @@ class AiAuditRetentionServiceImplTest {
     @Test
     @DisplayName("清理对 6 张表使用同一截止时间（now − 保留天数）")
     void shouldUseSameCutoffForAllTables() {
-        when(runtimeConfigStore.auditRetention()).thenReturn(bo(7));
+        when(runtimeConfigStore.auditRetention()).thenReturn(bo(30));
 
         service.purge();
 
@@ -133,7 +153,7 @@ class AiAuditRetentionServiceImplTest {
         assertEquals(2, values.size());
         assertEquals(values.get(0), values.get(1));
         assertTrue(values.get(0).isBefore(LocalDateTime.now()));
-        assertTrue(values.get(0).isAfter(LocalDateTime.now().minusDays(8)));
+        assertTrue(values.get(0).isAfter(LocalDateTime.now().minusDays(31)));
     }
 
     /**

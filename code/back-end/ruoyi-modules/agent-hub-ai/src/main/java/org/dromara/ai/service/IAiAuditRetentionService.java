@@ -29,6 +29,9 @@ public interface IAiAuditRetentionService {
     /**
      * 保存保留策略（写入运行期配置，下一次清理即按新天数执行）。
      *
+     * <p>非 0 取值不得低于 30 天（§12.4 保留期下限），否则回业务错误；
+     * {@code 0} 是显式的「不限」，不受下限约束，但自动清理会跳过、手动清理会被拒。</p>
+     *
      * @param bo 保留策略
      */
     void saveRetention(AiAuditRetentionBo bo);
