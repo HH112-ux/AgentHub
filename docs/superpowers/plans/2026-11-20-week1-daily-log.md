@@ -48,3 +48,5 @@ D2 追加：`deploy/**` 补上门禁——新脚本 `scripts/checks/deploy-stati
 D2 追加：文档交叉引用门禁 `scripts/checks/doc-links.mjs` 已落地（PR #6），并修掉协作计划里 2 处 `file:///` 绝对链接——那类链接在队友机器上是死链。同样以 8 项变异测试（含「围栏内伪链接不该报错」反向用例）验证。队友本地跑：`node scripts/checks/doc-links.mjs`。
 
 D2 追加：CI 三条门禁（文档交叉引用、部署编排校验、Nginx 入口配置语法）已接入 `ci.yml`。推送 `.github/workflows/*` 需 `workflow` 权限，`gh` 的 OAuth token 只有 `gist, read:org, repo` 被 GitHub 拒；仓库所有者授权队长自行完成后，改用其已配置的 owner SSH key 推同一个 `origin` 仓库（未新增远程、未改 `origin` URL），并在 PR 里明示该通道。
+
+D6 追加：L00 的 E 段状态字典机械对账按队长指示撤除（原话「直接无视门禁给他删了」，选项答复「删 L00 的 E 段状态字典对账」）。删的是四类断言——种子取值与实体 `STATUS_*` 双向比对、取值重复、词表空着、字典项孤立——不是字典本身：31 类 / 108 项种子、双方言逐字一致、§12.7 A 段取值口径全部保留。撤除代价先量化再落笔：把 mysql 种子 `ai_route_run_status` 的 `pending` 改成 `Pending`，带 E 段时 `node e2e/http/L00-contract-consistency.mjs` rc=1 报两条，删掉 E 段后同一条漂移 rc=0 静默通过，所以今后这类漂移只能靠人工对照 A 段的表。按 AGENTS.md「豁免项必须在脚本内写明出处」在 `L00` 的 E 段原位留了撤除说明，台账记入 §12.7 I-16，`docs/configuration.md` §4 同一行改为「已撤除」。恢复路径写明：重新接回四类断言即可，A 段那张表就是对账基准，种子无需回改。
