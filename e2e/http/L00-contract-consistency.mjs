@@ -225,74 +225,10 @@ for (const dialect of DIALECTS) {
   if (w !== ddlWidth) fail(`${dialect} 方言的 degrade_reason 列宽 ${w ?? '缺失'} 与 MySQL 的 varchar(${ddlWidth}) 不一致`);
 }
 
-// ---------- E. 状态字典：种子取值 = 实体 STATUS_* 常量（设计稿 §12.7） ----------
-// 为什么需要：字典取值是管理台渲染状态的唯一来源，但种子当初按设计稿词表写成 UPPER 串，
-// 代码落库却是 lower 串或 char(1) 码——页面只会显示原始码或空白，且只有点开列表才暴露。
-// 取值以实体常量为单一来源：服务层若再写字面量，改名时只改一边也无人报警。
-const STATUS_DICTS = [
-  ['ai_session_status', 'domain/AiSession.java'],
-  ['ai_message_status', 'domain/AiMessage.java'],
-  ['ai_task_run_status', 'domain/AiAgentTaskRun.java'],
-  ['ai_route_run_status', 'domain/AiRouteRun.java'],
-  ['ai_expert_call_status', 'domain/AiRouteExpertCall.java'],
-];
-// sys_dict_* 是多行 VALUES：扫到 insert 头之后进入词表块，遇到分号结束，块内逐行带真实行号取元组。
-function dictRowsOf(text, table) {
-  const rows = [];
-  let inBlock = false;
-  text.split('\n').forEach((line, i) => {
-    if (!inBlock) {
-      inBlock = new RegExp(`^\\s*insert (?:ignore )?into ${table}\\b`, 'i').test(line);
-      return;
-    }
-    if (/;\s*$/.test(line)) inBlock = false;
-    const m = table === 'sys_dict_type'
-      ? /^\s*\(\d+, '(?:[^']|'')*', '([a-z_]+)'/.exec(line)
-      : /^\s*\(\d+, \d+, '(?:[^']|'')*', '((?:[^']|'')*)', '([a-z_]+)'/.exec(line);
-    if (!m) return;
-    rows.push(table === 'sys_dict_type'
-      ? { type: m[1], line: i + 1 }
-      : { value: m[1].replace(/''/g, "'"), type: m[2], line: i + 1 });
-  });
-  return rows;
-}
-const dictTypes = new Map();
-const dictData = new Map();
-for (const dialect of DIALECTS) {
-  const path = rel(join(BACK, `script/sql/${dialect}/agenthub-ai-seed.sql`));
-  const text = readFileSync(join(BACK, `script/sql/${dialect}/agenthub-ai-seed.sql`), 'utf8');
-  for (const r of dictRowsOf(text, 'sys_dict_type')) dictTypes.set(`${dialect}#${r.type}`, { ...r, dialect });
-  for (const r of dictRowsOf(text, 'sys_dict_data')) {
-    const key = `${dialect}#${r.type}#${r.value}`;
-    if (dictData.has(key)) fail(`${path}:${r.line} 字典 ${r.type} 的取值「${r.value}」重复登记`);
-    dictData.set(key, r);
-    const t = `${dialect}#${r.type}`;
-    if (!dictTypes.has(t)) fail(`${path}:${r.line} 字典项属于词表 ${r.type}，但 sys_dict_type 里没有登记它`);
-  }
-  for (const r of dictTypes.values()) {
-    if (r.dialect !== dialect) continue;
-    if (![...dictData.keys()].some((k) => k.startsWith(`${dialect}#${r.type}#`))) {
-      fail(`${path}:${r.line} 字典类型 ${r.type} 没有任何字典项（页面只会拿到裸码）`);
-    }
-  }
-}
-for (const [type, entity] of STATUS_DICTS) {
-  const want = new Set(
-    [...readFileSync(join(AI, entity), 'utf8').matchAll(/public static final String STATUS_\w+ = "([^"]+)"/g)].map((m) => m[1])
-  );
-  if (!want.size) fail(`${entity} 里没有 STATUS_* 常量，状态字典 ${type} 失去对账基准`);
-  for (const dialect of DIALECTS) {
-    const path = rel(join(BACK, `script/sql/${dialect}/agenthub-ai-seed.sql`));
-    const got = new Map([...dictData].filter(([k]) => k.startsWith(`${dialect}#${type}#`)).map(([, v]) => [v.value, v]));
-    if (!got.size) fail(`${path} 状态字典 ${type} 在 ${dialect} 方言里没有任何字典项，而 ${entity} 会写入 ${[...want].join('/')}`);
-    for (const value of want) {
-      if (!got.has(value)) fail(`${path} 状态字典 ${type} 缺少 ${entity} 写入的取值「${value}」（已登记：${[...got.keys()].join('/') || '空'}）`);
-    }
-    for (const [value, r] of got) {
-      if (!want.has(value)) fail(`${path}:${r.line} 状态字典 ${type} 的取值「${value}」没有任何代码写入（${entity} 的 STATUS_* 里没有它）`);
-    }
-  }
-}
+// ---------- E. 状态字典对账：已按队长 2026-11-21 指示撤除（台账 §12.7 I-16） ----------
+// 撤除的是四类机械断言：种子 sys_dict_data 取值与实体 STATUS_* 常量的双向比对、同一方言内取值重复、
+// 词表登记了却没有任何字典项、字典项属于未登记的词表。撤除后这些漂移不会报警：字典少一个取值时页面显示裸码，
+// 字典多出一个代码从不写入的取值时也没人发现。取值口径仍以 §12.7 A 段的表为准，改字典需人工对照实体常量。
 
 // ---------- F. AI 表清单：DDL 建表 = 实体 @TableName = Mapper 覆盖（设计稿 §12.7 I-1） ----------
 // 为什么需要：健康自检「AI 业务表齐全」以实体 @TableName 为基准；基准与建库脚本各改一边时，
@@ -349,6 +285,5 @@ if (violations.length) {
 console.log(
   `✓ 契约一致性通过（权限 注解 ${annotated.length} → 菜单 ${menuMysql.size} = 常量 ${keyValues.size}；` +
   `SSE ${typeWire.size} 类；工具 ${implValues.size} 个；降级原因词表 ${prefixes.length} 项、列宽 varchar(${ddlWidth})；` +
-  `状态字典 ${STATUS_DICTS.length} 类 ${[...dictData.values()].filter((r) => STATUS_DICTS.some(([t]) => t === r.type)).length / DIALECTS.length} 项 × ${DIALECTS.length} 方言；` +
   `表清单 实体 ${entityOfTable.size} 张 = ${DIALECTS.join('/')} DDL，且 ${entityOfTable.size} 张都有 Mapper）`
 );

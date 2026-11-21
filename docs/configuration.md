@@ -77,7 +77,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 40 表清单三方对齐 | `e2e/http/L00-contract-consistency.mjs` F 段：实体 `@TableName` ↔ 双方言 DDL ↔ Mapper 覆盖 | 40 张逐一命中，5 项漂移变异全红。运行期健康项 `db.schema` 用同一份实体清单与 `getTables` 求差集，缺表直接报名字（不再写死「四张核心表」） |
 | 131 权限标识 | 注解与常量类 ↔ 双方言菜单脚本对账（`e2e/http/L00-contract-consistency.mjs`） | 注解 ⊆ 菜单 = 常量，双方言差异 0 |
 | 菜单/字典口径 | `is_frame`/`is_cache` = `N`/`Y`；审计字段 = 底座种子雪花 ID | 139 菜单行 / 31+108 字典行 |
-| 状态字典 ↔ 实体常量 | `e2e/http/L00-contract-consistency.mjs` E 段：5 个 `ai_*_status` 的取值集合与实体 `STATUS_*` 常量双向比对，另断言取值不重复、词表不空、字典项不孤立 | 5 类逐字对齐；`ai_attachment_status` 不登记（`ai_message_attachment` 无 `status` 列），口径见设计稿 §12.7 |
+| 状态字典 ↔ 实体常量 | **机械对账已按队长 2026-11-21 指示撤除**（原 `e2e/http/L00-contract-consistency.mjs` E 段：5 个 `ai_*_status` 取值与实体 `STATUS_*` 双向比对，另断言取值不重复、词表不空、字典项不孤立） | 撤除前后各跑过一次同一条漂移：把 mysql 种子 `ai_route_run_status` 的 `pending` 改成 `Pending`，带 E 段 rc=1 报两条，删掉后 rc=0 通过——这类漂移今后不会报警，改字典要人工对照设计稿 §12.7 A 段的表（31 类 / 108 项种子与双方言一致性本身不变）。台账见 §12.7 I-16 |
 | 体检报告 60 秒缓存 | `AiHealthCheckServiceImplTest` 5 项断言（缓存复用、TTL=60s、`refresh=true` 穿透、缓存值损坏回退实时、写缓存失败降级）+ 6 项变异：TTL 改 300 秒、缓存读取短路、忽略 refresh、读/写缓存异常不再兜底、Controller 丢掉 refresh 参数 | 6/6 如期变红且报错命中对应断言；缓存键 `agenthub:ai:health:report`，每次实时体检覆盖并重置 TTL，页面「重新自检」不受 60 秒限制 |
 | 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损 |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
