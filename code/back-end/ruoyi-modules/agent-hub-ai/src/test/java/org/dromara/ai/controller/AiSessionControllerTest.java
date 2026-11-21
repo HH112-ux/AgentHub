@@ -76,30 +76,31 @@ class AiSessionControllerTest {
     }
 
     @Test
-    @DisplayName("终止会话成功")
+    @DisplayName("终止会话成功：理由原样交给服务层")
     void shouldClose() {
-        when(service.closeWithValidByIds(List.of(2L))).thenReturn(true);
-        assertTrue(R.isSuccess(controller.close(new Long[]{2L})));
+        // 桩按「理由 == 该串」匹配：控制器丢掉参数时桩不命中，返回值即断言失败
+        when(service.closeWithValidByIds(List.of(2L), "违规外联处置")).thenReturn(true);
+        assertTrue(R.isSuccess(controller.close(new Long[]{2L}, "违规外联处置")));
     }
 
     @Test
-    @DisplayName("删除会话失败返回失败码")
+    @DisplayName("删除会话失败返回失败码：理由原样交给服务层")
     void shouldRemoveFail() {
-        when(service.deleteWithValidByIds(List.of(2L))).thenReturn(false);
-        assertFalse(R.isSuccess(controller.remove(new Long[]{2L})));
+        when(service.deleteWithValidByIds(List.of(2L), "投诉核查")).thenReturn(false);
+        assertFalse(R.isSuccess(controller.remove(new Long[]{2L}, "投诉核查")));
     }
 
     @Test
-    @DisplayName("导出会话留档写入响应")
+    @DisplayName("导出会话留档写入响应：理由原样交给服务层")
     void shouldExport() {
         AiSessionBo bo = new AiSessionBo();
         HttpServletResponse response = mock(HttpServletResponse.class);
-        when(service.buildExportData(bo)).thenReturn(List.of(new AiSessionExportVo()));
+        when(service.buildExportData(bo, "季度留档")).thenReturn(List.of(new AiSessionExportVo()));
         try (MockedStatic<ExcelBuilder> mocked = mockStatic(ExcelBuilder.class)) {
             ExcelBuilder builder = mock(ExcelBuilder.class);
             mocked.when(() -> ExcelBuilder.of(anyList(), any())).thenReturn(builder);
             when(builder.sheetName(anyString())).thenReturn(builder);
-            controller.export(bo, response);
+            controller.export(bo, "季度留档", response);
             verify(builder).toResponse(response);
         }
     }

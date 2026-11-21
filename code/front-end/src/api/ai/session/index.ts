@@ -50,23 +50,27 @@ export const listSessionToolCall = (sessionId: string | number): AxiosPromise<To
 
 /**
  * 终止会话
- * @param sessionId 会话主键
+ * @param sessionId 会话主键（多个用逗号拼接）
+ * @param reason 操作理由；含他人会话时后端必填（§12.5 / §12.7 I-9）
  */
-export const closeChatSessionById = (sessionId: string | number) => {
+export const closeChatSessionById = (sessionId: string | number, reason?: string) => {
   return request({
     url: `/ai/session/${sessionId}/close`,
-    method: 'put'
+    method: 'put',
+    params: { reason }
   });
 };
 
 /**
  * 删除会话（逻辑删除会话与消息）
  * @param id 主键或主键数组
+ * @param reason 操作理由；含他人会话时后端必填（§12.5 / §12.7 I-9）
  */
-export const delChatSession = (id: string | number | Array<string | number>) => {
+export const delChatSession = (id: string | number | Array<string | number>, reason?: string) => {
   return request({
     url: '/ai/session/' + id,
-    method: 'delete'
+    method: 'delete',
+    params: { reason }
   });
 };
 

@@ -281,6 +281,7 @@ import {
 import type { UserVO } from '@/api/system/user/types';
 import UserSelect from '@/components/UserSelect/index.vue';
 import modal from '@/plugins/modal';
+import { useUserStore } from '@/store/modules/user';
 import { download } from '@/utils/request';
 
 const router = useRouter();
@@ -323,9 +324,38 @@ const detail = reactive<{
   tools: []
 });
 
-const ids = ref<Array<string | number>>([]);
+const selected = ref<SessionVO[]>([]);
 const single = ref(true);
 const multiple = ref(true);
+const userStore = useUserStore();
+
+/** 操作理由上限：与后端 IAiSessionService.REASON_MAX_LENGTH 同档，门禁 session-governance-reason.mjs 对账 */
+const REASON_MAX_LENGTH = 200;
+
+/** 是否不属于当前登录用户（长整型 id 按字符串比，避开雪花 id 的 number 精度问题） */
+const isForeign = (row: Partial<SessionVO>) => String(row.userId ?? '') !== String(userStore.userId ?? '');
+
+/**
+ * 需要时收集操作理由（§12.5 / §12.7 I-9：操作他人会话必填理由并落底座操作日志）。
+ * 这里只是提前把该填的理由要到，必填的最终判定在后端按归属结果集执行——
+ * 页面判据是列表里的 userId，可能因数据权限或刚刷新过而与后端结论不一致。
+ * @param message 弹框文案
+ * @returns 理由文本
+ */
+const promptReason = (message: string): Promise<string> =>
+  ElMessageBox.prompt(message, '操作理由', {
+    inputType: 'textarea',
+    inputValidator: (input: string) => (!!input && input.length <= REASON_MAX_LENGTH) || `操作理由必填且不超过 ${REASON_MAX_LENGTH} 字`
+  }).then(({ value }) => value);
+
+/** 选中项含他人任务时索取理由；全是本人任务则不必填 */
+const collectReason = async (action: string, rows: Array<Partial<SessionVO>>) => {
+  const foreign = rows.filter(isForeign).length;
+  if (!foreign) {
+    return undefined;
+  }
+  return promptReason(`本次${action}含 ${foreign} 个他人任务，请填写操作理由（将记入操作日志）`);
+};
 
 /** 查询会话列表 */
 const getList = async () => {
@@ -396,7 +426,7 @@ const resetQuery = () => {
 };
 
 const handleSelectionChange = (selection: SessionVO[]) => {
-  ids.value = selection.map((item) => item.id);
+  selected.value = selection;
   single.value = selection.length !== 1;
   multiple.value = !selection.length;
 };
@@ -423,30 +453,55 @@ const handleClearUser = () => {
 
 /** 终止会话 */
 const handleClose = async (row?: Partial<SessionVO>) => {
-  const targetIds = row ? [row.id as string | number] : ids.value;
-  if (!targetIds.length) {
+  const targets = row ? [row] : selected.value;
+  if (!targets.length) {
     return;
   }
-  await modal.confirm(`是否确认终止选中的 ${targetIds.length} 个任务？终止后不能再继续提问。`);
-  await closeChatSessionById(targetIds.join(','));
+  let reason: string | undefined;
+  try {
+    await modal.confirm(`是否确认终止选中的 ${targets.length} 个任务？终止后不能再继续提问。`);
+    reason = await collectReason('终止', targets);
+  } catch {
+    return;
+  }
+  await closeChatSessionById(targets.map((item) => item.id as string | number).join(','), reason);
   modal.msgSuccess('已终止');
   await getList();
 };
 
 /** 删除会话 */
 const handleDelete = async (row?: Partial<SessionVO>) => {
-  const targetIds = row ? [row.id as string | number] : ids.value;
-  if (!targetIds.length) {
+  const targets = row ? [row] : selected.value;
+  if (!targets.length) {
     return;
   }
-  await modal.confirm(`是否确认删除选中的 ${targetIds.length} 个任务？删除后消息记录不再展示。`);
-  await delChatSession(targetIds.join(','));
+  let reason: string | undefined;
+  try {
+    await modal.confirm(`是否确认删除选中的 ${targets.length} 个任务？删除后消息记录不再展示。`);
+    reason = await collectReason('删除', targets);
+  } catch {
+    return;
+  }
+  await delChatSession(targets.map((item) => item.id as string | number).join(','), reason);
   modal.msgSuccess('删除成功');
   await getList();
 };
 
+/**
+ * 当前筛选是否可能含他人任务。
+ * 导出按筛选条件取全集，页面看不到结果集，只能按条件判：「只看我的」或把归属用户筛成自己时
+ * 才全是本人。判错的方向是安全的——多问一次理由，而不是漏问。
+ */
+const exportMayIncludeOthers = () => {
+  if (queryParams.value.mine) {
+    return false;
+  }
+  const owner = queryParams.value.userId;
+  return owner === undefined || owner === null || String(owner) !== String(userStore.userId ?? '');
+};
+
 /** 导出留档 */
-const handleExport = () => {
+const handleExport = async () => {
   const params: SessionQuery = { ...queryParams.value };
   if (dateRange.value && dateRange.value.length === 2) {
     params.beginTime = `${dateRange.value[0]}T00:00:00`;
@@ -454,7 +509,15 @@ const handleExport = () => {
   }
   delete params.pageNum;
   delete params.pageSize;
-  download(exportSessionUrl, params, `任务数据_${new Date().getTime()}.xlsx`);
+  let reason: string | undefined;
+  try {
+    if (exportMayIncludeOthers()) {
+      reason = await promptReason('本次导出可能含他人任务，请填写留档理由（将记入操作日志）');
+    }
+  } catch {
+    return;
+  }
+  download(exportSessionUrl, { ...params, reason }, `任务数据_${new Date().getTime()}.xlsx`);
 };
 
 /** 查看会话明细 */

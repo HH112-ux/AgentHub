@@ -322,14 +322,23 @@ public interface IAiSessionService {
     List<AiToolCallLogVo> queryOwnedToolCalls(Long sessionId);
 
     /**
+     * 治理面操作理由的长度上限（§12.5 / §12.7 I-9）。
+     *
+     * <p>接口、服务实现与会话管理页弹框三处引用同一个值：上限不一致时，页面放行、服务拒绝，
+     * 管理员看到的是「填了理由还是报错」，比不填更难排查。</p>
+     */
+    int REASON_MAX_LENGTH = 200;
+
+    /**
      * 终止会话（会话管理页，不限定归属用户）。
      *
      * <p>与 {@link #closeSession(Long)} 同款幂等：已在跑的按取消句柄中止，已是「已结束」的直接算成功。</p>
      *
-     * @param ids 会话主键集合
+     * @param ids    会话主键集合
+     * @param reason 操作理由；选中项含他人会话时必填（§12.5「操作他人会话必填理由」）
      * @return 是否全部已处于已结束状态
      */
-    Boolean closeWithValidByIds(Collection<Long> ids);
+    Boolean closeWithValidByIds(Collection<Long> ids, String reason);
 
     /**
      * 删除会话（逻辑删除会话与其消息，并清理该会话的模型记忆）。
@@ -338,18 +347,20 @@ public interface IAiSessionService {
      * 抛 {@code code = 409} 的 {@link org.dromara.common.core.exception.ServiceException}
      * 并引导先终止（§12.5 / §12.7 I-8）——否则一轮正在落库的对话会被删成半截消息与孤儿明细。</p>
      *
-     * @param ids 会话主键集合
+     * @param ids    会话主键集合
+     * @param reason 操作理由；含他人会话时必填（§12.5 / §12.7 I-9）
      * @return 是否删除成功
      */
-    Boolean deleteWithValidByIds(Collection<Long> ids);
+    Boolean deleteWithValidByIds(Collection<Long> ids, String reason);
 
     /**
      * 构建会话导出数据。
      *
-     * @param bo 查询条件（与列表页一致）
+     * @param bo     查询条件（与列表页一致）
+     * @param reason 操作理由；筛选结果含他人会话时必填（§12.5 / §12.7 I-9）
      * @return 导出数据
      */
-    List<AiSessionExportVo> buildExportData(AiSessionBo bo);
+    List<AiSessionExportVo> buildExportData(AiSessionBo bo, String reason);
 
     /**
      * 查询会话涉及的全部智能体选项（供会话管理页按智能体筛选）。

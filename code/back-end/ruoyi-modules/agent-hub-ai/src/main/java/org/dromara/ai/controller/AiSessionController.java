@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.dromara.ai.domain.bo.AiSessionBo;
 import org.dromara.ai.domain.vo.AiAgentVo;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
@@ -37,6 +39,11 @@ import java.util.List;
  *
  * <p>面向治理场景：可按用户 / 智能体 / 时间检索全部会话（不限定归属用户），
  * 查看消息记录与工具调用明细，必要时终止、删除或导出留档。</p>
+ *
+ * <p><b>操作留痕</b>：三个治理写动作带 {@code reason}，跨本人范围时服务层拒绝空理由（§12.5 / §12.7 I-9）。
+ * 理由经 {@code @Log} 切面落底座 {@code sys_oper_log}：请求一旦带上查询参数，切面记的 {@code oper_param}
+ * 就是查询参数集合而不再序列化方法入参，所以被操作的主键串只出现在 {@code oper_url}
+ * （255 字符截断，约容 12 个雪花 id）；导出的筛选条件与理由一起进 {@code oper_param}。</p>
  *
  * @author AgentHub
  */
@@ -92,37 +99,51 @@ public class AiSessionController extends BaseController {
     /**
      * 终止会话（已结束的会话不能再继续提问）
      *
-     * @param ids 主键串
+     * <p>{@code reason} 的必填条件（选中项含他人会话）在服务层判，见 §12.5 / §12.7 I-9。</p>
+     *
+     * @param ids    主键串
+     * @param reason 操作理由
      */
     @SaCheckPermission("ai:session:edit")
     @Log(title = "AI会话管理", businessType = BusinessType.UPDATE)
     @PutMapping("/{ids}/close")
     public R<Void> close(@NotEmpty(message = "主键不能为空")
-                         @PathVariable Long[] ids) {
-        return toAjax(aiSessionService.closeWithValidByIds(Arrays.asList(ids)));
+                         @PathVariable Long[] ids,
+                         @Size(max = IAiSessionService.REASON_MAX_LENGTH, message = "操作理由不能超过 200 字")
+                         @RequestParam(value = "reason", required = false) String reason) {
+        return toAjax(aiSessionService.closeWithValidByIds(Arrays.asList(ids), reason));
     }
 
     /**
      * 删除会话（逻辑删除会话与其消息，并清理模型记忆）
      *
-     * @param ids 主键串
+     * @param ids    主键串
+     * @param reason 操作理由（选中项含他人会话时必填）
      */
     @SaCheckPermission("ai:session:remove")
     @Log(title = "AI会话管理", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
-                          @PathVariable Long[] ids) {
-        return toAjax(aiSessionService.deleteWithValidByIds(Arrays.asList(ids)));
+                          @PathVariable Long[] ids,
+                          @Size(max = IAiSessionService.REASON_MAX_LENGTH, message = "操作理由不能超过 200 字")
+                          @RequestParam(value = "reason", required = false) String reason) {
+        return toAjax(aiSessionService.deleteWithValidByIds(Arrays.asList(ids), reason));
     }
 
     /**
      * 导出会话留档（按当前筛选条件）
+     *
+     * @param bo     筛选条件
+     * @param reason 操作理由（筛选结果含他人会话时必填）
      */
     @SaCheckPermission("ai:session:export")
     @Log(title = "AI会话管理", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
-    public void export(@Validated(QueryGroup.class) AiSessionBo bo, HttpServletResponse response) {
-        List<AiSessionExportVo> list = aiSessionService.buildExportData(bo);
+    public void export(@Validated(QueryGroup.class) AiSessionBo bo,
+                       @Size(max = IAiSessionService.REASON_MAX_LENGTH, message = "操作理由不能超过 200 字")
+                       @RequestParam(value = "reason", required = false) String reason,
+                       HttpServletResponse response) {
+        List<AiSessionExportVo> list = aiSessionService.buildExportData(bo, reason);
         ExcelBuilder.of(list, AiSessionExportVo.class).sheetName("会话数据").toResponse(response);
     }
 
