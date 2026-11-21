@@ -31,6 +31,10 @@ jobs:
       - name: 审计保留策略（下限 / 分批 / 联动）
         run: node scripts/checks/audit-retention-guards.mjs
 
+      # §12.5 的「操作他人会话必填理由并写底座操作日志」分处控制器、服务层与前端三处，理由丢一处、@Log 被摘、校验挪到删除之后，功能回归全都看不出来（§12.7 I-9）。
+      - name: 会话治理留痕（理由 / 归属 / 收痕）
+        run: node scripts/checks/session-governance-reason.mjs
+
       - name: 文件与目录命名规范
         run: node scripts/checks/naming-convention.mjs
 
@@ -156,6 +160,7 @@ jobs:
             echo "|---|---|"
             echo "| 双方言 SQL 一致性与幂等 | 恒定执行 |"
             echo "| 审计保留策略（§12.4 / I-5 / I-6 / I-7） | 恒定执行 |"
+            echo "| 会话治理留痕（§12.5 / I-9） | 恒定执行 |"
             echo "| 文件与目录命名规范（§3.2） | 恒定执行 |"
             echo "| 密钥入库防护（仓库 public） | 恒定执行 |"
             echo "| 文档交叉引用（绝对链接/死链/锚点） | 恒定执行 |"

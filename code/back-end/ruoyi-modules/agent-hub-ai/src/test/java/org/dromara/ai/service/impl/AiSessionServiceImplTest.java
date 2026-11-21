@@ -27,6 +27,7 @@ import org.dromara.ai.mapper.AiToolMapper;
 import org.dromara.ai.service.IAiAgentService;
 import org.dromara.ai.service.IAiChatAttachmentService;
 import org.dromara.ai.service.IAiScenarioPackService;
+import org.dromara.ai.service.IAiSessionService;
 import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.exception.ServiceException;
@@ -591,7 +592,7 @@ class AiSessionServiceImplTest {
         vo.setCreateTime(LocalDateTime.now());
         when(baseMapper.selectVoList(any())).thenReturn(List.of(vo));
 
-        List<AiSessionExportVo> rows = service.buildExportData(new AiSessionBo());
+        List<AiSessionExportVo> rows = service.buildExportData(new AiSessionBo(), null);
 
         assertEquals(1, rows.size());
         assertEquals("已结束", rows.get(0).getStatusText());
@@ -611,9 +612,9 @@ class AiSessionServiceImplTest {
     @Test
     @DisplayName("批量终止会话：空集合与不匹配时拒绝")
     void shouldValidateCloseWithIds() {
-        assertThrows(ServiceException.class, () -> service.closeWithValidByIds(List.of()));
+        assertThrows(ServiceException.class, () -> service.closeWithValidByIds(List.of(), null));
         when(baseMapper.selectByIds(any())).thenReturn(List.of());
-        assertThrows(ServiceException.class, () -> service.closeWithValidByIds(List.of(1L)));
+        assertThrows(ServiceException.class, () -> service.closeWithValidByIds(List.of(1L), null));
     }
 
     @Test
@@ -624,7 +625,7 @@ class AiSessionServiceImplTest {
             .thenReturn(List.of(session(1L, 9L, "1"), session(2L, 9L, "1")));
         when(baseMapper.update(any(AiSession.class), any())).thenReturn(2);
 
-        assertTrue(service.closeWithValidByIds(List.of(1L, 2L)));
+        assertTrue(service.closeWithValidByIds(List.of(1L, 2L), null));
 
         verify(runRegistry).cancel(1L);
         verify(runRegistry).cancel(2L);
@@ -638,7 +639,7 @@ class AiSessionServiceImplTest {
             .thenReturn(List.of(session(1L, 9L, "1")));
         when(baseMapper.update(any(AiSession.class), any())).thenReturn(0);
 
-        assertTrue(service.closeWithValidByIds(List.of(1L)));
+        assertTrue(service.closeWithValidByIds(List.of(1L), null));
     }
 
     @Test
@@ -648,7 +649,7 @@ class AiSessionServiceImplTest {
         when(baseMapper.deleteByIds(any())).thenReturn(1);
         when(routeRunMapper.selectCount(any())).thenReturn(0L);
 
-        assertTrue(service.deleteWithValidByIds(List.of(1L)));
+        assertTrue(service.deleteWithValidByIds(List.of(1L), null));
 
         verify(messageMapper).delete(any());
         verify(aiAgentStateStore).delete("9", "1");
@@ -661,7 +662,7 @@ class AiSessionServiceImplTest {
         when(runRegistry.isActive(1L)).thenReturn(true);
 
         ServiceException error = assertThrows(ServiceException.class,
-            () -> service.deleteWithValidByIds(List.of(1L)));
+            () -> service.deleteWithValidByIds(List.of(1L), null));
 
         assertEquals(409, error.getCode());
         assertTrue(error.getMessage().contains("请先终止后再删除"));
@@ -675,7 +676,7 @@ class AiSessionServiceImplTest {
         when(routeRunMapper.selectCount(any())).thenReturn(1L);
 
         ServiceException error = assertThrows(ServiceException.class,
-            () -> service.deleteWithValidByIds(List.of(1L)));
+            () -> service.deleteWithValidByIds(List.of(1L), null));
 
         assertEquals(409, error.getCode());
     }
@@ -688,8 +689,9 @@ class AiSessionServiceImplTest {
         when(baseMapper.selectByIds(any())).thenReturn(List.of(foreign));
         when(runRegistry.isActive(1L)).thenReturn(true);
 
+        // 理由照填：本用例要判的是 409 报错的称呼口径，不是 I-9 的必填理由（那里另有断言）
         ServiceException error = assertThrows(ServiceException.class,
-            () -> service.deleteWithValidByIds(List.of(1L)));
+            () -> service.deleteWithValidByIds(List.of(1L), "违规外联处置"));
 
         assertFalse(error.getMessage().contains("他人的会话标题"));
         assertTrue(error.getMessage().contains("id=1"));
@@ -704,7 +706,7 @@ class AiSessionServiceImplTest {
         when(runRegistry.isActive(1L)).thenReturn(true);
 
         ServiceException error = assertThrows(ServiceException.class,
-            () -> service.deleteWithValidByIds(List.of(1L)));
+            () -> service.deleteWithValidByIds(List.of(1L), null));
 
         assertTrue(error.getMessage().contains("季度报销问答"));
     }
@@ -713,8 +715,74 @@ class AiSessionServiceImplTest {
     @DisplayName("删除会话：主键数量不一致时拒绝")
     void shouldRejectDeleteSessionsMismatch() {
         when(baseMapper.selectByIds(any())).thenReturn(List.of());
-        assertThrows(ServiceException.class, () -> service.deleteWithValidByIds(List.of(1L)));
-        assertThrows(ServiceException.class, () -> service.deleteWithValidByIds(List.of()));
+        assertThrows(ServiceException.class, () -> service.deleteWithValidByIds(List.of(1L), null));
+        assertThrows(ServiceException.class, () -> service.deleteWithValidByIds(List.of(), null));
+    }
+
+    @Test
+    @DisplayName("终止他人会话：没填理由就拒绝，且不取消执行、不落终态")
+    void shouldRejectCloseOthersSessionWithoutReason() {
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 8L, "0")));
+
+        // 只填空格：与「没填」同一档，防的是页面上敲一下空格绕过必填
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.closeWithValidByIds(List.of(1L), "   "));
+
+        assertTrue(error.getMessage().contains("请填写操作理由"));
+        verify(runRegistry, never()).cancel(1L);
+        verify(baseMapper, never()).update(any(AiSession.class), any());
+    }
+
+    @Test
+    @DisplayName("终止他人会话：填了理由即照常放行")
+    void shouldCloseOthersSessionWithReason() {
+        when(baseMapper.selectByIds(any()))
+            .thenReturn(List.of(session(1L, 8L, "0")))
+            .thenReturn(List.of(session(1L, 8L, "1")));
+        when(baseMapper.update(any(AiSession.class), any())).thenReturn(1);
+
+        assertTrue(service.closeWithValidByIds(List.of(1L), "离职交接，清理遗留会话"));
+
+        verify(runRegistry).cancel(1L);
+    }
+
+    @Test
+    @DisplayName("批量删除混进一条他人会话：整批必填理由，一条也不删")
+    void shouldRequireReasonWhenBatchMixesOthersSessions() {
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 9L, "0"), session(2L, 8L, "0")));
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.deleteWithValidByIds(List.of(1L, 2L), null));
+
+        assertTrue(error.getMessage().contains("1 个他人会话"));
+        verify(baseMapper, never()).deleteByIds(any());
+    }
+
+    @Test
+    @DisplayName("导出他人会话：没填理由时不产出任何留档行")
+    void shouldRejectExportOthersWithoutReason() {
+        AiSessionVo foreign = sessionVo();
+        foreign.setUserId(8L);
+        when(baseMapper.selectVoList(any())).thenReturn(List.of(foreign));
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.buildExportData(new AiSessionBo(), null));
+
+        assertTrue(error.getMessage().contains("导出"));
+        assertTrue(error.getMessage().contains("请填写操作理由"));
+    }
+
+    @Test
+    @DisplayName("操作理由超出上限同样拒绝（与接口注解同一档）")
+    void shouldRejectOverlongGovernanceReason() {
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 8L, "0")));
+        String reason = "理".repeat(IAiSessionService.REASON_MAX_LENGTH + 1);
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.deleteWithValidByIds(List.of(1L), reason));
+
+        assertTrue(error.getMessage().contains(IAiSessionService.REASON_MAX_LENGTH + " 字"));
+        verify(baseMapper, never()).deleteByIds(any());
     }
 
     @Test

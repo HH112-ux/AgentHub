@@ -1004,7 +1004,7 @@ public class AiSessionServiceImpl implements IAiSessionService {
     }
 
     @Override
-    public Boolean closeWithValidByIds(Collection<Long> ids) {
+    public Boolean closeWithValidByIds(Collection<Long> ids, String reason) {
         if (ids == null || ids.isEmpty()) {
             throw new ServiceException("请选择要终止的会话");
         }
@@ -1012,13 +1012,14 @@ public class AiSessionServiceImpl implements IAiSessionService {
         if (list.size() != ids.size()) {
             throw new ServiceException("会话不存在或已被删除");
         }
+        requireReasonForOthers("终止", reason, list.stream().map(AiSession::getUserId).toList());
         list.forEach(session -> runRegistry.cancel(session.getId()));
         return markClosed(ids);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean deleteWithValidByIds(Collection<Long> ids) {
+    public Boolean deleteWithValidByIds(Collection<Long> ids, String reason) {
         if (ids == null || ids.isEmpty()) {
             throw new ServiceException("请选择要删除的会话");
         }
@@ -1026,6 +1027,7 @@ public class AiSessionServiceImpl implements IAiSessionService {
         if (list.size() != ids.size()) {
             throw new ServiceException("您没有删除权限!");
         }
+        requireReasonForOthers("删除", reason, list.stream().map(AiSession::getUserId).toList());
         rejectWhileGenerating(list);
         // 附件不随会话级联：先回收对象存储文件与附件行，避免永久孤儿
         attachmentReclaimer.reclaimBySessionIds(ids);
@@ -1037,6 +1039,40 @@ public class AiSessionServiceImpl implements IAiSessionService {
             list.forEach(this::clearSessionState);
         }
         return flag;
+    }
+
+    /**
+     * 跨本人范围的治理操作必须留下理由（§12.5「操作他人会话必填理由并写底座操作日志」、§12.7 I-9）。
+     *
+     * <p><b>按目标归属判定，不按调用方权限判定</b>：同一个管理员既有自己的会话也有他人会话，
+     * 只挑自己的那批操作不必填，混进一条他人的就整批必填。挂在权限上会出现「刚用自己的会话试了一遍
+     * 不用填理由，换成别人的也没提示要填」，而留痕要防的恰恰是后一次。</p>
+     *
+     * <p><b>为什么在服务层而不是只靠接口注解</b>：{@code @Size} 只能管住长度，管不住「什么时候必须有」；
+     * 且接口注解只覆盖 HTTP 入口，日后新增的批量入口（定时回收、渠道转发）绕过 Controller 即无声免检。
+     * 三个治理动作（终止 / 删除 / 导出）都从这里过，门禁 {@code session-governance-reason.mjs} 盯的就是
+     * 「有没有人另开一条不过这里的路」。</p>
+     *
+     * <p>理由本身由 Controller 上的 {@code @Log} 切面随请求参数落 {@code sys_oper_log}，
+     * 被拒绝的操作同样落一条失败记录（含「未填理由」的原因）。</p>
+     *
+     * @param action   动作名，用于报错文案（终止 / 删除 / 导出）
+     * @param reason   调用方填写的理由（可为空）
+     * @param ownerIds 本次涉及的每条会话的归属用户
+     */
+    private void requireReasonForOthers(String action, String reason, Collection<Long> ownerIds) {
+        Long currentUserId = LoginHelper.getUserId();
+        long foreignCount = ownerIds.stream().filter(userId -> !Objects.equals(userId, currentUserId)).count();
+        if (foreignCount == 0) {
+            return;
+        }
+        String scope = "本次" + action + "含 " + foreignCount + " 个他人会话";
+        if (StringUtils.isBlank(reason)) {
+            throw new ServiceException(scope + "，请填写操作理由（将记入操作日志）");
+        }
+        if (reason.trim().length() > REASON_MAX_LENGTH) {
+            throw new ServiceException(scope + "，操作理由不能超过 " + REASON_MAX_LENGTH + " 字");
+        }
     }
 
     /**
@@ -1094,8 +1130,9 @@ public class AiSessionServiceImpl implements IAiSessionService {
     }
 
     @Override
-    public List<AiSessionExportVo> buildExportData(AiSessionBo bo) {
+    public List<AiSessionExportVo> buildExportData(AiSessionBo bo, String reason) {
         List<AiSessionVo> list = baseMapper.selectVoList(buildQueryWrapper(bo, null));
+        requireReasonForOthers("导出", reason, list.stream().map(AiSessionVo::getUserId).toList());
         fillDisplayNames(list);
         List<AiSessionExportVo> result = new ArrayList<>(list.size());
         for (AiSessionVo vo : list) {
