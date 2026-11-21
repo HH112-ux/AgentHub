@@ -133,7 +133,7 @@ gh pr create --base main --title "chore: 三线基线与底座导入" --body "�
 - Test: `e2e/http/L00-contract-consistency.mjs`（本身即契约测试）
 
 **Interfaces:**
-- Produces: 三条工作面共享的唯一事实源。D1 冻结读数为事件 13 型、原因码 11 个；后端与前端全树入仓后按设计稿 D11（§12.7）重冻为 SSE 事件 16 类、降级原因词表 8 项、权限标识 131 个、工具实现 30 个、40 表 DDL，重冻明细见[每日执行日志](2026-11-20-week1-daily-log.md) D3 行。
+- Produces: 三条工作面共享的唯一事实源。D1 冻结读数为事件 13 型、原因码 11 个；后端与前端全树入仓后按设计稿 D11（§12.7）重冻为 SSE 事件 16 类、降级原因词表 8 项、权限标识 131 个、工具实现 30 个、40 表 DDL，重冻明细见[每日执行日志](2026-11-20-week1-daily-log.md) D3 行；权限标识现值 132 个（§12.7 I-11 于 2026-11-21 按 §12.2 原口径加回 `ai:memory:version:restore`）。
 
 - [ ] **Step 1: 先写契约一致性检查（此时必然失败——TS 镜像还不存在）**
 
@@ -206,6 +206,8 @@ public enum AiDegradeReason {
 ```
 
 `AiPermissionKeys.java` 为 `public static final String` 常量，值形如 `"ai:knowledge:list"`，常量名由值按 `:` 转大写蛇形（`AI_KNOWLEDGE_LIST`），因此每段只允许 `[a-z0-9]`，不得含 `-`（原 `ai:audit:retention:dry-run` 已改名 `ai:audit:retention:preview`）；取值以 `agenthub-ai-menu.sql` 的 `sys_menu.perms` 为准，共 132 条，其中含设计稿 §12 新增的 12 个标识（`ai:health:check`、`ai:audit:retention:view|edit|purge|unlimited`、`ai:session:governance:list|terminate|delete|export`、`ai:memory:version:restore`、`ai:attachment:recycle`、`ai:runtime:unattended:edit`）。`AiToolImpl.java` 同理，值为 `ai_tool.impl_name` 的大写蛇形（内置 11 个：`GET_CURRENT_TIME`、`ROUTE_DECISION`、`MEMORY_SEARCH`、`TODO_WRITE` 等）；B 线新增的底座业务工具按同一风格追加（`DEPT_QUERY`、`ANNOUNCEMENT_WRITE`、`DAILY_DIGEST_WRITE`）。
+
+> 本步与 Step 4 的词表是**冻结前的意图稿**，不是现行登记名：实现落库时按「模块 = URL 资源段」重命名，`ai:audit:retention:view|purge|unlimited`、`ai:session:governance:*`、`ai:attachment:recycle`、`ai:runtime:unattended:edit` 均未引入，现行取值以[设计稿 §6.1「重冻后的登记名」](../specs/2026-11-20-agenthub-decomposition-design.md)与 `AiPermissionKeys.java` 为准；`ai:memory:version:restore` 是唯一按本稿登记的（§12.7 I-11，2026-11-21 队长批准）。
 
 - [ ] **Step 4: C 写 TS 镜像（字符串必须与 Step 3 逐字相同）**
 

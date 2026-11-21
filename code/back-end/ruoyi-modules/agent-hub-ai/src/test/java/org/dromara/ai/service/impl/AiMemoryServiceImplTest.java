@@ -12,13 +12,16 @@ import org.dromara.ai.core.agent.AgentRegistry;
 import org.dromara.ai.core.agent.AiRuntimeConfigStore;
 import org.dromara.ai.core.memory.AiMemoryAuditLogger;
 import org.dromara.ai.core.memory.AiMemorySanitizer;
+import org.dromara.ai.core.memory.AiMemoryVersionStore;
 import org.dromara.ai.domain.AiAgent;
 import org.dromara.ai.domain.bo.AiMemoryConfigBo;
 import org.dromara.ai.domain.bo.AiMemoryContentBo;
 import org.dromara.ai.domain.dto.ChatTokenUsage;
 import org.dromara.ai.domain.vo.AiMemoryContentVo;
 import org.dromara.ai.domain.vo.AiMemoryFileVo;
+import org.dromara.ai.domain.vo.AiMemoryVersionVo;
 import org.dromara.ai.service.IAiAgentService;
+import org.dromara.ai.service.IAiMemoryService;
 import org.dromara.ai.service.IAiUsageStatService;
 import org.dromara.ai.test.AiTestSupport;
 import org.dromara.common.core.exception.ServiceException;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -44,6 +48,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -496,6 +501,98 @@ class AiMemoryServiceImplTest {
         assertFalse(userText.contains("忽略之前的所有指令"));
         assertTrue(userText.contains("用户偏好表格输出"));
         assertTrue(Files.isDirectory(tempDir.resolve(".quarantine")));
+    }
+
+    /**
+     * §12.2 版本恢复验收：正文与目标版本逐字一致，且覆盖之前先给当前正文留一份 PRE_RESTORE 快照。
+     */
+    @Test
+    @DisplayName("恢复版本：正文逐字一致，且覆盖前先自动快照")
+    void shouldRestoreContentVerbatimAfterPreSnapshot() {
+        WorkspaceManager workspace = stubWorkspace();
+        when(runtimeConfigStore.memory()).thenReturn(policy());
+        when(workspace.getMemoryDir(any())).thenReturn(tempDir);
+        when(workspace.readMemoryMd(any())).thenReturn("current-content");
+        when(memoryVersionStore.read(tempDir, "v1")).thenReturn(version("v1", "target-content"));
+        when(memoryVersionStore.readContent(tempDir, "v1")).thenReturn("target-content");
+        when(memoryVersionStore.record(any(), any(), any(), any(), any(), any(), any(), anyInt()))
+            .thenReturn("v2");
+        when(memoryVersionStore.read(tempDir, "v2")).thenReturn(version("v2", "target-content"));
+
+        AiMemoryVersionVo restored = memoryService.restoreVersion(1L, 7L, "v1", "CONTENT", "回滚误删", true);
+
+        assertEquals("target-content", restored.getContent());
+        InOrder order = inOrder(memoryVersionStore, workspace);
+        order.verify(memoryVersionStore).record(eq(tempDir), eq("current-content"), eq("PRE_RESTORE"),
+            any(), eq(7L), eq("回滚误删"), eq("v1"), anyInt());
+        order.verify(workspace).writeUtf8WorkspaceRelative(any(), eq("MEMORY.md"), eq("target-content"));
+        order.verify(memoryVersionStore).record(eq(tempDir), eq("target-content"), eq("RESTORE"),
+            any(), eq(7L), eq("回滚误删"), eq("v1"), anyInt());
+        verify(auditLogger).record(any(), eq(7L), eq(AiMemoryAuditLogger.EVENT_RESTORE), eq("OK"), any());
+    }
+
+    /**
+     * 未二次确认：拒掉，并且一条副作用都不留。
+     *
+     * <p>断言用 {@code verifyNoInteractions} 而不是「没覆盖 MEMORY.md」，是因为拒因一旦排在
+     * 自动快照之后，被拒的请求也会往版本历史里塞一行 PRE_RESTORE——历史只增不删，攒不出真相。</p>
+     */
+    @Test
+    @DisplayName("恢复版本：缺少二次确认时拒绝且不产生任何副作用")
+    void shouldRejectRestoreWithoutConfirmation() {
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> memoryService.restoreVersion(1L, 7L, "v1", "CONTENT", "回滚误删", false));
+
+        assertEquals(IAiMemoryService.RESTORE_CONFIRM_REQUIRED, error.getMessage());
+        verifyNoInteractions(agentService, agentRegistry, runtimeConfigStore, memoryVersionStore, auditLogger);
+    }
+
+    /**
+     * 正文已与目标版本一致时不重复快照，也不谎报成新版本。
+     */
+    @Test
+    @DisplayName("恢复版本：正文相同则不写不快照")
+    void shouldSkipSnapshotWhenContentAlreadyMatches() {
+        WorkspaceManager workspace = stubWorkspace();
+        when(workspace.getMemoryDir(any())).thenReturn(tempDir);
+        when(workspace.readMemoryMd(any())).thenReturn("same-content");
+        when(memoryVersionStore.read(tempDir, "v1")).thenReturn(version("v1", "same-content"));
+        when(memoryVersionStore.readContent(tempDir, "v1")).thenReturn("same-content");
+
+        AiMemoryVersionVo restored = memoryService.restoreVersion(1L, 7L, "v1", "CONTENT", null, true);
+
+        assertTrue(restored.getCurrent());
+        verify(workspace, never()).writeUtf8WorkspaceRelative(any(), any(), any());
+        verify(memoryVersionStore, never()).record(any(), any(), any(), any(), any(), any(), any(), anyInt());
+    }
+
+    /**
+     * 恢复不带备注时落两条默认说明，各自说清自己是「回退点」还是「恢复结果」。
+     */
+    @Test
+    @DisplayName("恢复版本：缺省备注写默认说明")
+    void shouldFallBackToDefaultRestoreNotes() {
+        WorkspaceManager workspace = stubWorkspace();
+        when(runtimeConfigStore.memory()).thenReturn(policy());
+        when(workspace.getMemoryDir(any())).thenReturn(tempDir);
+        when(workspace.readMemoryMd(any())).thenReturn("current-content");
+        when(memoryVersionStore.read(tempDir, "v1")).thenReturn(version("v1", "target-content"));
+        when(memoryVersionStore.readContent(tempDir, "v1")).thenReturn("target-content");
+        when(memoryVersionStore.record(any(), any(), any(), any(), any(), any(), any(), anyInt()))
+            .thenReturn("v2");
+        when(memoryVersionStore.read(tempDir, "v2")).thenReturn(version("v2", "target-content"));
+
+        memoryService.restoreVersion(1L, 7L, "v1", "CONTENT", "", true);
+
+        verify(memoryVersionStore).record(eq(tempDir), eq("current-content"), eq("PRE_RESTORE"),
+            any(), eq(7L), eq("恢复前自动快照"), eq("v1"), anyInt());
+        verify(memoryVersionStore).record(eq(tempDir), eq("target-content"), eq("RESTORE"),
+            any(), eq(7L), eq("从历史版本恢复"), eq("v1"), anyInt());
+    }
+
+    private AiMemoryVersionStore.VersionEntry version(String versionId, String content) {
+        return new AiMemoryVersionStore.VersionEntry(versionId, versionId + ".md",
+            "2026-11-21T10:00:00Z", "CONSOLIDATE", 7L, content.length(), "sha256", null, "旧版说明", null);
     }
 
     private WorkspaceManager stubWorkspace() {

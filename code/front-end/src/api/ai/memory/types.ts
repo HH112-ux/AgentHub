@@ -92,6 +92,8 @@ export interface MemoryRestoreForm {
   userId?: string | number;
   mode: 'CONTENT' | 'CONTENT_AND_WATERMARK';
   note?: string;
+  /** 二次确认位（§12.2 / §12.7 I-11）：非 true 时服务端拒绝覆盖，且不留任何副作用 */
+  confirmed: boolean;
 }
 
 /** 显式记忆条目（用户明确要求记住的个人偏好） */

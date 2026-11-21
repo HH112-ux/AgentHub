@@ -21,6 +21,14 @@ import java.util.List;
 public interface IAiMemoryService {
 
     /**
+     * 版本恢复缺少二次确认时的报错文案（§12.2 / §12.7 I-11）。
+     *
+     * <p>与前端恢复弹窗同源：文案改动必须两边一起改，否则页面弹出的提示与实际拒因不一致。</p>
+     */
+    String RESTORE_CONFIRM_REQUIRED =
+        "恢复历史版本需要二次确认：目标版本正文将覆盖当前 MEMORY.md，请勾选确认后重试";
+
+    /**
      * 查询指定智能体与用户下的记忆文件清单（长期记忆 + 每日流水）。
      *
      * @param agentId 智能体主键
@@ -182,8 +190,10 @@ public interface IAiMemoryService {
      * @param versionId 版本 ID
      * @param mode      CONTENT / CONTENT_AND_WATERMARK
      * @param note      备注
+     * @param confirmed 二次确认位（§12.2 / §12.7 I-11），为 {@code false} 时不产生任何副作用
      * @return 恢复后生成的新版本
      */
-    AiMemoryVersionVo restoreVersion(Long agentId, Long userId, String versionId, String mode, String note);
+    AiMemoryVersionVo restoreVersion(Long agentId, Long userId, String versionId, String mode, String note,
+                                     boolean confirmed);
 
 }

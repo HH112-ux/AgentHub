@@ -87,3 +87,11 @@ D7 追加：§12.7 I-10 附件状态机、配额与优先回收落地（分支 `
 4. **新门禁首轮是"假绿"的，变异测试才把它照出来**。方法体截取最初写成"匹配任意 `foo(`"，于是 `reclaim(list)` 这类**调用点**也被当成声明，`bodyFrom` 从那里往后找到的第一个 `{` 往往是 `for` 的括号——五段检查读的全是错位内容，代码怎么改都报绿。修法是把声明锚定到行首的可见性修饰词。同一轮还暴露两处"检查存在但不成立"：只断言 `markOrphaned` 圈了 `PENDING/BOUND`，把 `RECYCLED` 也加进范围照样过关（终态被改回在制品），因此补一条"范围里不得出现 RECYCLED"；只断言 `start()` 里有 `scheduleAtFixedRate`，把调度整体挂在暂存开关上仍然绿，因此补一条"调度入口不得按 TTL 开关短路"。最终 21 项变异全部 rc≠0 且报错命中对应断言，还原后复跑为绿。
 
 验证：模块 1656 项 0 失败（较上一分支 +24），十条门禁 + L00 全绿，`schema-dialect-parity` 通过（字典 31 类 / 108 项 → 32 类 / 112 项，双方言逐字一致）。未达：到期扫描在真实库上的取片与对象删除（含删除失败"保留原状态等下一轮"）、72 小时留档窗口内附件的可回显性，只能在云端真实栈上核验，随 §9 H1 联调收口；`RECYCLED` 行不进历史回显是本次定的口径，页面若日后要展示"已回收"占位需要新接口，不属本项。
+
+D7 追加：§12.7 I-11 记忆版本恢复的独立权限与二次确认（分支 `feature/memory-version-restore`），并收口 I-12 的队长裁定。`POST /ai/memory/versions/{versionId}/restore` 会**整篇覆盖用户的 `MEMORY.md`**，而版本历史只增不删、没有撤销按钮——此前它挂在 `ai:memory:edit` 上，即"能改记忆的人就能把历史换成任意一版"，且页面弹窗只是自觉，接口不带确认位照样执行。补齐的三件事：
+
+1. **权限单独开，登记名回到 §12.2 原口径**。这条标识在 §6.1 重冻时曾被并写进"用编辑档，不再单开 `:restore`"，本次经队长 2026-11-21 批准改回：`ai:memory:version:restore` 入 `AiPermissionKeys`（131 → 132），两个方言各在「长期记忆」菜单下追加按钮行（幂等：PG `on conflict do nothing`、MySQL `on duplicate key update`），前端按钮改按它显隐。效果不是"多一个开关"，而是只有编辑权限的人**看不到**一个必然失败的按钮，而不是看得到一个能覆盖整篇历史的按钮。
+2. **二次确认的判据放服务层，且排在任何副作用之前**。`restoreVersion` 第一句就 `if (!confirmed) throw ServiceException(RESTORE_CONFIRM_REQUIRED)`，在读工作区、自动快照、覆盖正文、合并水位之前——判据若只写在入口注解或前端弹窗，日后新增的批量 / 渠道入口绕过 Controller 即无声免检；判据若排在快照之后，被拒的请求还会往只增不删的版本历史里塞进一行 `PRE_RESTORE`。确认位用 `Boolean` 而非 `@NotNull`，控制器按"显式 `true` 才算确认"取值（`Boolean.TRUE.equals`）：字段没填等于没确认，不做"没填就当默认同意"。
+3. **留痕仍走底座 `@Log` 切面**（与 §12.5 治理面同一口径），不自建表——40 表是 §6 冻结契约。拒因文案在 `IAiMemoryService` 常量上与前端弹窗同源（同 I-9 的 `REASON_MAX_LENGTH` 写法），两边各写一句迟早漂移成"提示与实际拒因不一致"。
+
+验证：新门禁 `scripts/checks/memory-version-restore.mjs` 登记为 `ci.yml` 必过步骤「记忆版本恢复（独立权限 / 二次确认 / 留痕）」，管五个文件的接线面（常量源、双方言按钮与父菜单归属、入口权限与 `@Log` 与 `Boolean.TRUE.equals`、服务层判据存在且排在 `getEnabledAgent(` / `snapshotMemory(` 之前、前端勾选绑定与禁用与请求体与类型）；17 项门禁变异全部 rc≠0 且命中对位断言，还原后复跑为绿。判定取值仍归单测：`AiMemoryServiceImplTest` 新增 4 项（正文与目标版本逐字一致、`InOrder` 钉住快照→覆盖→新版本、未确认时 `verifyNoInteractions` 五个协作者、备注兜底文案）+ `AiMemoryControllerTest` 新增 2 项（勾选传 `true`、字段缺失按 `false`）。I-12 按队长裁定**底座示例菜单保留不动**，不新增裁剪脚本、不给 `menu-component` 扩面，代价（7 个入口点开是白屏）如实登记在 §12.7 C 段。未达：权限在真实库上的授予与收回、`sys_oper_log` 里恢复操作的可查性，只能在云端真实栈上核验，随 §9 H1 联调收口；本地不起栈，也不以 mock 单测冒充接口 e2e。

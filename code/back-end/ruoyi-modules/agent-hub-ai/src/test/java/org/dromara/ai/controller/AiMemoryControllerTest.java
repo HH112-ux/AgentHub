@@ -5,6 +5,7 @@ import org.dromara.ai.core.memory.spi.AiMemoryBackend;
 import org.dromara.ai.core.memory.spi.MemoryBackendStats;
 import org.dromara.ai.domain.bo.AiMemoryConfigBo;
 import org.dromara.ai.domain.bo.AiMemoryContentBo;
+import org.dromara.ai.domain.bo.AiMemoryRestoreBo;
 import org.dromara.ai.domain.vo.AiMemoryContentVo;
 import org.dromara.ai.domain.vo.AiMemoryFileVo;
 import org.dromara.ai.domain.vo.AiMemoryQualityVo;
@@ -105,6 +106,38 @@ class AiMemoryControllerTest {
         quality.setDays(7);
         when(memoryService.quality(2L, 7)).thenReturn(quality);
         assertSame(quality, controller.quality(2L, 7).getData());
+    }
+
+    @Test
+    @DisplayName("恢复版本：勾选确认才把 true 交给服务层")
+    void shouldPassRestoreConfirmation() {
+        AiMemoryRestoreBo bo = restoreBo();
+        bo.setConfirmed(true);
+
+        controller.restoreVersion("v1", bo);
+
+        verify(memoryService).restoreVersion(1L, 2L, "v1", "CONTENT", "回滚误删", true);
+    }
+
+    /**
+     * 确认位缺失要传 false 而不是「没填就当默认同意」：入口注解管不到日后新增的批量入口，
+     * 一旦这里写成 {@code bo.getConfirmed() != Boolean.FALSE}，二次确认就只剩下页面自觉。
+     */
+    @Test
+    @DisplayName("恢复版本：确认位未填按未确认处理")
+    void shouldTreatMissingRestoreConfirmationAsUnconfirmed() {
+        controller.restoreVersion("v1", restoreBo());
+
+        verify(memoryService).restoreVersion(1L, 2L, "v1", "CONTENT", "回滚误删", false);
+    }
+
+    private AiMemoryRestoreBo restoreBo() {
+        AiMemoryRestoreBo bo = new AiMemoryRestoreBo();
+        bo.setAgentId(1L);
+        bo.setUserId(2L);
+        bo.setMode("CONTENT");
+        bo.setNote("回滚误删");
+        return bo;
     }
 
 }

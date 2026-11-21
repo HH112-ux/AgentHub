@@ -237,13 +237,13 @@ public class AiMemoryController extends BaseController {
     /**
      * 恢复到指定版本（恢复前自动快照当前版本）
      */
-    @SaCheckPermission("ai:memory:edit")
+    @SaCheckPermission("ai:memory:version:restore")
     @Log(title = "AI长期记忆版本恢复", businessType = BusinessType.UPDATE)
     @PostMapping("/versions/{versionId}/restore")
     public R<AiMemoryVersionVo> restoreVersion(@PathVariable String versionId,
                                                @Validated @RequestBody AiMemoryRestoreBo bo) {
         return R.ok(memoryService.restoreVersion(bo.getAgentId(), bo.getUserId(), versionId,
-            bo.getMode(), bo.getNote()));
+            bo.getMode(), bo.getNote(), Boolean.TRUE.equals(bo.getConfirmed())));
     }
 
     /**

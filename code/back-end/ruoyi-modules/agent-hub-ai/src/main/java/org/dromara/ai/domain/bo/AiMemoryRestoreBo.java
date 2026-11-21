@@ -36,4 +36,13 @@ public class AiMemoryRestoreBo implements Serializable {
 
     @Size(max = 200, message = "备注不能超过 200 字")
     private String note;
+
+    /**
+     * 二次确认位（§12.2 / §12.7 I-11）：必须显式为 {@code true} 才执行覆盖。
+     *
+     * <p>故意不加 {@code @NotNull}：判据落在 {@code IAiMemoryService#restoreVersion} 里，
+     * 缺字段时也走同一条领域报错，而不是被 bean 校验挡在 HTTP 入口——
+     * 日后新增的批量或渠道入口绕过本控制器时，确认要求不能跟着一起被绕过。</p>
+     */
+    private Boolean confirmed;
 }
