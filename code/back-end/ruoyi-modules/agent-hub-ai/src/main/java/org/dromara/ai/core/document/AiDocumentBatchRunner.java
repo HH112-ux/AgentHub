@@ -20,6 +20,12 @@ import org.springframework.stereotype.Component;
 public class AiDocumentBatchRunner {
 
     /**
+     * 队列上限（设计稿 §12.3 WARN 档「向量化队列积压打满 200」里的 200 即此值）：
+     * 满时 {@link #submit} 抛 {@code TaskRejectedException}，由调用方把该批落为失败而不是静默丢弃。
+     */
+    public static final int QUEUE_CAPACITY = 200;
+
+    /**
      * 执行线程池（有界，队列满时拒绝而不是无限堆积）
      */
     private final ThreadPoolTaskExecutor executor;
@@ -28,7 +34,7 @@ public class AiDocumentBatchRunner {
         ThreadPoolTaskExecutor pool = new ThreadPoolTaskExecutor();
         pool.setCorePoolSize(2);
         pool.setMaxPoolSize(2);
-        pool.setQueueCapacity(200);
+        pool.setQueueCapacity(QUEUE_CAPACITY);
         pool.setThreadNamePrefix("ai-kb-batch-");
         pool.setWaitForTasksToCompleteOnShutdown(true);
         pool.setAwaitTerminationSeconds(30);
@@ -44,6 +50,18 @@ public class AiDocumentBatchRunner {
      */
     public void submit(Runnable task) {
         executor.execute(task);
+    }
+
+    /**
+     * 当前排队等待的任务数（健康自检 §12.7 I-3 的「向量化队列积压」读此值）。
+     *
+     * <p>只反映本进程——多副本部署时每个副本各有一条队列，自检报告的是「当前这台」的积压，
+     * 与 {@code ai_document.vector_status} 的待处理行数互补（后者是全局的）。</p>
+     *
+     * @return 队列中的任务数
+     */
+    public int queuedTaskCount() {
+        return executor.getThreadPoolExecutor().getQueue().size();
     }
 
     /**

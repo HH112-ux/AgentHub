@@ -23,6 +23,7 @@
 3. `deploy/{stack}/config/application-agenthub.yml`——挂载进容器 `/config`，把 `AGENTHUB_*` 映射回**底座已有的属性路径**（`spring.datasource.dynamic.datasource.master.*`、`spring.data.redis.*`、`sa-token.jwt-secret-key`、`api-decrypt.*`）。
 
 AgentHub 自有的配置项（模型密钥根密钥、安全守卫模式、向量库与对象存储入口）不借用底座键名，由 `agent-hub-ai` 侧属性类声明后读取，因此不出现在映射文件里。
+§12.7 I-3 新增的两个键同属此类：`agenthub.ai.health.error-log-path`（默认 `./logs/sys-error.log`，须与 logback 的 `log.path` 对齐；对不上时检项直接记 `UNKNOWN` 并提示两处配置不一致，不会假装「无错误日志」）与 `agenthub.ai.health.low-watermark-percent`（默认 `15`，即 §12.3 的冻结水位；开成配置只为让余量边界用例不取决于跑测试那台机器的磁盘，生产不改）。
 
 ### 覆盖优先级实测
 
@@ -81,6 +82,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 体检报告 60 秒缓存 | `AiHealthCheckServiceImplTest` 5 项断言（缓存复用、TTL=60s、`refresh=true` 穿透、缓存值损坏回退实时、写缓存失败降级）+ 6 项变异：TTL 改 300 秒、缓存读取短路、忽略 refresh、读/写缓存异常不再兜底、Controller 丢掉 refresh 参数 | 6/6 如期变红且报错命中对应断言；缓存键 `agenthub:ai:health:report`，每次实时体检覆盖并重置 TTL，页面「重新自检」不受 60 秒限制 |
 | 体检检项取数视野 | `AiAgentServiceImplTest` 平台全量视图三重断言（未碰登录上下文、SQL 片段不含 `visible_scope`、查询参数值里不出现用户与部门主键）+ `AiHealthCheckServiceImplTest` 他部门专家出现在结论里且 `queryOptions()` 不再被调用 | 3/3 变异（自检改回 `queryOptions()`、平台视图偷偷加 `visible_scope`、平台视图又读 `LoginHelper`）如期变红。报告按 §12.3 全局缓存 60 秒，检项取数因此必须与登录用户无关，否则某个人的视野会串给下一个人 |
 | 体检超时与整屏预算（§12.7 I-14） | `AiHealthItemTimeoutInvokerTest` 4 项（检项跑在工作线程、到点抛 `TimeoutException` 且调用方不陪跑、超时后 `cancel(true)` 中断工作线程、检项异常原样解包）+ `AiHealthCheckServiceImplTest` 新增 4 项（单项超时记 `UNKNOWN` 并写明「判定超时」、单项预算取 3 秒上限与整屏剩余的较小值、30 秒预算耗尽后剩余项不再执行、每行按真实耗时回填 `elapsedMs`）+ 8 项变异：单项上限放宽到 300 秒、取消取小、预算耗尽仍执行、超时落到 FAIL 分支、整屏预算改 60 秒、耗时不回写、超时不中断工作线程、异常不解包 | 8/8 如期变红且报错命中对应断言；硬超时要把检项搬到工作线程，前提是该线程没有登录上下文——`AiHealthItemInvoker` 的类注释写明这条约束由 I-15 的平台全量视图守住，本模块 ai_ Mapper 也不带 `@DataPermission` |
+| 体检 WARN 项（§12.7 I-3） | `AiHealthCapacityProbeTest` 17 项（磁盘/Redis 两路读数各自缺失、余量正好 15% 与 14%、未设 `maxmemory`、工作区未创建时向上取父目录、心跳缺失按运行时长分「未到首轮」与「线程退出」、超 2 个周期报警、日志文件缺失/无行首时间戳的续行/尾部 2MB 截断）+ `AiTaskHeartbeatTest` 6 项（TTL = 4×间隔且不低于 60 秒、写失败不影响扫描、读失败原样抛出）+ `AiHealthCheckServiceImplTest` 新增 7 项检项接线断言 + 5 项变异：余量水位 `<` 改 `<=`、心跳容忍周期 2 改 3、队满判定 `>=` 改 `>`、摘掉 `runtime.capacity` 注册、`channel.stream` 分类漂出注册处那一档 | 5/5 如期变红；`storage.io` 按「接不进记 `UNKNOWN`」的口径接入且断言其 `suggestion` 非空，不允许伪造 PASS。错误日志检项只报条数与最近时间，响应与 CI 日志都不含日志正文（仓库 public） |
 | 真实部署 initdb | `docker compose up -d db` 各栈 | PG 与 MySQL 均 40 表 / 131 perms / 中文无损 |
 | 同源入口 | Nginx 前置一个每 1.2s 吐一帧的 SSE 假后端 | 帧间隔 2.39s（未被缓冲）、80→443 308、`actuator` 403、`index.html` 不缓存、hash 资源缺失 404、`/mcp` 到后端 |
 | 部署门禁有效性 | 对 `deploy-static.mjs` 做 17 项变异：编排与 Nginx 8 项（删指令、改端口、删清单变量、暴露中间件端口、删字符集前置、退化 profile、删映射键、删文件）+ 镜像接线 9 项（compose 去 `SERVER_PORT`、`ENTRYPOINT` 不传端口、运行期镜像改 `-jre-alpine`、构建镜像 JDK 降 17、构建命令去 `-am`、`ruoyi-admin` 不依赖 `agent-hub-ai`、`/app/data` 退化 bind、删 `.dockerignore` 排除项、删 `Dockerfile`） | 17/17 如期变红且报错命中对应断言（判定按「rc=1 且报错含该断言措辞」，脚本自身崩溃不计通过）；无 docker 时渲染记为「未执行」而非静默通过 |
@@ -101,7 +103,8 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 2. 底座 `ruoyi-admin/pom.xml` 的 PostgreSQL 驱动在 D1 日志里是注释态；现仓库内已放开，且与 MySQL 驱动同时在位、按 url 选择（`scripts/checks/deploy-static.mjs` 的镜像接线段会校验 ruoyi-admin 依赖 `agent-hub-ai`，但驱动在位与否仍以起栈实测为准）。
 3. 两栈各自带一套 Milvus/etcd/MinIO，同机并存的内存预算要在 §11 前置里确认；若余量不足，改为共享外部网络与卷属部署变更，需队长批准。
 4. `deploy/**` 的改动由 CI 两条门禁兜住：`node scripts/checks/deploy-static.mjs`（端口口径、`.env.example` 与 compose 占位符对齐、Nginx 关键指令、MySQL 字符集前置、profile 覆盖接线、镜像接线（§7），docker 在场时追加一次真实渲染）与「Nginx 入口配置语法」（现签一次性自签证书后跑 `nginx -t`，必须带 `--add-host app:127.0.0.1`，否则 upstream 解析在测试阶段就失败）。两条都随 `deploy/deploy-pg/docker-compose.yml` 是否入仓自动启停，不起容器、不连真库；行为类实测口径见上表。
-5. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。CI 侧走 `RUNNER_TEMP`，无此问题。
+5. 体检项 `storage.io` 只到「记 `UNKNOWN`」：§12.3 把「对象存储读/写/删」列在 FAIL 档，而底座 `OssService` 只暴露读（URL 查询），自检要不污染存储桶就验不了写与删。转真实判定需二选一——底座开放带 TTL 的探针对象，或允许自检在固定前缀下写入并即时删除——属产品决策，定了再补检项与 D5 门禁口径（设计稿 §12.7 I-3 末段同记这条残留）。
+6. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。CI 侧走 `RUNNER_TEMP`，无此问题。
 
 ## 7. 应用镜像构建与容器内端口
 

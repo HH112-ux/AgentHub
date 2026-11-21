@@ -9,6 +9,9 @@ import org.dromara.ai.config.AiProperties;
 import org.dromara.ai.core.AiMilvusProbe;
 import org.dromara.ai.core.AiVectorStore;
 import org.dromara.ai.core.agent.AiRuntimeConfigStore;
+import org.dromara.ai.core.channel.AiChannelStreamStatus;
+import org.dromara.ai.core.document.AiDocumentBatchRunner;
+import org.dromara.ai.core.health.AiHealthCapacityProbe;
 import org.dromara.ai.core.health.AiHealthItemInvoker;
 import org.dromara.ai.core.route.JevSystemOneSupport;
 import org.dromara.ai.core.route.RouteJudge;
@@ -16,6 +19,7 @@ import org.dromara.ai.core.route.RouteJudgeMode;
 import org.dromara.ai.core.route.RouteJudgeRequest;
 import org.dromara.ai.core.route.RouteJudgeVerdict;
 import org.dromara.ai.domain.AiAgent;
+import org.dromara.ai.domain.AiDocument;
 import org.dromara.ai.domain.AiMcpClient;
 import org.dromara.ai.domain.AiModelConfig;
 import org.dromara.ai.domain.bo.AiHealthProbeBo;
@@ -31,8 +35,10 @@ import org.dromara.ai.domain.vo.AiMcpClientTestVo;
 import org.dromara.ai.domain.vo.AiMcpServerVo;
 import org.dromara.ai.domain.vo.AiModelConfigVo;
 import org.dromara.ai.domain.vo.AiModelTestVo;
+import org.dromara.ai.mapper.AiDocumentMapper;
 import org.dromara.ai.mapper.AiMcpClientMapper;
 import org.dromara.ai.service.IAiAgentService;
+import org.dromara.ai.service.IAiChannelService;
 import org.dromara.ai.service.IAiHealthCheckService;
 import org.dromara.ai.service.IAiKnowledgeBaseService;
 import org.dromara.ai.service.IAiMcpClientService;
@@ -118,7 +124,7 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     static final String REPORT_CACHE_KEY = "agenthub:ai:health:report";
 
     /**
-     * 体检报告缓存时长。取 60 秒是因为一次全量自检要遍历 15 项、多次查库，
+     * 体检报告缓存时长。取 60 秒是因为一次全量自检要遍历全部检项、多次查库，
      * 而页面切回来不需要每一秒都重算；手动刷新不受它限制。
      */
     private static final Duration REPORT_CACHE_TTL = Duration.ofSeconds(60);
@@ -130,8 +136,8 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     private static final long ITEM_TIMEOUT_MILLIS = Duration.ofSeconds(3).toMillis();
 
     /**
-     * 整屏体检的总预算（设计稿 §12.3 / §12.7 I-14）。15 项 × 3 秒 = 45 秒是「每项都刚好卡满」
-     * 的最坏值，页面等不起；预算耗尽后剩余检项直接记 UNKNOWN 且不再执行，因此实际耗时上界是 30 秒。
+     * 整屏体检的总预算（设计稿 §12.3 / §12.7 I-14）。「检项数 × 单项上限」是「每项都刚好卡满」的最坏值，
+     * 页面等不起；预算耗尽后剩余检项直接记 UNKNOWN 且不再执行，因此实际耗时上界是 30 秒。
      */
     private static final long TOTAL_BUDGET_MILLIS = Duration.ofSeconds(30).toMillis();
 
@@ -146,6 +152,24 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     private static final String CATEGORY_AGENT = "智能体";
 
     private static final String CATEGORY_STORAGE = "存储";
+
+    /**
+     * 知识库检索模式：混合检索（BM25 + 向量），与 {@code AiKnowledgeBaseServiceImpl.MODE_HYBRID} 同值
+     */
+    private static final String MODE_HYBRID = "hybrid";
+
+    /**
+     * BM25 索引状态：未建 / 建设中 / 已就绪 / 建败（{@code ai_knowledge_base.bm25_index_status} 字典）
+     */
+    private static final String BM25_NONE = "none";
+    private static final String BM25_BUILDING = "building";
+    private static final String BM25_READY = "ready";
+    private static final String BM25_FAILED = "failed";
+
+    /**
+     * 文档向量化状态：待向量化（{@code ai_document.vector_status} 字典 0）
+     */
+    private static final String DOC_VECTOR_PENDING = "0";
 
     private final DataSource dataSource;
 
@@ -172,6 +196,16 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     private final OssService ossService;
 
     private final RouteJudge routeJudge;
+
+    private final IAiChannelService channelService;
+
+    private final AiChannelStreamStatus channelStreamStatus;
+
+    private final AiDocumentMapper documentMapper;
+
+    private final AiDocumentBatchRunner documentBatchRunner;
+
+    private final AiHealthCapacityProbe capacityProbe;
 
     /**
      * 检项执行接缝：生产注入带硬超时的实现，单测注入同线程直调（理由见 {@link AiHealthItemInvoker}）
@@ -249,17 +283,24 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
         items.add(safe("db", "数据库连通", CATEGORY_INFRA, this::checkDb, deadlineNanos));
         items.add(safe("db.schema", "AI 业务表齐全", CATEGORY_INFRA, this::checkSchema, deadlineNanos));
         items.add(safe("redis", "Redis 连通", CATEGORY_INFRA, this::checkRedis, deadlineNanos));
+        items.add(safe("runtime.capacity", "磁盘与 Redis 余量", CATEGORY_INFRA, this::checkCapacity, deadlineNanos));
         items.add(safe("model.chat.key", "对话模型密钥", CATEGORY_MODEL, this::checkChatKeys, deadlineNanos));
         items.add(safe("model.embedding", "向量模型密钥与维度", CATEGORY_MODEL, this::checkEmbedding, deadlineNanos));
         items.add(safe("vector.milvus", "向量库（Milvus）", CATEGORY_MODEL, this::checkMilvus, deadlineNanos));
+        items.add(safe("rag.bm25", "BM25 索引就绪", CATEGORY_RUNTIME, this::checkBm25Index, deadlineNanos));
+        items.add(safe("rag.queue", "向量化队列积压", CATEGORY_RUNTIME, this::checkVectorQueue, deadlineNanos));
         items.add(safe("agent.model", "智能体绑定模型", CATEGORY_AGENT, this::checkAgentModels, deadlineNanos));
         items.add(safe("mcp.server", "MCP 出口口令与工具", CATEGORY_INTEGRATION, this::checkMcpServer, deadlineNanos));
         items.add(safe("mcp.client", "外部 MCP 连接", CATEGORY_INTEGRATION, this::checkMcpClients, deadlineNanos));
+        items.add(safe("channel.stream", "渠道长连接在线", CATEGORY_INTEGRATION, this::checkChannelStream, deadlineNanos));
         items.add(safe("safety.engine", "内容安全引擎", CATEGORY_RUNTIME, this::checkSafetyEngine, deadlineNanos));
         items.add(safe("rag.rerank", "检索重排（Rerank）", CATEGORY_RUNTIME, this::checkRerank, deadlineNanos));
         items.add(safe("runtime.timezone", "时区一致性", CATEGORY_RUNTIME, this::checkTimezone, deadlineNanos));
+        items.add(safe("runtime.reaper", "回收任务心跳", CATEGORY_RUNTIME, this::checkReaperHeartbeat, deadlineNanos));
+        items.add(safe("runtime.error-log", "近 24 小时错误日志", CATEGORY_RUNTIME, this::checkErrorLog, deadlineNanos));
         items.add(safe("structured-decision", "结构化决策连通性", CATEGORY_RUNTIME, this::checkStructuredDecision, deadlineNanos));
         items.add(safe("storage.domain", "对象存储对外域名", CATEGORY_STORAGE, this::checkStorageDomain, deadlineNanos));
+        items.add(safe("storage.io", "对象存储读写删", CATEGORY_STORAGE, this::checkStorageIo, deadlineNanos));
         items.add(safe("crypto.key", "加密根密钥收口", CATEGORY_RUNTIME, this::checkCryptoKey, deadlineNanos));
 
         AiHealthReportVo report = new AiHealthReportVo();
@@ -794,6 +835,143 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     }
 
     /**
+     * 磁盘与 Redis 内存余量（§12.3 WARN 档「余量 &lt;15%」，读数细节见 {@link AiHealthCapacityProbe#capacity()}）。
+     */
+    private AiHealthCheckVo checkCapacity() {
+        return verdict("runtime.capacity", "磁盘与 Redis 余量", CATEGORY_INFRA, capacityProbe.capacity());
+    }
+
+    /**
+     * 混合检索知识库的 BM25 索引是否就绪（§12.3 WARN 档）。
+     *
+     * <p>只看启用中的知识库：停用库的索引坏了不影响线上检索，不值得报警。{@code queryOptions()} 只按
+     * 启用状态过滤、不按登录用户可见范围过滤，符合 §12.7 I-15 对缓存报告的口径要求。</p>
+     *
+     * <p>没有任何混合检索库时判通过——此时「BM25 没建」是正确状态而不是缺口，不是「接不进」。</p>
+     */
+    private AiHealthCheckVo checkBm25Index() {
+        String key = "rag.bm25";
+        String name = "BM25 索引就绪";
+        List<AiKnowledgeBaseVo> hybrid = knowledgeBaseService.queryOptions().stream()
+            .filter(kb -> MODE_HYBRID.equals(kb.getRetrievalMode()))
+            .toList();
+        if (hybrid.isEmpty()) {
+            return pass(key, name, CATEGORY_RUNTIME, "没有启用中的混合检索知识库，无需 BM25 索引");
+        }
+        List<String> failed = new ArrayList<>();
+        List<String> notReady = new ArrayList<>();
+        for (AiKnowledgeBaseVo kb : hybrid) {
+            String label = StringUtils.isBlank(kb.getKbName()) ? kb.getKbCode() : kb.getKbName();
+            String status = kb.getBm25IndexStatus();
+            if (BM25_FAILED.equals(status)) {
+                failed.add(label);
+            } else if (!BM25_READY.equals(status)) {
+                notReady.add(label + "（" + (StringUtils.isBlank(status) ? BM25_NONE : status) + "）");
+            }
+        }
+        if (!failed.isEmpty()) {
+            return warn(key, name, CATEGORY_RUNTIME,
+                String.join("；", failed) + "：BM25 索引构建失败，混合检索会退化为纯向量检索",
+                "到「知识库」重新触发索引构建；暂时修不好可把该库检索模式改回向量");
+        }
+        if (!notReady.isEmpty()) {
+            return warn(key, name, CATEGORY_RUNTIME,
+                String.join("；", notReady) + "：BM25 索引未就绪（未建或建设中）",
+                "到「知识库」触发索引构建，建设完成后自动转为就绪");
+        }
+        return pass(key, name, CATEGORY_RUNTIME, hybrid.size() + " 个混合检索知识库的 BM25 索引均已就绪");
+    }
+
+    /**
+     * 向量化批量队列积压（§12.3 WARN 档「打满 200」）。
+     *
+     * <p>排队数来自本进程的有界线程池，只反映当前副本；库内「待向量化」行数走 mapper 直查、
+     * 不带可见范围过滤（§12.7 I-15），两个数一起给才看得出纳管有没有在动。
+     * 判据按契约只用「打满」：排队未满而仍有待处理行属正常节奏，写进说明而不报警。</p>
+     */
+    private AiHealthCheckVo checkVectorQueue() {
+        String key = "rag.queue";
+        String name = "向量化队列积压";
+        int queued = documentBatchRunner.queuedTaskCount();
+        long pending = documentMapper.selectCount(Wrappers.lambdaQuery(AiDocument.class)
+            .eq(AiDocument::getVectorStatus, DOC_VECTOR_PENDING));
+        String detail = "本进程批量队列 " + queued + "/" + AiDocumentBatchRunner.QUEUE_CAPACITY
+            + "，库内待向量化文档 " + pending + " 篇";
+        if (queued >= AiDocumentBatchRunner.QUEUE_CAPACITY) {
+            return warn(key, name, CATEGORY_RUNTIME, detail + "（队列已满，新提交的批量任务会被拒绝）",
+                "等队列排空再提交；批量排队时间过长时同步调大 agenthub.ai.reaper.stale-minutes，避免排队被误判为中断");
+        }
+        return pass(key, name, CATEGORY_RUNTIME, detail);
+    }
+
+    /**
+     * 长连接渠道（钉钉 / 飞书 {@code mode=ws}）是否已拉起（§12.3 WARN 档）。
+     *
+     * <p>状态是<b>单实例内存快照</b>，只代表这台副本拉起过没有，不代表此刻与平台网关连通
+     * （断线由 SDK 自动重连）；说明里写清口径，免得运维把「运行中」读成「此刻在线」。</p>
+     */
+    private AiHealthCheckVo checkChannelStream() {
+        String key = "channel.stream";
+        String name = "渠道长连接在线";
+        // 三条出口共用一个分类，且必须与 runChecks 注册时的分类一致：超时行的分类由注册处给，
+        // 正常行的分类由这里给，两边不一致同一个检项会在页面两个分组里各出现一次。
+        String category = CATEGORY_INTEGRATION;
+        List<String> codes = channelService.listEnabledLongConnectionChannelCodes();
+        if (codes == null || codes.isEmpty()) {
+            return pass(key, name, category, "未启用长连接渠道（钉钉恒为长连接、飞书按 mode=ws），无需在线判定");
+        }
+        List<String> failed = new ArrayList<>();
+        List<String> offline = new ArrayList<>();
+        for (String code : codes) {
+            AiChannelStreamStatus.Snapshot snapshot = channelStreamStatus.get(code);
+            if (snapshot == null) {
+                offline.add(code + "（本实例未登记）");
+            } else if (AiChannelStreamStatus.FAILED.equals(snapshot.status())) {
+                failed.add(code + "：" + StringUtils.defaultIfBlank(snapshot.detail(), "未记录原因"));
+            } else if (!AiChannelStreamStatus.RUNNING.equals(snapshot.status())) {
+                offline.add(code + "（" + snapshot.status() + "）");
+            }
+        }
+        if (!failed.isEmpty() || !offline.isEmpty()) {
+            List<String> issues = new ArrayList<>(failed);
+            issues.addAll(offline);
+            return warn(key, name, category,
+                String.join("；", issues) + "：长连接渠道启动失败或未在本实例拉起，该平台暂不会收到消息",
+                "到「渠道接入」核对凭据与出网策略，保存后重启服务；多副本部署时确认每个副本都拉起了连接");
+        }
+        return pass(key, name, category,
+            codes.size() + " 个长连接渠道均已在本实例拉起（断线由 SDK 自动重连，非实时连通性）");
+    }
+
+    /**
+     * 回收任务心跳（§12.3 WARN 档「心跳超 2 个扫描周期」）。
+     */
+    private AiHealthCheckVo checkReaperHeartbeat() {
+        return verdict("runtime.reaper", "回收任务心跳", CATEGORY_RUNTIME, capacityProbe.reaperHeartbeat());
+    }
+
+    /**
+     * 近 24 小时的 ERROR 日志（§12.3 WARN 档）。
+     */
+    private AiHealthCheckVo checkErrorLog() {
+        return verdict("runtime.error-log", "近 24 小时错误日志", CATEGORY_RUNTIME, capacityProbe.errorLog());
+    }
+
+    /**
+     * 对象存储读 / 写 / 删（§12.3 FAIL 档要求的三项全链路）。
+     *
+     * <p><b>为什么现在是 UNKNOWN</b>：底座对业务模块只开放只读接口（{@code OssService} 的 URL 查询与批量取链接），
+     * 没有上传与删除入口。要真跑一遍读写删，要么往桶里写探针对象（留下需要回收的垃圾文件），
+     * 要么绕过底座自建客户端（与底座的配置与缓存脱节）。§12.7 I-3 的口径是「接不进的一律记 UNKNOWN 而非 PASS」，
+     * 所以这里给出未接入的结论与原因，不伪造一次成功。</p>
+     */
+    private AiHealthCheckVo checkStorageIo() {
+        return unknown("storage.io", "对象存储读写删", CATEGORY_STORAGE,
+            "未接入：底座对象存储接口只暴露读（URL 查询），自检在不污染存储桶的前提下无法验证写与删",
+            "确认方案后再接入：由底座开放带 TTL 的探针对象读写删接口，或允许自检写入固定前缀并即时删除");
+    }
+
+    /**
      * 加密根密钥是否已收口（沿用出厂值时 prod 启动会被生产配置收口检查拒绝）。
      */
     private AiHealthCheckVo checkCryptoKey() {
@@ -1035,6 +1213,13 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
 
     private AiHealthCheckVo unknown(String key, String name, String category, String detail, String suggestion) {
         return item(key, name, category, AiHealthCheckVo.STATUS_UNKNOWN, detail, suggestion);
+    }
+
+    /**
+     * 把探针结论落成检项行：状态与文案由探针判定，键 / 名称 / 分类归本服务。
+     */
+    private AiHealthCheckVo verdict(String key, String name, String category, AiHealthCapacityProbe.Verdict verdict) {
+        return item(key, name, category, verdict.status(), verdict.detail(), verdict.suggestion());
     }
 
     private AiHealthCheckVo probed(String key, String name, String category, String status,

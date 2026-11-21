@@ -4,6 +4,9 @@ import org.dromara.ai.config.AiProperties;
 import org.dromara.ai.core.AiMilvusProbe;
 import org.dromara.ai.core.AiVectorStore;
 import org.dromara.ai.core.agent.AiRuntimeConfigStore;
+import org.dromara.ai.core.channel.AiChannelStreamStatus;
+import org.dromara.ai.core.document.AiDocumentBatchRunner;
+import org.dromara.ai.core.health.AiHealthCapacityProbe;
 import org.dromara.ai.core.health.AiHealthItemInvoker;
 import org.dromara.ai.core.route.RouteJudge;
 import org.dromara.ai.core.route.RouteJudgeRequest;
@@ -24,8 +27,10 @@ import org.dromara.ai.domain.vo.AiMcpClientTestVo;
 import org.dromara.ai.domain.vo.AiMcpServerVo;
 import org.dromara.ai.domain.vo.AiModelConfigVo;
 import org.dromara.ai.domain.vo.AiModelTestVo;
+import org.dromara.ai.mapper.AiDocumentMapper;
 import org.dromara.ai.mapper.AiMcpClientMapper;
 import org.dromara.ai.service.IAiAgentService;
+import org.dromara.ai.service.IAiChannelService;
 import org.dromara.ai.service.IAiKnowledgeBaseService;
 import org.dromara.ai.service.IAiMcpClientService;
 import org.dromara.ai.service.IAiMcpServerService;
@@ -109,6 +114,17 @@ class AiHealthCheckServiceImplTest {
 
     private final RouteJudge routeJudge = mock(RouteJudge.class);
 
+    private final IAiChannelService channelService = mock(IAiChannelService.class);
+
+    private final AiChannelStreamStatus channelStreamStatus = mock(AiChannelStreamStatus.class);
+
+    private final AiDocumentMapper documentMapper = mock(AiDocumentMapper.class);
+
+    private final AiDocumentBatchRunner documentBatchRunner = mock(AiDocumentBatchRunner.class);
+
+    /** 运行余量探针：文件与 Redis INFO 的真读在 {@code AiHealthCapacityProbeTest}，此处只验检项接线 */
+    private final AiHealthCapacityProbe capacityProbe = mock(AiHealthCapacityProbe.class);
+
     private AiHealthCheckServiceImpl service;
 
     /** 库内已有表名集合的测试替身：按实体清单造齐，个别用例再摘除几张模拟建库脚本没跑全。 */
@@ -129,7 +145,9 @@ class AiHealthCheckServiceImplTest {
         aiProperties.getChat().setCurrentTimeZone(TimeZone.getDefault().getID());
         service = new AiHealthCheckServiceImpl(dataSource, modelConfigService, knowledgeBaseService,
             agentService, mcpServerService, mcpClientService, mcpClientMapper, runtimeConfigStore,
-            aiProperties, vectorStore, milvusProbe, ossService, routeJudge, AiHealthItemInvoker.direct());
+            aiProperties, vectorStore, milvusProbe, ossService, routeJudge, channelService,
+            channelStreamStatus, documentMapper, documentBatchRunner, capacityProbe,
+            AiHealthItemInvoker.direct());
         stubHealthy();
     }
 
@@ -144,7 +162,7 @@ class AiHealthCheckServiceImplTest {
     @DisplayName("全部就绪时整体通过，且项数与计数自洽")
     void shouldPassWhenEverythingReady() {
         AiHealthReportVo report = service.check();
-        assertEquals(15, report.getTotal());
+        assertEquals(22, report.getTotal());
         assertEquals(report.getTotal(),
             report.getPassCount() + report.getWarnCount() + report.getFailCount() + report.getUnknownCount());
         assertEquals(AiHealthCheckVo.STATUS_PASS, report.getOverall(), "失败原因：" + report.getItems());
@@ -173,7 +191,7 @@ class AiHealthCheckServiceImplTest {
 
         AiHealthReportVo report = service.check();
 
-        assertEquals(3, report.getTotal(), "命中的是缓存里的报告，不是重新算出来的 15 项");
+        assertEquals(3, report.getTotal(), "命中的是缓存里的报告，不是重新算出来的 22 项");
         verify(dataSource, never()).getConnection();
     }
 
@@ -187,7 +205,7 @@ class AiHealthCheckServiceImplTest {
         redisUtils.verify(() -> RedisUtils.setCacheObject(
             eq(AiHealthCheckServiceImpl.REPORT_CACHE_KEY), payload.capture(), ttl.capture()));
         assertEquals(Duration.ofSeconds(60), ttl.getValue());
-        assertTrue(payload.getValue().contains("\"total\":15"), "缓存里存的应是本次完整报告的 JSON");
+        assertTrue(payload.getValue().contains("\"total\":22"), "缓存里存的应是本次完整报告的 JSON");
     }
 
     @Test
@@ -198,7 +216,7 @@ class AiHealthCheckServiceImplTest {
 
         AiHealthReportVo report = service.check(true);
 
-        assertEquals(15, report.getTotal());
+        assertEquals(22, report.getTotal());
         verify(dataSource, atLeastOnce()).getConnection();
         redisUtils.verify(() -> RedisUtils.setCacheObject(
             eq(AiHealthCheckServiceImpl.REPORT_CACHE_KEY), anyString(), eq(Duration.ofSeconds(60))));
@@ -212,7 +230,7 @@ class AiHealthCheckServiceImplTest {
 
         AiHealthReportVo report = service.check();
 
-        assertEquals(15, report.getTotal());
+        assertEquals(22, report.getTotal());
         assertEquals(AiHealthCheckVo.STATUS_PASS, report.getOverall(), "失败原因：" + report.getItems());
     }
 
@@ -224,7 +242,7 @@ class AiHealthCheckServiceImplTest {
 
         AiHealthReportVo report = service.check();
 
-        assertEquals(15, report.getTotal());
+        assertEquals(22, report.getTotal());
         assertEquals(AiHealthCheckVo.STATUS_PASS, report.getOverall(), "失败原因：" + report.getItems());
     }
 
@@ -254,15 +272,15 @@ class AiHealthCheckServiceImplTest {
 
         AiHealthReportVo report = timingOut.check();
 
-        assertEquals(15, executed.get(), "超时之后剩余检项仍要执行");
-        assertEquals(15, report.getTotal());
+        assertEquals(22, executed.get(), "超时之后剩余检项仍要执行");
+        assertEquals(22, report.getTotal());
         AiHealthCheckVo timedOut = itemOf(report, "redis");
         assertEquals(AiHealthCheckVo.STATUS_UNKNOWN, timedOut.getStatus(),
             "单项超时要记 UNKNOWN（未判定），不能按检项自身失败算 FAIL");
         assertTrue(timedOut.getDetail().contains("判定超时"), "超时行要写明判定超时，实际：" + timedOut.getDetail());
         assertEquals(AiHealthCheckVo.STATUS_PASS, itemOf(report, "db").getStatus(), "超时项之前的检项不受影响");
         assertEquals(AiHealthCheckVo.STATUS_PASS, itemOf(report, "crypto.key").getStatus(), "超时项之后的检项不受影响");
-        assertEquals(2, report.getUnknownCount(), "基线的向量库「待探测」之外，只多出超时这一项");
+        assertEquals(3, report.getUnknownCount(), "基线的向量库「待探测」之外，只多出超时这一项");
     }
 
     @Test
@@ -275,13 +293,13 @@ class AiHealthCheckServiceImplTest {
         };
 
         withInvoker(capturing).runChecks(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(60_000));
-        assertEquals(15, budgets.size());
+        assertEquals(22, budgets.size());
         assertTrue(budgets.stream().allMatch(budget -> budget == 3_000L),
             "整屏预算充裕时每项应按单项上限 3000 毫秒下发，实际：" + budgets);
 
         budgets.clear();
         withInvoker(capturing).runChecks(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(1_000));
-        assertEquals(15, budgets.size());
+        assertEquals(22, budgets.size());
         assertTrue(budgets.stream().allMatch(budget -> budget > 0 && budget <= 1_000L),
             "整屏只剩 1 秒时不该再按 3 秒给单项预算，实际：" + budgets);
     }
@@ -298,8 +316,8 @@ class AiHealthCheckServiceImplTest {
         AiHealthReportVo report = skipped.runChecks(System.nanoTime() - 1L);
 
         assertEquals(0, executed.get(), "预算已用尽时一个检项都不该再执行");
-        assertEquals(15, report.getTotal());
-        assertEquals(15, report.getUnknownCount());
+        assertEquals(22, report.getTotal());
+        assertEquals(22, report.getUnknownCount());
         assertTrue(report.getItems().stream().allMatch(item ->
                 AiHealthCheckVo.STATUS_UNKNOWN.equals(item.getStatus())
                     && item.getDetail().contains("判定超时")
@@ -319,7 +337,7 @@ class AiHealthCheckServiceImplTest {
 
         AiHealthReportVo report = slow.check();
 
-        assertEquals(15, report.getTotal());
+        assertEquals(22, report.getTotal());
         assertNotNull(itemOf(report, "db").getElapsedMs());
         assertTrue(itemOf(report, "db").getElapsedMs() >= 15L,
             "每行耗时要按真实执行时间回填，接口里少了它就分不清是哪一项在拖，实际：" + itemOf(report, "db").getElapsedMs());
@@ -700,6 +718,110 @@ class AiHealthCheckServiceImplTest {
         assertTrue(result.getSuggestion().contains("回落"));
     }
 
+    // -------------------------------- WARN 档补齐（设计稿 §12.3 / §12.7 I-3：每项独立判定，接不进记 UNKNOWN）
+
+    @Test
+    @DisplayName("混合检索库的 BM25 索引建败时告警并点名知识库")
+    void shouldWarnWhenBm25IndexFailed() {
+        when(knowledgeBaseService.queryOptions()).thenReturn(List.of(hybridKb("公告库", "failed")));
+        AiHealthCheckVo item = itemOf(service.check(), "rag.bm25");
+        assertEquals(AiHealthCheckVo.STATUS_WARN, item.getStatus());
+        assertTrue(item.getDetail().contains("公告库"), item.getDetail());
+        assertTrue(item.getDetail().contains("构建失败"), item.getDetail());
+    }
+
+    @Test
+    @DisplayName("BM25 索引建设中判告警，就绪后转通过")
+    void shouldWarnUntilBm25IndexReady() {
+        when(knowledgeBaseService.queryOptions()).thenReturn(List.of(hybridKb("公告库", "building")));
+        AiHealthCheckVo building = itemOf(service.check(), "rag.bm25");
+        assertEquals(AiHealthCheckVo.STATUS_WARN, building.getStatus());
+        assertTrue(building.getDetail().contains("未就绪"), building.getDetail());
+        assertTrue(building.getDetail().contains("building"), building.getDetail());
+
+        when(knowledgeBaseService.queryOptions()).thenReturn(List.of(hybridKb("公告库", "ready")));
+        AiHealthCheckVo ready = itemOf(service.check(), "rag.bm25");
+        assertEquals(AiHealthCheckVo.STATUS_PASS, ready.getStatus(), ready.getDetail());
+        assertTrue(ready.getDetail().contains("均已就绪"), ready.getDetail());
+    }
+
+    @Test
+    @DisplayName("没有混合检索知识库时 BM25 项判通过（未启用不是缺口）")
+    void shouldPassBm25WhenNoHybridKnowledgeBase() {
+        when(knowledgeBaseService.queryOptions()).thenReturn(List.of(kb(1L, "纯向量库", 10L, 1024)));
+        AiHealthCheckVo item = itemOf(service.check(), "rag.bm25");
+        assertEquals(AiHealthCheckVo.STATUS_PASS, item.getStatus(), item.getDetail());
+    }
+
+    @Test
+    @DisplayName("向量化队列打满 200 才告警，未满时把排队数与待处理数都写进说明")
+    void shouldWarnOnlyWhenVectorQueueFull() {
+        when(documentMapper.selectCount(any())).thenReturn(37L);
+        AiHealthCheckVo idle = itemOf(service.check(), "rag.queue");
+        assertEquals(AiHealthCheckVo.STATUS_PASS, idle.getStatus(), idle.getDetail());
+        assertTrue(idle.getDetail().contains("0/200"), idle.getDetail());
+        assertTrue(idle.getDetail().contains("37"), idle.getDetail());
+
+        when(documentBatchRunner.queuedTaskCount()).thenReturn(200);
+        AiHealthCheckVo full = itemOf(service.check(), "rag.queue");
+        assertEquals(AiHealthCheckVo.STATUS_WARN, full.getStatus());
+        assertTrue(full.getDetail().contains("队列已满"), full.getDetail());
+        assertTrue(full.getSuggestion().contains("stale-minutes"), full.getSuggestion());
+    }
+
+    @Test
+    @DisplayName("长连接渠道启动失败或未在本实例拉起时告警并点名渠道编码")
+    void shouldWarnWhenChannelStreamNotRunning() {
+        when(channelService.listEnabledLongConnectionChannelCodes()).thenReturn(List.of("ding_a", "feishu_b"));
+        when(channelStreamStatus.get("ding_a")).thenReturn(new AiChannelStreamStatus.Snapshot(
+            AiChannelStreamStatus.FAILED, "凭据失效", LocalDateTime.now()));
+        when(channelStreamStatus.get("feishu_b")).thenReturn(null);
+
+        AiHealthReportVo report = service.check();
+        AiHealthCheckVo item = itemOf(report, "channel.stream");
+        assertEquals(AiHealthCheckVo.STATUS_WARN, item.getStatus());
+        assertEquals("集成", item.getCategory(), "检项自己的分类要和 runChecks 注册的一致，否则超时行与正常行会归到页面两个分组");
+        assertTrue(item.getDetail().contains("ding_a：凭据失效"), item.getDetail());
+        assertTrue(item.getDetail().contains("feishu_b（本实例未登记）"), item.getDetail());
+        assertEquals(AiHealthCheckVo.STATUS_WARN, report.getOverall(), "WARN 档要把整体结论拉下来");
+
+        when(channelStreamStatus.get("ding_a")).thenReturn(new AiChannelStreamStatus.Snapshot(
+            AiChannelStreamStatus.RUNNING, null, LocalDateTime.now()));
+        when(channelStreamStatus.get("feishu_b")).thenReturn(new AiChannelStreamStatus.Snapshot(
+            AiChannelStreamStatus.RUNNING, null, LocalDateTime.now()));
+        assertEquals(AiHealthCheckVo.STATUS_PASS, itemOf(service.check(), "channel.stream").getStatus());
+    }
+
+    @Test
+    @DisplayName("对象存储读写删接不进时记 UNKNOWN 并写明原因，绝不伪造通过")
+    void shouldMarkStorageIoUnknownRatherThanPass() {
+        AiHealthCheckVo item = itemOf(service.check(), "storage.io");
+        assertEquals(AiHealthCheckVo.STATUS_UNKNOWN, item.getStatus(),
+            "§12.7 I-3 验收口径：接不进的检项记 UNKNOWN，不允许因为没实现就判 PASS");
+        assertTrue(item.getDetail().contains("未接入"), item.getDetail());
+        assertFalse(item.getSuggestion().isBlank(), "未接入要给出接入路径");
+    }
+
+    @Test
+    @DisplayName("探针三项各自独立落位：余量与心跳告警、日志缺失记 UNKNOWN")
+    void shouldForwardProbeVerdictsAsIndependentItems() {
+        when(capacityProbe.capacity())
+            .thenReturn(verdict(AiHealthCheckVo.STATUS_WARN, "磁盘剩余 8%（/ 共 100.0GB，余 8.0GB）", "清理磁盘"));
+        when(capacityProbe.reaperHeartbeat())
+            .thenReturn(verdict(AiHealthCheckVo.STATUS_WARN, "回收器上次心跳距今 900 秒", "重启服务"));
+        when(capacityProbe.errorLog())
+            .thenReturn(verdict(AiHealthCheckVo.STATUS_UNKNOWN, "未找到错误日志文件：./logs/sys-error.log", "核对路径"));
+
+        AiHealthReportVo report = service.check();
+
+        assertEquals(AiHealthCheckVo.STATUS_WARN, itemOf(report, "runtime.capacity").getStatus());
+        assertTrue(itemOf(report, "runtime.capacity").getDetail().contains("磁盘剩余 8%"));
+        assertEquals(AiHealthCheckVo.STATUS_WARN, itemOf(report, "runtime.reaper").getStatus());
+        assertEquals(AiHealthCheckVo.STATUS_UNKNOWN, itemOf(report, "runtime.error-log").getStatus());
+        assertEquals(AiHealthCheckVo.STATUS_WARN, report.getOverall());
+        assertEquals(2, report.getWarnCount(), "只有余量与心跳两项告警，其余项不受影响");
+    }
+
     // ---------------------------------------------------------------- 造数据
 
     /**
@@ -783,6 +905,30 @@ class AiHealthCheckServiceImplTest {
         when(runtimeConfigStore.jev()).thenReturn(jev(false, null));
 
         when(ossService.selectDomainUrl()).thenReturn("http://localhost:9000");
+
+        // §12.7 I-3 新增检项的就位基线：无积压、无长连接渠道，探针三项给出「都已就绪」的结论
+        // （真实读数在 AiHealthCapacityProbeTest 里逐项校验，这里只验检项接线与判据分档）
+        when(documentMapper.selectCount(any())).thenReturn(0L);
+        when(channelService.listEnabledLongConnectionChannelCodes()).thenReturn(List.of());
+        when(capacityProbe.capacity()).thenReturn(verdict(AiHealthCheckVo.STATUS_PASS,
+            "磁盘剩余 42%（/ 共 100.0GB，余 42.0GB）；Redis 已用 20.0MB / 上限 512.0MB（剩余 96%）。", ""));
+        when(capacityProbe.reaperHeartbeat()).thenReturn(verdict(AiHealthCheckVo.STATUS_PASS,
+            "回收器（run-reaper）上次心跳距今 12 秒（扫描间隔 300 秒）。", ""));
+        when(capacityProbe.errorLog()).thenReturn(verdict(AiHealthCheckVo.STATUS_PASS,
+            "近 24 小时无 ERROR 日志；回看 24 小时，窗口内日志行 3 行", ""));
+    }
+
+    /** 探针结论构造：状态与文案由被测桩决定，检项键 / 名称 / 分类归体检服务。 */
+    private AiHealthCapacityProbe.Verdict verdict(String status, String detail, String suggestion) {
+        return new AiHealthCapacityProbe.Verdict(status, detail, suggestion);
+    }
+
+    /** 混合检索知识库（BM25 索引状态由用例指定），维度与 {@link #stubHealthy()} 的向量模型一致以免串项。 */
+    private AiKnowledgeBaseVo hybridKb(String name, String bm25IndexStatus) {
+        AiKnowledgeBaseVo vo = kb(1L, name, 10L, 1024);
+        vo.setRetrievalMode("hybrid");
+        vo.setBm25IndexStatus(bm25IndexStatus);
+        return vo;
     }
 
     private AiModelConfigVo chatModel(Long id, String name, String mask) {
@@ -839,7 +985,8 @@ class AiHealthCheckServiceImplTest {
     private AiHealthCheckServiceImpl withInvoker(AiHealthItemInvoker invoker) {
         return new AiHealthCheckServiceImpl(dataSource, modelConfigService, knowledgeBaseService,
             agentService, mcpServerService, mcpClientService, mcpClientMapper, runtimeConfigStore,
-            aiProperties, vectorStore, milvusProbe, ossService, routeJudge, invoker);
+            aiProperties, vectorStore, milvusProbe, ossService, routeJudge, channelService,
+            channelStreamStatus, documentMapper, documentBatchRunner, capacityProbe, invoker);
     }
 
     private AiHealthCheckVo itemOf(AiHealthReportVo report, String key) {
