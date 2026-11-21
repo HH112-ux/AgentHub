@@ -9,10 +9,12 @@ import io.agentscope.core.state.AgentStateStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dromara.ai.core.agent.AiExpertDirectory;
+import org.dromara.ai.core.agent.AiRunRegistry;
 import org.dromara.ai.core.chat.AiAttachmentReclaimer;
 import org.dromara.ai.domain.AiAgent;
 import org.dromara.ai.domain.AiExpertAgent;
 import org.dromara.ai.domain.AiMessage;
+import org.dromara.ai.domain.AiRouteRun;
 import org.dromara.ai.domain.AiScenarioPack;
 import org.dromara.ai.domain.AiSession;
 import org.dromara.ai.domain.AiTool;
@@ -28,6 +30,7 @@ import org.dromara.ai.domain.vo.AiSessionVo;
 import org.dromara.ai.domain.vo.AiSourceVo;
 import org.dromara.ai.domain.vo.AiToolCallLogVo;
 import org.dromara.ai.mapper.AiMessageMapper;
+import org.dromara.ai.mapper.AiRouteRunMapper;
 import org.dromara.ai.mapper.AiScenarioPackMapper;
 import org.dromara.ai.mapper.AiSessionMapper;
 import org.dromara.ai.mapper.AiToolCallLogMapper;
@@ -128,6 +131,13 @@ public class AiSessionServiceImpl implements IAiSessionService {
     private static final String STREAMING_DONE = "0";
 
     /**
+     * 冲突业务码，与 HTTP 409 同值。底座业务错误一律走「HTTP 200 + 响应体 {@code code}」
+     * （{@code GlobalExceptionHandler.handleServiceException}），前端按 {@code code} 判分支、按 {@code msg} 提示，
+     * 因此这里给的是响应体码而不是状态码（§12.7 I-8）
+     */
+    private static final int CONFLICT_CODE = 409;
+
+    /**
      * 会话状态：进行中
      */
     private static final String SESSION_ACTIVE_TEXT = "进行中";
@@ -185,6 +195,16 @@ public class AiSessionServiceImpl implements IAiSessionService {
      * 附件回收器：删会话 / 删整轮时级联清理对象存储文件与附件行
      */
     private final AiAttachmentReclaimer attachmentReclaimer;
+
+    /**
+     * 取消句柄注册表：判定「本实例上这一轮还在不在跑」的唯一现场依据（§12.7 I-8）
+     */
+    private final AiRunRegistry runRegistry;
+
+    /**
+     * 编排运行表：句柄是单实例内存态，跨副本 / 重启后仍在跑的编排由库里的 {@code running} 行兜住
+     */
+    private final AiRouteRunMapper routeRunMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -887,11 +907,33 @@ public class AiSessionServiceImpl implements IAiSessionService {
 
     @Override
     public Boolean closeSession(Long sessionId) {
-        getOwnedSession(sessionId);
+        AiSession session = getOwnedSession(sessionId);
+        // 「先终止再删除」要真能让删除放行：只改状态不取消执行，删的时候照样被判进行中，等于把 409 变成死循环
+        runRegistry.cancel(sessionId);
+        if (SESSION_CLOSED.equals(session.getStatus())) {
+            return true;
+        }
+        return markClosed(List.of(sessionId));
+    }
+
+    /**
+     * 把会话置为已结束，并按「目标状态是否已达成」而非「本条语句改了几行」判定成功。
+     *
+     * <p>带 {@code status = 进行中} 的条件是状态 CAS：并发的一方改成功后，另一方不该把已结束的行再改一遍。
+     * 重复终止、或另一个请求（另一个副本）抢先把状态改掉时本条影响 0 行，但会话已是我们要的终态——
+     * 此时回失败会让页面在双击或重试时弹「操作失败」，而状态早已生效（§12.7 I-8 的幂等口径）。</p>
+     *
+     * @param ids 会话主键集合（非空）
+     * @return 目标会话是否全部处于已结束状态
+     */
+    private boolean markClosed(Collection<Long> ids) {
         AiSession update = new AiSession();
-        update.setId(sessionId);
         update.setStatus(SESSION_CLOSED);
-        return baseMapper.updateById(update) > 0;
+        LambdaUpdateWrapper<AiSession> luw = Wrappers.lambdaUpdate();
+        luw.in(AiSession::getId, ids)
+            .eq(AiSession::getStatus, SESSION_ACTIVE);
+        baseMapper.update(update, luw);
+        return baseMapper.selectByIds(ids).stream().allMatch(item -> SESSION_CLOSED.equals(item.getStatus()));
     }
 
     @Override
@@ -966,14 +1008,12 @@ public class AiSessionServiceImpl implements IAiSessionService {
         if (ids == null || ids.isEmpty()) {
             throw new ServiceException("请选择要终止的会话");
         }
-        if (baseMapper.selectByIds(ids).size() != ids.size()) {
+        List<AiSession> list = baseMapper.selectByIds(ids);
+        if (list.size() != ids.size()) {
             throw new ServiceException("会话不存在或已被删除");
         }
-        AiSession update = new AiSession();
-        update.setStatus(SESSION_CLOSED);
-        LambdaQueryWrapper<AiSession> lqw = Wrappers.lambdaQuery();
-        lqw.in(AiSession::getId, ids);
-        return baseMapper.update(update, lqw) > 0;
+        list.forEach(session -> runRegistry.cancel(session.getId()));
+        return markClosed(ids);
     }
 
     @Override
@@ -986,6 +1026,7 @@ public class AiSessionServiceImpl implements IAiSessionService {
         if (list.size() != ids.size()) {
             throw new ServiceException("您没有删除权限!");
         }
+        rejectWhileGenerating(list);
         // 附件不随会话级联：先回收对象存储文件与附件行，避免永久孤儿
         attachmentReclaimer.reclaimBySessionIds(ids);
         boolean flag = baseMapper.deleteByIds(ids) > 0;
@@ -996,6 +1037,60 @@ public class AiSessionServiceImpl implements IAiSessionService {
             list.forEach(this::clearSessionState);
         }
         return flag;
+    }
+
+    /**
+     * 进行中的会话拒绝删除，报 {@code code = 409}（§12.5 并发与保护、§12.7 I-8）。
+     *
+     * <p>一轮正在跑的对话被删掉，留下的是一头不存在会话的消息与无从回溯的工具明细，
+     * 而这一切发生在用户点「删除」和模型吐完最后一个 token 之间，重试也复现不出来——
+     * 所以宁可拒绝，让调用方先终止（{@link #closeSession(Long)} 会取消执行）再删。</p>
+     *
+     * @param sessions 已读出的会话实体（调用方保证非空且与请求 id 等量）
+     */
+    private void rejectWhileGenerating(List<AiSession> sessions) {
+        List<AiSession> busy = sessions.stream().filter(session -> isGenerating(session.getId())).toList();
+        if (busy.isEmpty()) {
+            return;
+        }
+        String labels = busy.stream().limit(3).map(this::describeSession).collect(Collectors.joining("、"));
+        String reason = busy.size() > 3
+            ? busy.size() + " 个会话仍在生成中（" + labels + " 等），请先终止后再删除"
+            : "会话（" + labels + "）仍在生成中，请先终止后再删除";
+        throw new ServiceException(reason, CONFLICT_CODE);
+    }
+
+    /**
+     * 进行中的判定取两个信号的并集：{@link AiRunRegistry} 的取消句柄是**单实例内存态**
+     * （含 HITL 挂起未收尾的那段），跨副本或本实例重启后只能靠库里 {@code status = running}
+     * 的编排运行行；后者由 {@code AiStaleRunReaper} 回收，所以中断的编排不会长期把删除挡在 409 上。
+     *
+     * @param sessionId 会话主键
+     * @return 该会话是否仍有未收尾的执行
+     */
+    private boolean isGenerating(Long sessionId) {
+        if (runRegistry.isActive(sessionId)) {
+            return true;
+        }
+        LambdaQueryWrapper<AiRouteRun> lqw = Wrappers.lambdaQuery();
+        lqw.eq(AiRouteRun::getSessionId, sessionId).eq(AiRouteRun::getStatus, AiRouteRun.STATUS_RUNNING);
+        return routeRunMapper.selectCount(lqw) > 0;
+    }
+
+    /**
+     * 报错里怎么称呼这个会话：本人的会话报标题（页面看得见），他人的只报主键，
+     * 免得删除失败顺带把别人的会话标题吐进响应。
+     *
+     * @param session 会话实体
+     * @return 用于报错文本的标识
+     */
+    private String describeSession(AiSession session) {
+        Long currentUserId = LoginHelper.getUserId();
+        if (currentUserId != null && currentUserId.equals(session.getUserId())
+            && StringUtils.isNotBlank(session.getSessionTitle())) {
+            return session.getSessionTitle();
+        }
+        return "id=" + session.getId();
     }
 
     @Override

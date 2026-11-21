@@ -3,6 +3,7 @@ package org.dromara.ai.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.agentscope.core.state.AgentStateStore;
 import org.dromara.ai.core.agent.AiExpertDirectory;
+import org.dromara.ai.core.agent.AiRunRegistry;
 import org.dromara.ai.core.chat.AiAttachmentReclaimer;
 import org.dromara.ai.domain.AiExpertAgent;
 import org.dromara.ai.domain.AiMessage;
@@ -18,6 +19,7 @@ import org.dromara.ai.domain.vo.AiSessionExportVo;
 import org.dromara.ai.domain.vo.AiSessionVo;
 import org.dromara.ai.domain.vo.AiToolCallLogVo;
 import org.dromara.ai.mapper.AiMessageMapper;
+import org.dromara.ai.mapper.AiRouteRunMapper;
 import org.dromara.ai.mapper.AiScenarioPackMapper;
 import org.dromara.ai.mapper.AiSessionMapper;
 import org.dromara.ai.mapper.AiToolCallLogMapper;
@@ -52,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,9 +77,11 @@ class AiSessionServiceImplTest {
     private final AiExpertDirectory expertDirectory = mock(AiExpertDirectory.class);
     private final IAiChatAttachmentService aiChatAttachmentService = mock(IAiChatAttachmentService.class);
     private final AiAttachmentReclaimer attachmentReclaimer = mock(AiAttachmentReclaimer.class);
+    private final AiRunRegistry runRegistry = mock(AiRunRegistry.class);
+    private final AiRouteRunMapper routeRunMapper = mock(AiRouteRunMapper.class);
     private final AiSessionServiceImpl service = new AiSessionServiceImpl(baseMapper, messageMapper, toolCallLogMapper,
         toolMapper, scenarioPackMapper, agentService, scenarioPackService, userService, deptService, aiAgentStateStore,
-        expertDirectory, aiChatAttachmentService, attachmentReclaimer);
+        expertDirectory, aiChatAttachmentService, attachmentReclaimer, runRegistry, routeRunMapper);
 
     private MockedStatic<LoginHelper> loginHelper;
 
@@ -522,14 +527,34 @@ class AiSessionServiceImplTest {
     }
 
     @Test
-    @DisplayName("关闭、重命名与置顶会话")
+    @DisplayName("重命名与置顶会话")
     void shouldModifySession() {
         when(baseMapper.selectById(1L)).thenReturn(session(1L, 9L, "0"));
         when(baseMapper.updateById(any(AiSession.class))).thenReturn(1);
 
-        assertTrue(service.closeSession(1L));
         assertTrue(service.renameSession(1L, "新标题"));
         assertTrue(service.toggleTop(1L, Boolean.TRUE));
+    }
+
+    @Test
+    @DisplayName("终止会话：取消在跑执行并置为已结束")
+    void shouldCloseSessionAndCancelRun() {
+        when(baseMapper.selectById(1L)).thenReturn(session(1L, 9L, "0"));
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 9L, "1")));
+
+        assertTrue(service.closeSession(1L));
+
+        verify(runRegistry).cancel(1L);
+    }
+
+    @Test
+    @DisplayName("重复终止会话幂等：不再改状态仍回成功")
+    void shouldCloseAlreadyClosedSession() {
+        when(baseMapper.selectById(1L)).thenReturn(session(1L, 9L, "1"));
+
+        assertTrue(service.closeSession(1L));
+
+        verify(baseMapper, never()).update(any(AiSession.class), any());
     }
 
     @Test
@@ -592,10 +617,26 @@ class AiSessionServiceImplTest {
     }
 
     @Test
-    @DisplayName("批量终止会话成功")
+    @DisplayName("批量终止会话：逐个取消执行后落终态")
     void shouldCloseWithIds() {
-        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 9L, "0")));
-        when(baseMapper.update(any(AiSession.class), any())).thenReturn(1);
+        when(baseMapper.selectByIds(any()))
+            .thenReturn(List.of(session(1L, 9L, "0"), session(2L, 9L, "0")))
+            .thenReturn(List.of(session(1L, 9L, "1"), session(2L, 9L, "1")));
+        when(baseMapper.update(any(AiSession.class), any())).thenReturn(2);
+
+        assertTrue(service.closeWithValidByIds(List.of(1L, 2L)));
+
+        verify(runRegistry).cancel(1L);
+        verify(runRegistry).cancel(2L);
+    }
+
+    @Test
+    @DisplayName("批量终止会话：状态被并发请求改掉仍回成功")
+    void shouldCloseWithIdsWhenAnotherRequestWon() {
+        when(baseMapper.selectByIds(any()))
+            .thenReturn(List.of(session(1L, 9L, "0")))
+            .thenReturn(List.of(session(1L, 9L, "1")));
+        when(baseMapper.update(any(AiSession.class), any())).thenReturn(0);
 
         assertTrue(service.closeWithValidByIds(List.of(1L)));
     }
@@ -605,11 +646,67 @@ class AiSessionServiceImplTest {
     void shouldDeleteSessions() {
         when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 9L, "0")));
         when(baseMapper.deleteByIds(any())).thenReturn(1);
+        when(routeRunMapper.selectCount(any())).thenReturn(0L);
 
         assertTrue(service.deleteWithValidByIds(List.of(1L)));
 
         verify(messageMapper).delete(any());
         verify(aiAgentStateStore).delete("9", "1");
+    }
+
+    @Test
+    @DisplayName("删除会话：本实例仍在生成时拒绝并引导先终止")
+    void shouldRejectDeleteWhileGenerating() {
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 9L, "0")));
+        when(runRegistry.isActive(1L)).thenReturn(true);
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.deleteWithValidByIds(List.of(1L)));
+
+        assertEquals(409, error.getCode());
+        assertTrue(error.getMessage().contains("请先终止后再删除"));
+        verify(baseMapper, never()).deleteByIds(any());
+    }
+
+    @Test
+    @DisplayName("删除会话：库里遗留未收尾的编排运行同样拒绝")
+    void shouldRejectDeleteWithOrphanRouteRun() {
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(session(1L, 9L, "0")));
+        when(routeRunMapper.selectCount(any())).thenReturn(1L);
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.deleteWithValidByIds(List.of(1L)));
+
+        assertEquals(409, error.getCode());
+    }
+
+    @Test
+    @DisplayName("删除他人会话：报错只报主键不带标题")
+    void shouldDescribeOtherUsersSessionByIdOnly() {
+        AiSession foreign = session(1L, 8L, "0");
+        foreign.setSessionTitle("他人的会话标题");
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(foreign));
+        when(runRegistry.isActive(1L)).thenReturn(true);
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.deleteWithValidByIds(List.of(1L)));
+
+        assertFalse(error.getMessage().contains("他人的会话标题"));
+        assertTrue(error.getMessage().contains("id=1"));
+    }
+
+    @Test
+    @DisplayName("删除自己的会话：报错用页面可见的标题")
+    void shouldDescribeOwnSessionByTitle() {
+        AiSession mine = session(1L, 9L, "0");
+        mine.setSessionTitle("季度报销问答");
+        when(baseMapper.selectByIds(any())).thenReturn(List.of(mine));
+        when(runRegistry.isActive(1L)).thenReturn(true);
+
+        ServiceException error = assertThrows(ServiceException.class,
+            () -> service.deleteWithValidByIds(List.of(1L)));
+
+        assertTrue(error.getMessage().contains("季度报销问答"));
     }
 
     @Test

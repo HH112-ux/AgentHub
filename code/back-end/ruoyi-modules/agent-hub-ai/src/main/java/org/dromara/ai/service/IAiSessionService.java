@@ -253,10 +253,12 @@ public interface IAiSessionService {
     void touchSession(Long sessionId);
 
     /**
-     * 终止会话（状态置为已结束）。
+     * 终止会话（状态置为已结束，并取消该会话仍在跑的执行）。
+     *
+     * <p>重复终止幂等返回 {@code true}：目标状态已经达成就不该回失败，前端重试与双击不会看到「操作失败」。</p>
      *
      * @param sessionId 会话主键
-     * @return 是否终止成功
+     * @return 是否已处于已结束状态
      */
     Boolean closeSession(Long sessionId);
 
@@ -322,13 +324,19 @@ public interface IAiSessionService {
     /**
      * 终止会话（会话管理页，不限定归属用户）。
      *
+     * <p>与 {@link #closeSession(Long)} 同款幂等：已在跑的按取消句柄中止，已是「已结束」的直接算成功。</p>
+     *
      * @param ids 会话主键集合
-     * @return 是否终止成功
+     * @return 是否全部已处于已结束状态
      */
     Boolean closeWithValidByIds(Collection<Long> ids);
 
     /**
      * 删除会话（逻辑删除会话与其消息，并清理该会话的模型记忆）。
+     *
+     * <p>进行中（本实例仍有取消句柄，或该会话还留着未收尾的编排运行）的会话拒绝删除，
+     * 抛 {@code code = 409} 的 {@link org.dromara.common.core.exception.ServiceException}
+     * 并引导先终止（§12.5 / §12.7 I-8）——否则一轮正在落库的对话会被删成半截消息与孤儿明细。</p>
      *
      * @param ids 会话主键集合
      * @return 是否删除成功
