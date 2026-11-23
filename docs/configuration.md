@@ -116,6 +116,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 构建阶段 | `maven:3.9-eclipse-temurin-21` + `RUN --mount=type=cache,target=/root/.m2`，命令 `mvn -B -ntp -Dmaven.test.skip=true -pl ruoyi-admin -am package` | 底座自带 `ruoyi-admin/Dockerfile` 走「宿主先 `mvn package` 再 ADD jar」，换台机器要先装齐同版本 JDK；把 Maven 装进容器后版本口径只由 pom 的 `<java.version>` 决定。`-am` 必需：镜像本地仓库里没有同级模块，只 `-pl ruoyi-admin` 会解析失败。测试不在镜像里跑（属 CI 与起栈后的 e2e） |
 | 运行阶段 | `eclipse-temurin:21-jre`，`WORKDIR /app` | compose 的容器探针是 `timeout 3 bash -c '</dev/tcp/127.0.0.1/<port>'`，`-jre-alpine` 里没有 bash 与 coreutils，探活会永远不绿 |
 | 容器内端口 | `ENV SERVER_PORT` 由 compose 按栈注入（PG `8080` / MySQL `8081`），ENTRYPOINT 传 `-Dserver.port=${SERVER_PORT}` | 底座 yml 写死 8080；两栈同机并存时，MySQL 栈的 Nginx upstream 与健康探针都按 §1 的口径指 8081，容器不监听 8081 就是「nginx 502 + 容器不 healthy」的连环故障。三处（compose 环境 / nginx upstream / Dockerfile）由 `deploy-static.mjs` 的镜像接线段对齐 |
+| JVM 堆上限 | `AGENTHUB_APP_JAVA_OPTS` 由 compose 注入镜像的 `JAVA_OPTS`；留空＝JVM 自行按容器/宿主内存 25% 取堆 | 容器不设内存限制，小内存机器上 app 会与同一栈里的 Milvus（常驻约 2–2.5G）抢同一段物理内存，被 OOM killer 杀掉的是谁不写日志。8G 单机常驻建议 `-Xms512m -Xmx1200m`，16G 可留空 |
 | 落盘目录 | `/app/logs`（logback `log.path=./logs`）与 `/app/data`（`workspace-root=./data/agent-workspace`）各挂命名卷 | 长期记忆的 `MEMORY.md`、抽取流水与版本快照是文件而不是表；不挂卷的话一次 `--force-recreate` 就把用户记忆清零，而且现场无法复现 |
 | 上下文 | `code/back-end/.dockerignore` 排除 `**/target/` 与 IDE/系统文件 | 不排除时 64 MB 上下文里有 50 MB 是本地构建产物，每次构建重传一遍，`COPY` 进去的还是过期 jar |
 | 探针与就绪 | 不用 `GET /ai/health/check`（带 `ai:health:query` 鉴权），改用 TCP 就绪 + Nginx `/healthz` | 见 §2 与 D2 日志：带鉴权的接口作容器探针只会把「未登录」当成启动失败 |
