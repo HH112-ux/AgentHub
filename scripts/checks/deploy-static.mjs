@@ -113,6 +113,33 @@ const checkPorts = (stack, compose, expect) => {
       fail(`${stack}/docker-compose.yml`, `${svc.name} 服务不得发布宿主端口（§2.3.9）`);
     }
   }
+  // 健康检查的形式必须匹配镜像基座：CMD-SHELL 要求镜像里有 /bin/sh。
+  // 出处：云服务器起栈实测——quay.io/coreos/etcd 是 scratch 基座，CMD-SHELL 探针在 OCI runtime
+  // exec 阶段就报 "stat /bin/sh: no such file or directory"，容器永远 unhealthy，并把依赖它
+  // service_healthy 的 Milvus 连带卡死，整栈停在 app 之前。换基座或新增服务：先在这里登记判定。
+  const shellBases = [
+    [/^postgres:14$/, 'postgres:14 是 Debian 基座'],
+    [/^mysql:[\d.]+$/, 'mysql 官方镜像含 bash'],
+    [/^redis:7$/, 'redis:7 是 Debian 基座'],
+    [/^nginx:1\.27$/, 'nginx:1.27 是 Debian 基座'],
+    [/^minio\/minio:/, '自建 MinIO 镜像以 debian:12-slim 为基座，见 deploy/tools/build-minio-image.sh'],
+    [/^milvusdb\/milvus:/, 'milvus 官方镜像是 Ubuntu 基座'],
+    [/^agenthub\/app:/, '运行阶段取 eclipse-temurin:21-jre（Ubuntu 基座）'],
+  ];
+  // 端口类断言只看默认值，镜像名同理：${VAR:-repo:tag} 起栈时解析的就是默认值。
+  const imageRef = (raw) => (raw.startsWith('${') && raw.includes(':-') ? raw.slice(raw.indexOf(':-') + 2).replace(/}$/, '') : raw);
+  for (const svc of services) {
+    if (!/^\s*test:\s*\[?\s*"CMD-SHELL"/m.test(svc.body)) continue;
+    const raw = (svc.body.match(/^ {4}image:\s*(\S+)/m) || [])[1];
+    if (!raw) {
+      fail(`${stack}/docker-compose.yml`, `${svc.name} 用了 CMD-SHELL 健康检查但没有 image 行，无法判定基座`);
+      continue;
+    }
+    const image = imageRef(raw);
+    if (!shellBases.some(([re]) => re.test(image))) {
+      fail(`${stack}/docker-compose.yml`, `${svc.name} 的 CMD-SHELL 健康检查要求镜像内有 /bin/sh，${image} 未登记基座（scratch 基座请改写 exec 形式 ["CMD", …]）`);
+    }
+  }
   return services.length;
 };
 

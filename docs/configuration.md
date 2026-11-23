@@ -14,6 +14,8 @@
 
 `GET /ai/health/check` 需要 `ai:health:query` 鉴权，因此**不能**作为无鉴权探针：容器健康检查只做 TCP 端口就绪，Nginx 侧的 `/healthz` 是纯静态 `200 agenthub[-mysql]-nginx-ok`，只证明 TLS 与入口在跑。
 
+探针形式还得匹配镜像基座：`quay.io/coreos/etcd` 是 scratch 基座、镜像里没有 `/bin/sh`，`CMD-SHELL` 写法会在 OCI runtime exec 阶段直接失败，容器永远 `unhealthy`，并把 `depends_on: service_healthy` 的 Milvus 连带卡死——整栈停在 app 之前且不写业务日志。etcd 因此用 exec 形式 `["CMD", "etcdctl", "endpoint", "health"]`；可用 `CMD-SHELL` 的镜像基座登记在 `deploy-static.mjs` 的判定表里，换基座要先过这张表。
+
 ## 2. 运行期配置：三段式，底座 yml 一行不改
 
 底座 6.0.0 的 `application-prod.yml` 把数据库写成 `localhost:3306/ry-vue` + `root/root`、Redis 写成 `localhost:6379` + `ruoyi123`，`sa-token.jwt-secret-key` 与 `api-decrypt` 的 RSA 公私钥都是仓库内明文。直接用它等于带着仓库私钥上线。本项目分三段处理：
