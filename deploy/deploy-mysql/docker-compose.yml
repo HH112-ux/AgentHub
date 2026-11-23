@@ -12,6 +12,9 @@ x-app-environment: &app-environment
   SPRING_CONFIG_ADDITIONAL_LOCATION: optional:file:/config/
   # 容器内监听端口必须等于本栈口径（Nginx upstream 与健康探针同值），底座 yml 里写的是 8080，故显式覆盖。
   SERVER_PORT: "8081"
+  # JVM 堆上限只能从这里压：容器不设内存限制，JVM 默认按宿主内存 25% 取堆，
+  # 单机常驻时 app 会与 Milvus（实测常驻 2–2.5G）抢同一段物理内存，谁被 OOM 杀掉不看日志。
+  JAVA_OPTS: ${AGENTHUB_APP_JAVA_OPTS:-}
 
   # ↓ 以下由 config/application-agenthub.yml 映射到底座既有属性路径（数据源、Redis、JWT、接口加解密）。
   AGENTHUB_DATASOURCE_URL: ${AGENTHUB_DATASOURCE_URL:-jdbc:mysql://db:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true}
