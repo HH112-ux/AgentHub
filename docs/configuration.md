@@ -10,9 +10,11 @@
 | PostgreSQL | `deploy/deploy-pg` | `80` / `443` | `8080` | 栈内 `db:5432`，不发布 |
 | MySQL | `deploy/deploy-mysql` | `81` / `8443` | `8081` | 栈内 `db:3306`，不发布 |
 
-两栈在同一台云服务器并存，靠宿主端口区分入口。Redis、etcd、MinIO、Milvus 一律只在栈内网络可达（§2.3.9 公网暴露收敛），进公网的只有 Nginx。`APP_HOST_PORT` 的后端映射是留给开发机直连的，生产按防火墙只放行内网。
+真实系统只常驻一套栈（队长 2026-11-23 裁定：「只认真跑一种方言」，选定 PostgreSQL），对外入口就是该栈的 `80/443`；两栈同机并存不是部署形态，只在需要现场对照双方言行为时临时启用，且要先过 §6 第 3 条的内存预算。Redis、etcd、MinIO、Milvus 一律只在栈内网络可达（§2.3.9 公网暴露收敛），进公网的只有 Nginx。`APP_HOST_PORT` 的后端映射是留给开发机直连的，生产按防火墙只放行内网。
 
 `GET /ai/health/check` 需要 `ai:health:query` 鉴权，因此**不能**作为无鉴权探针：容器健康检查只做 TCP 端口就绪，Nginx 侧的 `/healthz` 是纯静态 `200 agenthub[-mysql]-nginx-ok`，只证明 TLS 与入口在跑。
+
+探针形式还得匹配镜像基座：`quay.io/coreos/etcd` 是 scratch 基座、镜像里没有 `/bin/sh`，`CMD-SHELL` 写法会在 OCI runtime exec 阶段直接失败，容器永远 `unhealthy`，并把 `depends_on: service_healthy` 的 Milvus 连带卡死——整栈停在 app 之前且不写业务日志。etcd 因此用 exec 形式 `["CMD", "etcdctl", "endpoint", "health"]`；可用 `CMD-SHELL` 的镜像基座登记在 `deploy-static.mjs` 的判定表里，换基座要先过这张表。
 
 ## 2. 运行期配置：三段式，底座 yml 一行不改
 
@@ -100,9 +102,9 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 
 ## 6. 已知未决
 
-1. ~~`app` 服务的镜像构建依赖 B 线在 `code/back-end` 落 `Dockerfile`~~ 已交付：`code/back-end/Dockerfile` 两阶段构建，口径见 §7。仍待现场确认的是受限网络下的基础镜像通道（§7 末条）。
+1. ~~`app` 服务的镜像构建依赖 B 线在 `code/back-end` 落 `Dockerfile`~~ 已交付：`code/back-end/Dockerfile` 两阶段构建，口径见 §7。~~仍待现场确认的是受限网络下的基础镜像通道~~ 已在现场逐镜像验过：`postgres:14`、`redis:7`、`quay.io/coreos/etcd:v3.5.14`、`milvusdb/milvus:v2.5.5`、`nginx:1.27`、`maven:3.9-eclipse-temurin-21`、`eclipse-temurin:21-jre` 可匿名拉取；只有 MinIO 因上游归档而无处可拉，处置见 §7 末条。
 2. 底座 `ruoyi-admin/pom.xml` 的 PostgreSQL 驱动在 D1 日志里是注释态；现仓库内已放开，且与 MySQL 驱动同时在位、按 url 选择（`scripts/checks/deploy-static.mjs` 的镜像接线段会校验 ruoyi-admin 依赖 `agent-hub-ai`，但驱动在位与否仍以起栈实测为准）。
-3. 两栈各自带一套 Milvus/etcd/MinIO，同机并存的内存预算要在 §11 前置里确认；若余量不足，改为共享外部网络与卷属部署变更，需队长批准。
+3. ~~两栈各自带一套 Milvus/etcd/MinIO，同机并存的内存预算要在 §11 前置里确认~~ 已裁定（队长 2026-11-23）：真实环境只常驻 PG 单栈，不做同机双栈，因此不再有「两套 Milvus 抢内存」这个问题。现场实测单栈常驻约 5.3–6.7 G（Milvus 2–2.5 G 为大头），8 G 机器需按 §7 表把堆压到 `-Xmx1200m`。「MySQL 真实起栈实测」随之转为设计稿 §7.3 待补项，两栈编排与端口错位（8080/8081、80/81）仍保留，用于本地对照双方言。
 4. `deploy/**` 的改动由 CI 两条门禁兜住：`node scripts/checks/deploy-static.mjs`（端口口径、`.env.example` 与 compose 占位符对齐、Nginx 关键指令、MySQL 字符集前置、profile 覆盖接线、镜像接线（§7），docker 在场时追加一次真实渲染）与「Nginx 入口配置语法」（现签一次性自签证书后跑 `nginx -t`，必须带 `--add-host app:127.0.0.1`，否则 upstream 解析在测试阶段就失败）。两条都随 `deploy/deploy-pg/docker-compose.yml` 是否入仓自动启停，不起容器、不连真库；行为类实测口径见上表。
 5. 体检项 `storage.io` 只到「记 `UNKNOWN`」：§12.3 把「对象存储读/写/删」列在 FAIL 档，而底座 `OssService` 只暴露读（URL 查询），自检要不污染存储桶就验不了写与删。转真实判定需二选一——底座开放带 TTL 的探针对象，或允许自检在固定前缀下写入并即时删除——属产品决策，定了再补检项与 D5 门禁口径（设计稿 §12.7 I-3 末段同记这条残留）。
 6. 本地复跑校验脚本时，挂载目录要用可被容器引擎访问的路径：macOS 上 `mktemp -d` 落在 `/var/folders/...`，挂进容器后是空目录，会误报成证书缺失。CI 侧走 `RUNNER_TEMP`，无此问题。
@@ -116,12 +118,15 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 | 构建阶段 | `maven:3.9-eclipse-temurin-21` + `RUN --mount=type=cache,target=/root/.m2`，命令 `mvn -B -ntp -Dmaven.test.skip=true -pl ruoyi-admin -am package` | 底座自带 `ruoyi-admin/Dockerfile` 走「宿主先 `mvn package` 再 ADD jar」，换台机器要先装齐同版本 JDK；把 Maven 装进容器后版本口径只由 pom 的 `<java.version>` 决定。`-am` 必需：镜像本地仓库里没有同级模块，只 `-pl ruoyi-admin` 会解析失败。测试不在镜像里跑（属 CI 与起栈后的 e2e） |
 | 运行阶段 | `eclipse-temurin:21-jre`，`WORKDIR /app` | compose 的容器探针是 `timeout 3 bash -c '</dev/tcp/127.0.0.1/<port>'`，`-jre-alpine` 里没有 bash 与 coreutils，探活会永远不绿 |
 | 容器内端口 | `ENV SERVER_PORT` 由 compose 按栈注入（PG `8080` / MySQL `8081`），ENTRYPOINT 传 `-Dserver.port=${SERVER_PORT}` | 底座 yml 写死 8080；两栈同机并存时，MySQL 栈的 Nginx upstream 与健康探针都按 §1 的口径指 8081，容器不监听 8081 就是「nginx 502 + 容器不 healthy」的连环故障。三处（compose 环境 / nginx upstream / Dockerfile）由 `deploy-static.mjs` 的镜像接线段对齐 |
+| JVM 堆上限 | `AGENTHUB_APP_JAVA_OPTS` 由 compose 注入镜像的 `JAVA_OPTS`；留空＝JVM 自行按容器/宿主内存 25% 取堆 | 容器不设内存限制，小内存机器上 app 会与同一栈里的 Milvus（常驻约 2–2.5G）抢同一段物理内存，被 OOM killer 杀掉的是谁不写日志。8G 单机常驻建议 `-Xms512m -Xmx1200m`，16G 可留空 |
 | 落盘目录 | `/app/logs`（logback `log.path=./logs`）与 `/app/data`（`workspace-root=./data/agent-workspace`）各挂命名卷 | 长期记忆的 `MEMORY.md`、抽取流水与版本快照是文件而不是表；不挂卷的话一次 `--force-recreate` 就把用户记忆清零，而且现场无法复现 |
 | 上下文 | `code/back-end/.dockerignore` 排除 `**/target/` 与 IDE/系统文件 | 不排除时 64 MB 上下文里有 50 MB 是本地构建产物，每次构建重传一遍，`COPY` 进去的还是过期 jar |
 | 探针与就绪 | 不用 `GET /ai/health/check`（带 `ai:health:query` 鉴权），改用 TCP 就绪 + Nginx `/healthz` | 见 §2 与 D2 日志：带鉴权的接口作容器探针只会把「未登录」当成启动失败 |
 
 现场校验（本地与 CI 同一入口）：`node scripts/checks/deploy-static.mjs`。
 
-受限网络下的已知偏差：Docker Hub 不可达时，`maven:3.9-eclipse-temurin-21`、`eclipse-temurin:21-jre`、`milvusdb/milvus:v2.5.5`、`quay.io/coreos/etcd:v3.5.14`、`minio/minio:RELEASE.2024-08-17T01-24-54Z` 都要经镜像站拉取后 `docker tag` 回正式名，编排文件本身不改；Maven 依赖走 `repo1.maven.org` 通常可直连，与本条无关。
+受限网络下的已知偏差：Docker Hub 不可达时，`maven:3.9-eclipse-temurin-21`、`eclipse-temurin:21-jre`、`milvusdb/milvus:v2.5.5`、`quay.io/coreos/etcd:v3.5.14` 都要经镜像站拉取后 `docker tag` 回正式名，编排文件本身不改；Maven 依赖走 `repo1.maven.org` 通常可直连，与本条无关。
+
+对象存储镜像不适用上一条：上游已把开源版 MinIO 归档，`dl.min.io` 返回 410 Gone，Docker Hub 的 `minio/minio` 与 `minio/mc` 也不再对匿名拉取开放，任何镜像站上的 `minio/minio` 都属来源不可核验的第三方制品——对象存储里放的是用户附件与 Milvus 数据段，不做这种折中。改由 `deploy/tools/build-minio-image.sh` 从 `github.com/minio/{minio,mc}` 官方 Release 取 linux-amd64 二进制、逐个校验 `.sha256sum`，重建出与编排同名的 `minio/minio:RELEASE.2024-08-17T01-24-54Z`（`mc` 取同日 `RELEASE.2024-08-17T11-33-50Z`，编排的健康检查 `mc ready local` 依赖它）。编排文件仍不改镜像名；版本升级需重新评估，因为该分支不再获得上游修复。
 
 镜像暂以 root 运行（与底座编排习惯一致，卷属主也最简单）；改非 root 属一周后硬化项，届时须同时验证两个命名卷的属主。

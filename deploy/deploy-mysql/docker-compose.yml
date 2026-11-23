@@ -12,6 +12,9 @@ x-app-environment: &app-environment
   SPRING_CONFIG_ADDITIONAL_LOCATION: optional:file:/config/
   # 容器内监听端口必须等于本栈口径（Nginx upstream 与健康探针同值），底座 yml 里写的是 8080，故显式覆盖。
   SERVER_PORT: "8081"
+  # JVM 堆上限只能从这里压：容器不设内存限制，JVM 默认按宿主内存 25% 取堆，
+  # 单机常驻时 app 会与 Milvus（实测常驻 2–2.5G）抢同一段物理内存，谁被 OOM 杀掉不看日志。
+  JAVA_OPTS: ${AGENTHUB_APP_JAVA_OPTS:-}
 
   # ↓ 以下由 config/application-agenthub.yml 映射到底座既有属性路径（数据源、Redis、JWT、接口加解密）。
   AGENTHUB_DATASOURCE_URL: ${AGENTHUB_DATASOURCE_URL:-jdbc:mysql://db:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8&useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true&rewriteBatchedStatements=true&nullCatalogMeansCurrent=true}
@@ -29,8 +32,9 @@ x-app-environment: &app-environment
   AGENTHUB_AI_CRYPTO_KEY: ${AGENTHUB_AI_CRYPTO_KEY:?模型密钥密文根密钥，见手册 §10.2 第 4 项}
   AGENTHUB_SECURITY_GUARD_MODE: ${AGENTHUB_SECURITY_GUARD_MODE:-prod}
   AGENTHUB_AI_CHAT_CURRENT_TIME_ZONE: ${AGENTHUB_AI_CHAT_CURRENT_TIME_ZONE:-Asia/Shanghai}
-  AGENTHUB_MILVUS_URI: http://milvus:19530
-  AGENTHUB_MILVUS_PASSWORD: ${MILVUS_PASSWORD}
+  AGENTHUB_AI_MILVUS_URI: http://milvus:19530
+  AGENTHUB_AI_MILVUS_USERNAME: root
+  AGENTHUB_AI_MILVUS_PASSWORD: ${MILVUS_PASSWORD}
   AGENTHUB_OBJECT_STORAGE_ENDPOINT: http://minio:9000
   AGENTHUB_OBJECT_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER}
   AGENTHUB_OBJECT_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
@@ -94,7 +98,9 @@ services:
     volumes:
       - agenthub-mysql-etcd:/etcd
     healthcheck:
-      test: ["CMD-SHELL", "etcdctl endpoint health >/dev/null 2>&1 || exit 1"]
+      # 必须用 exec 形式：quay.io/coreos/etcd 是 scratch 基座、镜像里没有 /bin/sh，
+      # CMD-SHELL 会在 OCI runtime exec 阶段就失败，容器永远 unhealthy，把依赖 service_healthy 的 Milvus 连带卡死（云服务器起栈实测）。
+      test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 15s
       timeout: 10s
       retries: 20
