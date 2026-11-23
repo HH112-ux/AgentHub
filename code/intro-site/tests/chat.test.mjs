@@ -25,13 +25,13 @@ function sseBody(frames) {
   return stream;
 }
 
-function makeCloud({ frames = [deltaFrame('你好'), messageFrame('你好，AgentHub 支持四个渠道接入。')], openStreamError = null, eventsError = null } = {}) {
+function makeCloud({ frames = [deltaFrame('你好'), messageFrame('你好，AgentHub 支持四个渠道接入。')], openStreamError = null, eventsError = null, resources = null } = {}) {
   const calls = { agents: 0, environments: 0, sessions: 0, sessionBodies: [], prompts: [], paths: [], closes: 0 };
   return {
     calls,
     async findResources(kind) {
       calls.paths.push(`find:${kind}`);
-      return [];
+      return resources?.[kind] ?? [];
     },
     async request(path, options = {}) {
       const method = options.method ?? 'GET';
@@ -260,4 +260,30 @@ test('整体寿命到期时给出超时终态而不挂死', async () => {
   const result = await ask(handlerFor(neverEnding, { lifetimeMs: 60, heartbeatMs: 20 }), { text: '在吗' });
   assert.match(result.payload, /"code":"timeout"/);
   assert.ok(neverEnding.calls.closes >= 1);
+});
+
+test('云端留下重复资源时按确定 id 自愈，问答继续可用', async () => {
+  const cloud = makeCloud({
+    resources: {
+      agents: [{ id: 'agent_zzz', version: 7 }, { id: 'agent_aaa', version: 3 }],
+      environments: [{ id: 'env_zzz' }, { id: 'env_aaa' }],
+    },
+  });
+  const events = [];
+  const result = await ask(handlerFor(cloud, { log: event => events.push(event) }), { text: '支持哪些渠道' });
+
+  assert.doesNotMatch(result.payload, /"code":/);
+  assert.match(result.payload, /event: done/);
+  assert.equal(cloud.calls.agents, 0, '已有资源可用时不得再建 Agent');
+  const session = cloud.calls.sessionBodies[0];
+  assert.deepEqual(session.agent, { type: 'agent', id: 'agent_aaa', version: 3 });
+  assert.equal(session.environment_id, 'env_aaa');
+  assert.ok(events.some(event => event.event === 'chat_binding_conflict_healed' && event.agents === 2 && event.environments === 2));
+});
+
+test('重复资源里没有可用绑定时保留原失败，不伪造成功', async () => {
+  const cloud = makeCloud({ resources: { agents: [{ id: 'agent_aaa' }, { id: 'agent_zzz' }], environments: [{ id: 'env_aaa' }, { id: 'env_zzz' }] } });
+  const result = await ask(handlerFor(cloud), { text: '支持哪些渠道' });
+  assert.match(result.payload, /"code":"service_unavailable"/);
+  assert.equal(cloud.calls.sessions, 0);
 });

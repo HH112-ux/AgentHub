@@ -29,7 +29,9 @@ export const APPLICATION_SCOPE = 'agenthub-intro-site.cn-prod';
 
 // 钉住模型标识，避免云端模型列表变动导致 Agent 定义指纹漂移、重复建资源。
 // 取值方式：部署后问一次，从 Function 日志的 chat_models_discovered 里挑一个已启用的模型 id 填进来。
-export const PINNED_MODEL_ID = '';
+// 2026-11-23 线上首问日志：模型目录未标记 enabled（fallback=true），排序后取到 'auto' 并成功建成 Agent，
+// 因此钉成 'auto' 与实际已建资源一致——换成别的值会让指纹变化并在云端另建一份 Agent。
+export const PINNED_MODEL_ID = 'auto';
 
 const CHAT_PATH_SUFFIX = '/api/chat';
 
@@ -200,19 +202,43 @@ async function selectModel(rt) {
   return candidates[0];
 }
 
+// 进程内锁挡不住多实例并发首建；一旦云端留下重复资源，官方 ensureCloudResources 会扫到多于一份
+// 并抛 ai_initialization_conflict，问答会从此全量失败直到人工归档。这里按本站作用域挑一份
+// 确定 id 复用（只求确定性、不求最新），把永久故障降级成继续可用；多余资源仍需人工清理。
+async function healBinding(rt) {
+  const [agents, environments] = await Promise.all([
+    rt.cloud.findResources('agents', { qsites_scope: APPLICATION_SCOPE, qsites_kind: 'agents' }),
+    rt.cloud.findResources('environments', { qsites_scope: APPLICATION_SCOPE, qsites_kind: 'environments' }),
+  ]);
+  const pick = list => list.map(resource => resource.id).sort()[0];
+  const agent = agents.find(resource => resource.id === pick(agents));
+  const environment = environments.find(resource => resource.id === pick(environments));
+  if (!agent || !environment || !Number.isInteger(agent.version) || agent.version < 1) return null;
+  rt.log({ event: 'chat_binding_conflict_healed', agents: agents.length, environments: environments.length });
+  return { agent: { type: 'agent', id: agent.id, version: agent.version }, environment_id: environment.id };
+}
+
 async function ensureBinding(rt) {
   if (rt.binding) return rt.binding;
   return rt.withLock('intro-site-binding', async () => {
     if (rt.binding) return rt.binding;
     const model = await selectModel(rt);
     // 不提供 tools 字段＝不授予任何工具；挂业务工具属于 AGENTS.md 明令禁止的范围。
-    const binding = await ensureCloudResources({
-      client: rt.cloud,
-      coordinator: { withLock: rt.withLock },
-      applicationScope: APPLICATION_SCOPE,
-      agent: { name: AGENT_NAME, model, system: PUBLIC_SYSTEM_PROMPT, metadata: { app: 'agenthub-intro-site', purpose: 'public-faq' } },
-      environment: { name: ENVIRONMENT_NAME, config: { type: 'cloud' } },
-    });
+    let binding;
+    try {
+      binding = await ensureCloudResources({
+        client: rt.cloud,
+        coordinator: { withLock: rt.withLock },
+        applicationScope: APPLICATION_SCOPE,
+        agent: { name: AGENT_NAME, model, system: PUBLIC_SYSTEM_PROMPT, metadata: { app: 'agenthub-intro-site', purpose: 'public-faq' } },
+        environment: { name: ENVIRONMENT_NAME, config: { type: 'cloud' } },
+      });
+    } catch (error) {
+      if (!(error instanceof CloudAgentsError) || error.code !== 'ai_initialization_conflict') throw error;
+      const healed = await healBinding(rt);
+      if (!healed) throw error;
+      binding = healed;
+    }
     rt.binding = binding;
     rt.log({ event: 'chat_resources_ready', agentVersion: binding.agent?.version });
     return binding;
