@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentHub · 企业级 AI 业务运行平台</title>
+  <meta name="description" content="AgentHub：以 AgentScope Java 为内核的企业级 AI 业务运行平台。多智能体编排、RAG 知识库、长期记忆、MCP 双向集成、全链路过审与审计，可私有化部署。" />
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">AgentHub</span>
+      <span class="brand-tag">企业级 AI 业务运行平台</span>
+    </a>
+    <nav class="topnav" aria-label="页内导航">
+      <a href="#capabilities">能力清单</a>
+      <a href="#architecture">架构</a>
+      <a href="#security">安全与治理</a>
+      <a href="#screenshots">界面</a>
+      <a href="#chat">在线体验</a>
+    </nav>
+    <div class="topnav-actions">
+      <a class="btn btn-ghost" id="link-docs" href="https://github.com/HH112-ux/AgentHub" target="_blank" rel="noopener">开发文档</a>
+      <button class="btn btn-primary" id="link-system" type="button">进入系统</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="hero-eyebrow">可运营 · 可审计 · 可控 · 可评测</p>
+        <h1>自然语言提问，<br />专家智能体在受控权限内完成作业</h1>
+        <p class="hero-sub">
+          入口智能体「小Z」判断意图并路由到领域专家，专家调用工具与知识库执行任务，
+          写操作经人工确认后落地。整套系统私有化部署，全链路留痕。
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg" id="link-system-2" type="button">进入系统</button>
+          <a class="btn btn-ghost btn-lg" href="#chat">在线体验与问答</a>
+        </div>
+        <ul class="hero-stats" aria-label="平台规模">
+          <li><strong>6</strong><span>大分组</span></li>
+          <li><strong>34</strong><span>功能页</span></li>
+          <li><strong>98</strong><span>按钮权限</span></li>
+          <li><strong>40</strong><span>张表 · 双方言</span></li>
+        </ul>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="route-line">
+          <span class="dot dot-user">提问</span>
+          <span class="arrow">→</span>
+          <span class="dot dot-router">小Z · 意图路由</span>
+          <span class="arrow">→</span>
+          <span class="dot dot-expert">领域专家</span>
+          <span class="arrow">→</span>
+          <span class="dot dot-tool">工具 / 知识库</span>
+        </div>
+        <div class="hitl-note">写操作 · 人工确认后落地</div>
+      </div>
+    </section>
+
+    <section class="section" id="capabilities">
+      <h2>能力清单</h2>
+      <p class="section-lead">覆盖六大分组、34 个功能页的完整 AI 业务运行能力。</p>
+      <div class="cards">
+        <article class="card">
+          <h3>多智能体编排</h3>
+          <p>入口智能体意图判定与路由，专家装配缓存、计划模式、子智能体委派；HITL 暂停/恢复与编排预算护栏。</p>
+        </article>
+        <article class="card">
+          <h3>知识库 RAG</h3>
+          <p>纯向量 / 向量+BM25 混合检索 + Rerank；切片、向量化、评测基线全链路，知识更新即刻生效。</p>
+        </article>
+        <article class="card">
+          <h3>长期记忆与技能</h3>
+          <p>记忆抽取 / 净化 / 水位 / 合并与版本恢复；技能仓库、工作区文件与场景包。</p>
+        </article>
+        <article class="card">
+          <h3>工具与集成</h3>
+          <p>内置业务工具集，MCP 双向集成，飞书 / 企微 / 钉钉 / GitHub 四渠道接入，定时任务与运行日报。</p>
+        </article>
+        <article class="card">
+          <h3>安全与治理</h3>
+          <p>六场景过审、PII 脱敏与注入防护；三层权限模型、无人值守白名单、置信度与降级。</p>
+        </article>
+        <article class="card">
+          <h3>审计与可观测</h3>
+          <p>六类审计留痕、链路追踪、健康自检、用量配额与四层评测体系。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="architecture">
+      <h2>总体架构</h2>
+      <p class="section-lead">六层分层：接入 → 鉴权 → 编排 → 能力 → 治理 → 数据。</p>
+      <div class="stack" aria-label="六层架构示意">
+        <div class="layer"><span class="layer-name">接入层</span><span class="layer-desc">Web 工作台（Vue 3 / SSE）· 四渠道 · MCP 出口</span></div>
+        <div class="layer"><span class="layer-name">网关 / 鉴权层</span><span class="layer-desc">Sa-Token 认证 · 路由守卫 · 接口加解密 · 渠道验签</span></div>
+        <div class="layer"><span class="layer-name">编排层</span><span class="layer-desc">「小Z」意图判定 / 路由 · 专家装配与缓存 · 计划模式 · HITL · 预算护栏</span></div>
+        <div class="layer"><span class="layer-name">能力层</span><span class="layer-desc">业务工具集 · MCP 客户端 · RAG · 技能仓库 · 长期记忆 · 工作区 · 模型网关</span></div>
+        <div class="layer"><span class="layer-name">治理层</span><span class="layer-desc">三层权限 · 安全护栏 · 审计留痕 · 用量配额 · 无人值守白名单</span></div>
+        <div class="layer"><span class="layer-name">数据层</span><span class="layer-desc">PostgreSQL / MySQL · Redis · Milvus+BM25 · OSS 对象存储</span></div>
+      </div>
+      <p class="tech-note">技术栈：JDK 21 · Spring Boot 4.1.1 · AgentScope Java 2.0.4 · Vue 3 · PostgreSQL 14 / MySQL 8.0 · Redis · Milvus</p>
+    </section>
+
+    <section class="section" id="security">
+      <h2>安全与治理</h2>
+      <div class="security-grid">
+        <div class="security-item">
+          <h3>全链路过审</h3>
+          <p>输入 / 输出 / 渠道出站 / 工具结果 / 知识库入库 / MCP 出口六场景过审，含 PII 脱敏与注入防护。</p>
+        </div>
+        <div class="security-item">
+          <h3>写操作人工确认</h3>
+          <p>高风险动作（改数据、对外发送、资金操作）必须人工批准，理由与置信度可见，决策全留痕。</p>
+        </div>
+        <div class="security-item">
+          <h3>密钥只在服务端</h3>
+          <p>模型密钥、渠道凭据、MCP 请求头密文落库；生产环境命中出厂示例值拒绝启动。</p>
+        </div>
+        <div class="security-item">
+          <h3>可私有化部署</h3>
+          <p>Docker Compose 一键拉起 PostgreSQL / MySQL 双栈，端口错开可并存，数据不出域。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="screenshots">
+      <h2>界面一览</h2>
+      <p class="section-lead">对话工作台与管理后台实拍截图（素材由团队审定后上线）。</p>
+      <div class="shots">
+        <figure class="shot"><div class="shot-box shot-pending">截图待替换</div><figcaption>对话工作台</figcaption></figure>
+        <figure class="shot"><div class="shot-box shot-pending">截图待替换</div><figcaption>专家管理</figcaption></figure>
+        <figure class="shot"><div class="shot-box shot-pending">截图待替换</div><figcaption>健康自检</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="chat">
+      <h2>在线体验与使用问答</h2>
+      <p class="section-lead">向云端 Agent 提问平台能力与使用方法；本问答只接触公开介绍内容，不接触任何业务数据。</p>
+      <div class="chat-panel">
+        <div class="chat-messages" id="chat-messages" aria-live="polite">
+          <div class="msg msg-agent">你好，我是 AgentHub 的体验助手。想了解平台能力、使用方式或部署方案，都可以问我。</div>
+        </div>
+        <form class="chat-input" id="chat-form">
+          <input type="text" id="chat-text" placeholder="例如：AgentHub 支持哪些渠道接入？" autocomplete="off" maxlength="500" />
+          <button class="btn btn-primary" type="submit" id="chat-send">发送</button>
+        </form>
+        <p class="chat-note" id="chat-note">体验通道接入中，敬请期待。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 AgentHub · 企业级 AI 业务运行平台</p>
+    <p>
+      <a id="link-docs-2" href="https://github.com/HH112-ux/AgentHub" target="_blank" rel="noopener">开发文档</a>
+      <span aria-hidden="true">·</span>
+      <button class="linklike" id="link-system-3" type="button">进入系统</button>
+    </p>
+  </footer>
+
+  <script src="site.js"></script>
+</body>
+</html>
