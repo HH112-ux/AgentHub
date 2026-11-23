@@ -1,6 +1,6 @@
 # AgentHub 介绍页 · Sites 发布任务清单
 
-> **状态**：页面骨架已交付（`b970689`，分支 `feature/intro-site` 已推送 origin）；Task 1 决策已定、Task 2 问答代码已在 `feature/intro-qca-chat` 本地完成并通过单元与浏览器验证（后端未开启、站点未发布）；Qoder 站点仍是 bootstrap 草稿。本文件列出剩余工作的小任务拆分。
+> **状态**：后端能力已开启（`01a20845`，QODER_PAT 已由平台签发）、完整草稿已发布（`published: true`，Function `app` 已 active）；页面骨架 + 云端问答 + 「进入系统」跳转均在 `feature/intro-qca-chat`（已推 origin，含 `origin/main` 合并）。**剩余**：线上问答实测被站点访问模式挡住（私有 = 登录墙，见 Task 3c），以及上线后必须钉 `PINNED_MODEL_ID`。
 >
 > **For agentic workers:** 步骤用 `- [ ]` 复选框跟踪；每个代码任务完成后按 AGENTS.md 做代码审查、推送分支，合入走 PR + 非作者评审。
 
@@ -22,11 +22,12 @@
 | 项 | 值 |
 |---|---|
 | 分支 | `feature/intro-site`（骨架 `b970689` 已推送） |
-| Task 2 分支 | `feature/intro-qca-chat`（从 `origin/feature/intro-site` 切出，尚未推送） |
-| 站点地址 | `agenthub-qq5kdpsfufg.qoder.zone`（私有） |
+| Task 2 分支 | `feature/intro-qca-chat`（从 `origin/feature/intro-site` 切出，已推 origin 并合并 `origin/main`） |
+| 站点地址 | `agenthub-qq5kdpsfufg.qoder.zone`（访问模式 `private`） |
 | Project ID | `01a206be-26b5-7ccc-b43e-21d01846ab16` |
 | Site ID | `01a206be-26b9-797d-ac35-8e6c4aaefc8b` |
-| bootstrap 草稿 | 已登记未发布（action `4aa84a6a-c030-4593-8e2b-8ba625c00fc6`） |
+| bootstrap 草稿 | 已被完整草稿取代（action `4aa84a6a-c030-4593-8e2b-8ba625c00fc6`） |
+| 已发布草稿 | action `2e58db55-fdca-4dc1-97fb-fa70e42a929f`（`published: true`，2026-11-23） |
 
 ## 分支约定
 
@@ -60,20 +61,21 @@
 >   `chat_models_discovered`）。留空时每次冷启动按模型列表排序取首个，模型目录变动会让 Agent 定义
 >   指纹漂移并在云端留下孤儿资源。
 
-- [ ] 2a. `ensure_backend('qoder')` 启用站点后端能力
+- [x] 2a. `ensure_backend('qoder')` 启用站点后端能力（2026-11-23，operation `01a20845-bf70-7382-bed0-ccd90e0af6b3`：`provision_backend`/`issue_qoder_pat`/`sync_secret` 三步均成功；`get_site(include:["backend"])` 回 `status: ready`、capabilities `functions+qoder+storage`。平台 Secret 不出现在 `secrets` 列表属预期，该列表看不到平台托管的 `QODER_PAT`）
 - [x] 2b. Function 骨架：`functions/index.ts` 入口 + `functions/chat.mjs` SSE 业务层（偏差见上，未用 `createChatHandler`）
 - [x] 2c. 云端 Agent 初始化集成：官方 `cloud-agents.mjs` + `ensureCloudResources`（QODER_PAT 仅 `Deno.env.get` 服务端读取，不进前端/仓库/日志）
 - [x] 2d. 前端接线：`site.js` 改 ES 模块，问答区接 `/functions/v1/app/api/chat` SSE 流式渲染，替换「接入中」占位；`sse-client.js` 为官方分帧助手副本
-- [ ] 2e. 本地验证 → 代码审查 → 推送分支
+- [x] 2e. 本地验证 → 代码审查 → 推送分支（提交 `25052d8`，已推 origin 并跟踪 `origin/feature/intro-qca-chat`；合并 `origin/main`（deploy/compose 线）无冲突；推送前重跑单测 14/14；diff 内 grep 无密钥值，仅服务端 `Deno.env.get('QODER_PAT')` 读取点）
   - [x] `node --test tests/chat.test.mjs`：14 项全过（入参校验、密钥缺失不触碰云端、逐帧投影、上游失败不透传原文、并发只建一份资源、寿命超时）
   - [x] `dev/local-server.mjs` 无凭据假云端预览：真浏览器实测两轮问答、历史接续、限流分支、半句中断分支、长回答压缩
   - [ ] `deno check functions/index.ts`：本机未安装 Deno，尚未执行（见清单末尾待决项）
 
 ## Task 3: 完整草稿与发布（无代码改动，站点工具操作）
 
-- [ ] 3a. 用同一 projectId 准备完整草稿（含 `functionDirectory`；若 Task 1 选不开后端则为纯静态）
-- [ ] 3b. 读草稿状态：无 blocker 且 `canPublish` 后 `publish_site`
-- [ ] 3c. 验证 `published: true`，浏览器实测站点可达、问答可用、跳转链接正常
+- [x] 3a. 用同一 projectId 准备完整草稿（action `2e58db55-fdca-4dc1-97fb-fa70e42a929f`，`projectRoot D:\AgentHub\code\intro-site` + `webDirectory dist` + `functionDirectory functions` + `databaseAccess none`，**未在 `secretNames` 声明 `QODER_PAT`**（平台托管）；首次返回 `descriptorStatus: pending`，同 action 同参数重试后 `written`）
+- [x] 3b. 读草稿状态：`canPublish: true`、`blockers: []` 后 `publish_site`（publish operation `01a20846-d94c-77b6-b1ea-f4701c25d724` → `succeeded`/`committed: true`）
+- [ ] 3c. 验证 `published: true`（已确认，`readiness: publication_completed`、Function `app` `is_active: true`、`database_access: none`），**浏览器实测未完成**：`access_mode=private` 使站点在登录墙之后——未认证访问首页 `401`、`POST /functions/v1/app/api/chat` `403`，内置浏览器落在「登录后即可访问」。真实问答调用与 `chat_models_discovered` 日志需要先解决访问方式（见队长按下表）。
+- [ ] 3c-1. 首次线上问答成功后，把 `chat.mjs` 的 `PINNED_MODEL_ID` 填成日志里的模型 id，再走一次 prepare + publish（不改这条 = 每次冷启动按列表排序取首个，模型目录变动会让 Agent 指纹漂移并在云端留孤儿资源）。
 - [ ] 3d. Desktop 交接：`show_publish_confirmation` 打开工作台，交付最终地址
 
 ## Task 4: 队长素材接入（分支 `fix/intro-assets`，素材到位后做）
@@ -87,6 +89,7 @@
 | 项 | 归属 | 影响 |
 |---|---|---|
 | ~~云服务器系统 URL~~ | 队长 | 已到位（Task 4a 已填） |
+| **站点访问范围** | 队长 | 现 `private` = 登录墙，与「介绍给别人看」冲突。选 `public` 需队长明确授权；改公开前建议先补「云端资源冲突自愈」补丁（见 Task 2 偏差第 3 条），否则并发首问可能永久打挂问答 |
 | 界面截图素材 | 队长 | Task 4b 占位替换 |
 | 站点域名确认 | 队长 | 站点地址是否保持 `.qoder.zone`；同时决定 `SYSTEM_URL` 是否换域名、访客是否继续撞自签名证书警告 |
-| 本机是否安装 Deno | 用户 | Task 2e 的 `deno check` 入口类型校验，当前未执行 |
+| 本机是否安装 Deno | 用户 | Task 2e 的 `deno check` 入口类型校验，当前未执行；线上 Function 已 `is_active`，实际加载未报错 |
