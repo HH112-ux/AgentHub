@@ -90,7 +90,9 @@ services:
     volumes:
       - agenthub-pg-etcd:/etcd
     healthcheck:
-      test: ["CMD-SHELL", "etcdctl endpoint health >/dev/null 2>&1 || exit 1"]
+      # 必须用 exec 形式：quay.io/coreos/etcd 是 scratch 基座、镜像里没有 /bin/sh，
+      # CMD-SHELL 会在 OCI runtime exec 阶段就失败，容器永远 unhealthy，把依赖 service_healthy 的 Milvus 连带卡死（云服务器起栈实测）。
+      test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 15s
       timeout: 10s
       retries: 20
