@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<!--
+  AgentHub 产品介绍页 · 高保真交互演示稿（单文件 HTML）
+  STATUS: 设计稿 v1 · 文案为草案，待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
+  SCOPE: 营销单页 7 区块 + 5 个 flow / 19 屏，hash 路由，无外部依赖，双击即开
+  ROUTES:
+    #/            L1 营销单页
+    #/flow/1..8   Flow A（S1-S4 提问与编排）+ Flow B（S5-S8 确认与治理）· 模拟层高保真 8 屏
+    #/exit        Flow C 转化出口 · 3 态状态机
+    #/qa          Flow D 在线体验问答 · 4 屏
+    #/onboard     Flow E 首登引导 · 4 屏
+  SOURCE: 流程口径=《开发总览手册》§6.1/§4.1.1/§6.3-6.6/§7.2；数字口径=设计稿 §1 与 §12.3
+  NOTE: 本页全部为智能模拟数据与模拟交互，不接入真实系统、不含业务数据（设计稿 D5/D9 数据边界）
+-->
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentHub · 企业级智能业务运行平台</title>
+<meta name="description" content="可运营、可审计、可控、可评测的企业级 AI 业务运行平台。自然语言提问，入口智能体路由领域专家，写操作经人工确认落地，每一环都留痕。" />
+<style>
+/* ============================================================
+   DESIGN TOKENS — 深色科技风（工程化轮再映射到组件库 token）
+   ============================================================ */
+:root{
+  /* 表面 */
+  --bg-base:#060910; --bg-layout:#080D16; --bg-container:#0D1420; --bg-elevated:#131C2B;
+  --bg-sunken:#040710; --bg-inverse:#EAF1FA;
+  /* 描边 */
+  --border:#26374F; --border-2:#1A2636; --border-3:#121C29;
+  /* 文本 */
+  --text:#E8F0FA; --text-2:#A9BCD3; --text-3:#6E86A3; --text-4:#758BA6;
+  /* 品牌与语义色 */
+  --glow:#31E1C4; --glow-dim:rgba(49,225,196,.16); --glow-line:rgba(49,225,196,.42);
+  --accent:#4C8DFF; --violet:#9B6CFF;
+  --ok:#3ECF8E; --warn:#F5A524; --err:#FF5C6C; --info:#4C8DFF; --muted:#6E86A3;
+  /* 间距 / 圆角 / 阴影 */
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:26px; --r-pill:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:72px; --sp-9:96px;
+  --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 8px 24px rgba(0,0,0,.45); --sh-3:0 24px 64px rgba(0,0,0,.55);
+  --glow-ring:0 0 0 1px var(--glow-line), 0 0 24px var(--glow-dim);
+  /* 字体 */
+  --font:"Inter","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+  --nav-h:64px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  margin:0; font-family:var(--font); color:var(--text); background:var(--bg-base); overflow-x:hidden;
+  -webkit-font-smoothing:antialiased; line-height:1.6; font-size:16px;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(76,141,255,.18), transparent 60%),
+    radial-gradient(760px 460px at 88% 4%, rgba(49,225,196,.13), transparent 62%),
+    radial-gradient(680px 520px at 60% 108%, rgba(155,108,255,.12), transparent 60%);
+}
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(circle at 50% 22%, #000 0%, transparent 72%);
+}
+h1,h2,h3,h4{margin:0; font-weight:650; letter-spacing:-.02em; line-height:1.25}
+p{margin:0}
+a{color:inherit; text-decoration:none}
+ul{margin:0; padding:0; list-style:none}
+button{font:inherit; color:inherit; background:none; border:none; cursor:pointer}
+code,.mono{font-family:var(--mono); font-size:.88em}
+:focus-visible{outline:2px solid var(--glow); outline-offset:3px; border-radius:4px}
+.sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+
+/* ---------- 原子 ---------- */
+.container{width:min(1240px,100% - 48px); margin-inline:auto; position:relative; z-index:1}
+.eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--glow); font-weight:600}
+.eyebrow::before{content:""; width:22px; height:1px; background:linear-gradient(90deg,var(--glow),transparent)}
+.tag{display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:var(--r-pill); font-size:12px; font-weight:600; border:1px solid var(--border-2); background:var(--bg-container); color:var(--text-2); white-space:nowrap}
+.tag.ok{color:var(--ok); border-color:rgba(62,207,142,.35); background:rgba(62,207,142,.08)}
+.tag.warn{color:var(--warn); border-color:rgba(245,165,36,.35); background:rgba(245,165,36,.08)}
+.tag.err{color:var(--err); border-color:rgba(255,92,108,.35); background:rgba(255,92,108,.08)}
+.tag.info{color:var(--accent); border-color:rgba(76,141,255,.35); background:rgba(76,141,255,.08)}
+.tag.violet{color:var(--violet); border-color:rgba(155,108,255,.35); background:rgba(155,108,255,.08)}
+.tag.glow{color:var(--glow); border-color:var(--glow-line); background:var(--glow-dim)}
+.tag.draft{color:var(--warn); border-color:rgba(245,165,36,.3); background:rgba(245,165,36,.07); font-family:var(--mono); font-size:11px}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 20px; border-radius:var(--r-md); font-size:15px; font-weight:600; border:1px solid transparent; transition:transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s; white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(120deg,var(--glow),#26B6F0); color:#04121A; box-shadow:0 8px 28px rgba(49,225,196,.28)}
+.btn-primary:hover{box-shadow:0 10px 34px rgba(49,225,196,.42)}
+.btn-ghost{border-color:var(--border); background:rgba(19,28,43,.6); color:var(--text)}
+.btn-ghost:hover{border-color:var(--glow-line); background:rgba(19,28,43,.9)}
+.btn-danger{border-color:rgba(255,92,108,.42); background:rgba(255,92,108,.08); color:#FFC7CD}
+.btn-danger:hover{border-color:var(--err); background:rgba(255,92,108,.14)}
+.btn-sm{padding:7px 13px; font-size:13px; border-radius:var(--r-sm)}
+.file-upload{position:relative;overflow:hidden}
+.file-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.file-upload:focus-within{outline:2px solid var(--glow);outline-offset:3px}
+.btn[disabled]{opacity:.42; cursor:not-allowed; box-shadow:none}
+.card{background:var(--bg-container); border:1px solid var(--border-2); border-radius:var(--r-lg); box-shadow:var(--sh-1)}
+.divider{height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); border:none; margin:0}
+.muted{color:var(--text-3)}
+.sec{padding:var(--sp-9) 0; position:relative; z-index:1}
+.sec-h{display:flex; align-items:flex-end; justify-content:space-between; gap:var(--sp-5); margin-bottom:var(--sp-6); flex-wrap:wrap}
+.sec-h h2{font-size:clamp(26px,3vw,38px)}
+.sec-h .sub{color:var(--text-2); max-width:62ch; margin-top:10px}
+
+/* ============================================================
+   1. TOP NAVIGATION（营销层，进入模拟层后隐藏 — scenario Anti-Pattern #1）
+   ============================================================ */
+.nav{position:fixed; inset:0 0 auto 0; height:var(--nav-h); z-index:50; display:flex; align-items:center;
+  background:rgba(6,9,16,.72); backdrop-filter:blur(14px) saturate(140%); border-bottom:1px solid var(--border-3)}
+.nav .container{display:flex; align-items:center; gap:var(--sp-5)}
+.brand{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:-.01em}
+.brand .mark{width:30px; height:30px; border-radius:9px; background:conic-gradient(from 140deg,var(--glow),var(--accent),var(--violet),var(--glow)); position:relative; box-shadow:var(--glow-ring)}
+.brand .mark::after{content:""; position:absolute; inset:6px; border-radius:5px; background:var(--bg-base)}
+.brand .name{font-size:17px}
+.brand .name small{display:block; font-size:11px; font-weight:500; color:var(--text-3); letter-spacing:.04em}
+.nav-links{display:flex; gap:var(--sp-4); margin-left:var(--sp-4)}
+.nav-links a{font-size:14.5px; color:var(--text-2); padding:7px 2px; border-bottom:1px solid transparent; transition:.16s}
+.nav-links a:hover,.nav-links a[aria-current="true"]{color:var(--text); border-bottom-color:var(--glow-line)}
+.nav-cta{margin-left:auto; display:flex; align-items:center; gap:10px}
+
+/* ============================================================
+   2. HERO
+   ============================================================ */
+.hero{padding-top:calc(var(--nav-h) + 76px); padding-bottom:var(--sp-8)}
+.hero-grid{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:var(--sp-7); align-items:center}
+.hero h1{font-size:clamp(34px,4.6vw,58px); line-height:1.08; margin:18px 0 0}
+.title-lock{position:relative;margin-top:18px}
+.title-lock h1{margin:0}
+.hero h1 .title-line{display:block;position:relative}
+.hero h1 .title-outline{color:transparent;-webkit-text-stroke:1px rgba(168,188,211,.66)}
+.hero h1 .title-fill{position:absolute;inset:0;color:var(--text);clip-path:inset(0 100% 0 0)}
+.hero h1 .title-fill.hl{background:linear-gradient(100deg,var(--glow),#7FC4FF 55%,var(--violet));background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.title-aim{position:absolute;inset:-20px -24px;pointer-events:none;opacity:0;transition:opacity .3s ease}
+.aim-frame{position:absolute;inset:10px;border:1px dashed rgba(49,225,196,.48);border-radius:12px;box-shadow:inset 0 0 24px rgba(49,225,196,.04)}
+.aim-corner{position:absolute;width:18px;height:18px;border-color:var(--glow);border-style:solid;filter:drop-shadow(0 0 6px var(--glow-dim))}
+.aim-corner.tl{left:10px;top:10px;border-width:2px 0 0 2px}.aim-corner.tr{right:10px;top:10px;border-width:2px 2px 0 0}.aim-corner.bl{left:10px;bottom:10px;border-width:0 0 2px 2px}.aim-corner.br{right:10px;bottom:10px;border-width:0 2px 2px 0}
+.aim-cross{position:absolute;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);opacity:0}
+.aim-cross::before,.aim-cross::after{content:"";position:absolute;background:var(--glow);box-shadow:0 0 10px var(--glow)}
+.aim-cross::before{left:11px;top:0;width:1px;height:24px}.aim-cross::after{left:0;top:11px;width:24px;height:1px}
+.title-warm{position:absolute;left:14px;right:14px;bottom:12px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--glow),#7FC4FF,var(--violet),transparent);box-shadow:0 0 14px var(--glow);transform:scaleX(0);transform-origin:left}
+.title-needle{position:absolute;left:14px;top:12px;bottom:12px;width:2px;background:#fff;box-shadow:0 0 8px #fff,0 0 20px var(--glow),0 0 42px var(--glow);opacity:0}
+body[data-title-phase="aim"] .title-aim{opacity:1}
+body[data-title-phase="aim"] .aim-frame{animation:aimContract .65s cubic-bezier(.2,.75,.2,1) both}
+body[data-title-phase="lock"] .aim-corner{animation:aimLock .35s ease-out both}
+body[data-title-phase="lock"] .aim-cross{animation:crossLock .5s ease-out both}
+body[data-title-phase="warm"] .title-warm{animation:titleWarm .65s ease-in-out both}
+body[data-title-phase="ignite"] .title-needle{animation:needleSweep .55s cubic-bezier(.4,0,.2,1) both}
+body[data-title-phase="ignite"] .aim-frame,body[data-title-phase="ignite"] .aim-corner,body[data-title-phase="ignite"] .aim-cross{opacity:0;transition:opacity .2s}
+.title-lit .hero h1 .title-fill{animation:titleIgnite .55s cubic-bezier(.2,.75,.2,1) forwards}
+.title-lit .hero h1 .title-line:nth-child(2) .title-fill{animation-delay:.08s}
+body[data-title-phase="lit"] .title-aim{opacity:0}
+body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop-shadow(0 0 5px rgba(49,225,196,.18));background-position:0 0}
+@keyframes aimContract{from{transform:scale(1.28);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes aimLock{from{transform:scale(1.3);opacity:.35}to{transform:scale(1);opacity:1}}
+@keyframes crossLock{0%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}45%{opacity:1;transform:translate(-50%,-50%) scale(.7)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@keyframes titleWarm{0%{transform:scaleX(0);opacity:.2}60%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:.25}}
+@keyframes needleSweep{0%{left:14px;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:calc(100% - 14px);opacity:0}}
+@keyframes titleIgnite{0%{clip-path:inset(0 100% 0 0);filter:drop-shadow(0 0 0 rgba(49,225,196,0));background-position:100% 0}55%{filter:drop-shadow(0 0 12px rgba(49,225,196,.55))}100%{clip-path:inset(0 0 0 0);filter:drop-shadow(0 0 5px rgba(49,225,196,.18));background-position:0 0}}
+.hero .lead{color:var(--text-2); font-size:clamp(15px,1.5vw,18px); margin-top:20px; max-width:56ch}
+.hero .ctas{display:flex; gap:12px; margin-top:30px; flex-wrap:wrap}
+.four{display:flex; gap:8px; margin-top:26px; flex-wrap:wrap}
+.four .tag{padding:6px 12px; font-size:12.5px}
+.hero-note{margin-top:22px; font-size:12.5px; color:var(--text-4); display:flex; gap:8px; align-items:flex-start}
+.hero-stage{position:relative; border-radius:var(--r-xl); padding:18px; background:linear-gradient(160deg,rgba(19,28,43,.9),rgba(8,13,22,.9)); border:1px solid var(--border-2); box-shadow:var(--sh-3),var(--glow-ring)}
+.hero-stage .bar{display:flex; align-items:center; gap:7px; padding:0 4px 14px}
+.hero-stage .bar i{width:9px; height:9px; border-radius:50%; background:var(--border)}
+.hero-stage .bar span{margin-left:8px; font-family:var(--mono); font-size:11px; color:var(--text-4)}
+.mini{position:relative; height:290px; border-radius:var(--r-lg); background:var(--bg-sunken); border:1px solid var(--border-3); overflow:hidden; padding:16px}
+.mini .msg{display:flex; gap:10px; margin-bottom:12px}
+.mini .av{width:26px; height:26px; border-radius:8px; flex:none; background:linear-gradient(140deg,var(--accent),var(--violet)); font-size:11px; font-weight:700; display:grid; place-items:center; color:#031018}
+.mini .av.e{background:linear-gradient(140deg,var(--glow),#26B6F0)}
+.mini .bd{flex:1; min-width:0}
+.mini .who{font-size:11.5px; color:var(--text-3); margin-bottom:4px}
+.mini .bub{background:var(--bg-elevated); border:1px solid var(--border-2); border-radius:10px; padding:9px 11px; font-size:13px; color:var(--text-2)}
+.mini .bub.user{background:rgba(76,141,255,.1); border-color:rgba(76,141,255,.28); color:var(--text)}
+.mini .bub.confirm{border-color:rgba(245,165,36,.4); background:rgba(245,165,36,.07)}
+.mini .bub .ln{height:7px; border-radius:4px; background:linear-gradient(90deg,var(--border),transparent); margin:6px 0; animation:sweep 1.6s ease-in-out infinite}
+.mini .bub .ln:nth-child(2){width:82%} .mini .bub .ln:nth-child(3){width:58%}
+@keyframes sweep{0%,100%{opacity:.4}50%{opacity:1}}
+.mini .cursor{display:inline-block; width:7px; height:14px; background:var(--glow); vertical-align:-2px; animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.hero-stage .foot{display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:14px; font-size:12px; color:var(--text-3); flex-wrap:wrap}
+.swarm-stage{position:absolute; inset:52px 18px 54px; z-index:4; overflow:hidden; border-radius:var(--r-lg); background:linear-gradient(145deg,#09111D,#050912); border:1px solid var(--border-2); pointer-events:none; opacity:1}
+.swarm-stage.done{opacity:0; visibility:hidden; transition:opacity .45s ease,visibility 0s .45s}
+.swarm-grid{position:absolute; inset:0; background-image:linear-gradient(rgba(49,225,196,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(49,225,196,.045) 1px,transparent 1px); background-size:24px 24px; mask-image:linear-gradient(#000,transparent)}
+.swarm-ui{position:absolute;inset:0;display:flex;flex-direction:column;background:linear-gradient(145deg,rgba(9,17,29,.98),rgba(5,9,18,.98))}
+.swarm-windowbar{height:22px;display:flex;align-items:center;gap:4px;padding:0 10px;border-bottom:1px solid var(--border-3)}
+.swarm-windowbar i{width:5px;height:5px;border-radius:50%;background:var(--border)}
+.swarm-windowbar span{margin-left:6px;font-family:var(--mono);font-size:6.5px;color:var(--text-4)}
+.swarm-appnav{height:40px;margin:0 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-3)}
+.swarm-brandmark{width:17px;height:17px;border-radius:5px;background:conic-gradient(from 140deg,var(--glow),var(--accent),var(--violet),var(--glow));box-shadow:0 0 12px var(--glow-dim)}
+.swarm-appnav b{font-size:9px;letter-spacing:-.02em}
+.swarm-links{display:flex;gap:8px;margin-left:auto;font-size:6.5px;color:var(--text-3)}
+.swarm-actions{display:flex;gap:4px;margin-left:8px}
+.swarm-actions span{padding:4px 6px;border:1px solid var(--border-2);border-radius:5px;font-size:6px;color:var(--text-2);background:var(--bg-container)}
+.swarm-actions span:last-child{border-color:var(--glow-line);background:var(--glow);color:#04121A;font-weight:800}
+.swarm-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(86px,.8fr);gap:8px;padding:0 10px 10px}
+.swarm-conversation{min-width:0;display:flex;flex-direction:column;border:1px solid var(--border-3);border-radius:8px;background:rgba(8,13,22,.72);overflow:hidden}
+.swarm-chat-head{height:26px;display:flex;align-items:center;gap:5px;padding:0 8px;border-bottom:1px solid var(--border-3);font-size:7px;color:var(--text-2)}
+.swarm-chat-head i{width:5px;height:5px;border-radius:50%;background:var(--glow)}
+.swarm-chat-head span{margin-left:auto;padding:2px 4px;border-radius:4px;background:var(--bg-elevated);font-size:5.5px;color:var(--text-4)}
+.swarm-message{display:flex;gap:6px;margin:7px 8px 0;font-size:7.5px;line-height:1.45;color:var(--text-2)}
+.swarm-avatar{width:18px;height:18px;flex:none;display:grid;place-items:center;border-radius:5px;background:linear-gradient(140deg,var(--accent),var(--violet));color:#031018;font-size:6px;font-weight:800}
+.swarm-message.user .swarm-avatar{background:var(--accent)}
+.swarm-message.router .swarm-avatar,.swarm-message.expert .swarm-avatar{background:linear-gradient(140deg,var(--glow),#26B6F0)}
+.swarm-copy{min-width:0;flex:1}
+.swarm-who{margin-bottom:3px;font-size:6px;color:var(--text-3)}
+.swarm-bubble{padding:5px 7px;border:1px solid var(--border-2);border-radius:6px;background:var(--bg-elevated)}
+.swarm-message.user .swarm-bubble{border-color:rgba(76,141,255,.28);background:rgba(76,141,255,.1);color:var(--text)}
+.swarm-message.router .swarm-bubble code{font-family:var(--mono);font-size:6.5px;color:var(--glow)}
+.swarm-trace{margin:auto 8px 7px;padding-top:6px;border-top:1px solid var(--border-3);font-family:var(--mono);font-size:5.5px;color:var(--text-4)}
+.swarm-side{min-width:0;display:grid;grid-template-rows:repeat(3,1fr) auto;gap:6px}
+.swarm-stat{display:flex;flex-direction:column;justify-content:center;padding:6px 8px;border:1px solid var(--border-3);border-radius:8px;background:linear-gradient(145deg,rgba(19,28,43,.94),rgba(8,13,22,.94))}
+.swarm-stat b{font-family:var(--mono);font-size:14px;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
+.swarm-stat span{margin-top:4px;font-size:6.5px;color:var(--text-3)}
+.swarm-stat em{font-size:5.5px;font-style:normal;color:var(--text-4)}
+.swarm-runcta{height:27px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--glow-line);border-radius:7px;background:linear-gradient(100deg,var(--glow),#26B6F0);color:#04121A;font-size:7px;font-weight:800;box-shadow:0 0 16px var(--glow-dim)}
+.swarm-piece{position:relative;opacity:0;animation:swarmAssemble .42s cubic-bezier(.2,.75,.2,1) forwards;animation-delay:calc(.35s + var(--i)*.34s);overflow:hidden}
+.swarm-piece::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,rgba(49,225,196,.2),transparent 80%);transform:translateX(-120%);animation:swarmScan .7s ease-out forwards;animation-delay:inherit;pointer-events:none}
+.swarm-cursor{position:absolute; left:var(--sx);top:var(--sy);z-index:6; opacity:0; animation:swarmCursor 1.8s cubic-bezier(.22,.8,.25,1) both; animation-delay:var(--d); filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
+.swarm-cursor .tip{display:block;width:13px;height:17px;background:var(--c);clip-path:polygon(0 0,100% 62%,58% 66%,40% 100%,25% 94%,41% 61%,0 61%);transform:rotate(-12deg)}
+.swarm-cursor .name{position:absolute;left:13px;top:12px;padding:2px 6px;border-radius:4px;background:var(--c);color:#04121A;font-size:8px;font-weight:800;white-space:nowrap}
+@keyframes swarmAssemble{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes swarmScan{to{transform:translateX(120%)}}
+@keyframes swarmCursor{0%{left:var(--sx);top:var(--sy);opacity:0;transform:scale(.65)}12%{opacity:1}58%{left:var(--tx);top:var(--ty);opacity:1;transform:scale(1)}74%{left:var(--tx);top:var(--ty);opacity:1;transform:scale(.9)}100%{left:calc(var(--tx) + 9%);top:calc(var(--ty) + 12%);opacity:0;transform:scale(.65)}}
+
+/* ============================================================
+   3. 数字证明带（顶替 Logo Wall — 可信度锚定；企业内部平台无公开客户标识）
+   ============================================================ */
+.metrics{border-block:1px solid var(--border-3); background:linear-gradient(180deg,rgba(13,20,32,.72),rgba(6,9,16,.4)); padding:var(--sp-6) 0}
+.metrics .container{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:var(--sp-4)}
+.metric{text-align:center; padding:8px 6px; border-radius:var(--r-md)}
+.metric b{display:block; font-size:clamp(24px,2.6vw,34px); font-weight:700; letter-spacing:-.03em; background:linear-gradient(180deg,var(--text),#9FB6D0); -webkit-background-clip:text; background-clip:text; color:transparent}
+.metric span{display:block; font-size:12.5px; color:var(--text-3); margin-top:5px}
+.metric em{font-style:normal; color:var(--text-4); font-size:11px}
+/* 数字位宽稳定：统计卡、表格、轨道序号在数值变化时不抖动 */
+.metric b,.stat b,.stat em,.mono,table.tbl td,table.tbl th,.node .dot,#playTime{font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   4. 流程动画区 — 8 节点发光轨道 + 步骤详情面板（本次核心）
+   ============================================================ */
+.flowsec .wrap{display:grid; gap:var(--sp-5)}
+.track{position:relative; padding:var(--sp-6) 0 var(--sp-4)}
+.track .rail{position:absolute; left:0; right:0; top:calc(var(--sp-6) + 17px); height:2px; background:var(--border-2); border-radius:2px}
+.track .rail i{position:absolute; inset:0 auto 0 0; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); box-shadow:0 0 14px var(--glow-dim); transition:width .5s cubic-bezier(.4,0,.2,1)}
+.track ol{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:6px; position:relative}
+.node{display:flex; flex-direction:column; align-items:center; gap:10px; padding:0; text-align:center; width:100%}
+.node .dot{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--bg-container); border:1px solid var(--border); font-size:13px; font-weight:700; color:var(--text-3); transition:.28s}
+.node .lbl{font-size:12px; color:var(--text-3); line-height:1.35; transition:.2s}
+.node .grp{font-size:10px; color:var(--text-4); font-family:var(--mono); letter-spacing:.08em}
+.node:hover .dot{border-color:var(--glow-line); color:var(--text)}
+.node:hover .lbl{color:var(--text-2)}
+.node.done .dot{background:rgba(49,225,196,.14); border-color:var(--glow-line); color:var(--glow)}
+.node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0); color:#04121A; border-color:transparent; box-shadow:0 0 0 4px var(--glow-dim),0 0 22px rgba(49,225,196,.5); transform:scale(1.1)}
+.node.active .lbl{color:var(--text); font-weight:600}
+.flow-panel{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:var(--sp-5); align-items:stretch}
+.flow-panel .detail{padding:var(--sp-5); display:flex; flex-direction:column; gap:14px}
+.flow-panel .detail .idx{font-family:var(--mono); font-size:12px; color:var(--glow)}
+.flow-panel .detail h3{font-size:23px}
+.flow-panel .detail .desc{color:var(--text-2); font-size:14.5px}
+.flow-panel .detail .chips{display:flex; gap:7px; flex-wrap:wrap}
+.flow-panel .detail .acts{display:flex; gap:10px; margin-top:auto; padding-top:6px; flex-wrap:wrap}
+.preview{padding:var(--sp-4); background:var(--bg-sunken); border:1px solid var(--border-3); border-radius:var(--r-md); font-family:var(--mono); font-size:12px; color:var(--text-3); min-height:120px; display:flex; flex-direction:column; gap:7px}
+.preview .row{display:flex; gap:8px; align-items:baseline}
+.preview .k{color:var(--text-4); flex:none; width:74px}
+.preview .v{color:var(--text-2)}
+.playbar{display:flex; align-items:center; gap:12px; padding:10px 14px; border:1px solid var(--border-2); border-radius:var(--r-pill); background:var(--bg-container)}
+.playbar .prog{flex:1; height:3px; background:var(--border-2); border-radius:3px; overflow:hidden}
+.playbar .prog i{display:block; height:100%; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); transition:width .3s}
+.playbar .t{font-family:var(--mono); font-size:11.5px; color:var(--text-3); flex:none}
+.ring-dock{position:fixed;right:18px;top:50%;z-index:40;width:320px;padding:12px;border:1px solid var(--border);border-radius:24px;background:radial-gradient(circle at 50% 35%,rgba(49,225,196,.07),transparent 42%),rgba(8,13,22,.92);backdrop-filter:blur(18px) saturate(140%);box-shadow:var(--sh-3),var(--glow-ring);opacity:0;visibility:hidden;transform:translateY(-50%) translateX(28px);transition:opacity .25s,transform .25s,visibility 0s .25s,width .25s}
+.ring-dock.visible{opacity:1;visibility:visible;transform:translateY(-50%) translateX(0);transition-delay:0s}
+.ring-dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ring-dock-head span{font-size:11px;letter-spacing:.08em;color:var(--text-3);font-family:var(--mono)}
+.ring-dock-toggle{width:26px;height:26px;border:1px solid var(--border);border-radius:8px;background:var(--bg-container);color:var(--text-2)}
+.ring-dock-body{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;gap:4px}
+.ring-arrow{width:28px;height:34px;border:1px solid var(--border-2);border-radius:9px;background:var(--bg-container);color:var(--text-2)}
+.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
+.ring-viewport{height:270px;display:grid;place-items:center;perspective:1000px;touch-action:pan-y;cursor:grab;overflow:hidden}
+.ring-viewport:active{cursor:grabbing}
+#trackList{--rotation:0deg;position:relative;display:block;width:244px;height:244px;margin:0;padding:0;list-style:none;transform-style:preserve-3d;transform:rotateX(-7deg) rotateY(var(--rotation));transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform}
+#trackList li{position:absolute;left:50%;top:50%;width:96px;height:96px;margin:-48px;list-style:none;transform-style:preserve-3d;transform:rotateY(var(--angle)) translateZ(118px);backface-visibility:visible;-webkit-backface-visibility:visible}
+#trackList .node{width:96px;height:96px;justify-content:center;gap:6px;padding:9px;border:1px solid rgba(168,188,211,.16);border-radius:20px;background:linear-gradient(145deg,rgba(24,36,53,.94),rgba(8,13,22,.96));box-shadow:0 12px 28px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.04);opacity:.58;filter:saturate(.65);transition:opacity .25s,filter .25s,background .25s,transform .35s,box-shadow .25s;backface-visibility:visible;-webkit-backface-visibility:visible}
+#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.07),transparent 34%);pointer-events:none}
+#trackList .node:hover,#trackList .node.active{opacity:1;filter:none}
+#trackList .node.active{transform:scale(1.14) translateZ(12px);background:radial-gradient(circle at 50% 20%,rgba(49,225,196,.16),transparent 58%),linear-gradient(145deg,#142C37,#0A1720);border:1px solid var(--glow-line);box-shadow:0 0 0 5px var(--glow-dim),0 0 34px rgba(49,225,196,.28),0 20px 38px rgba(0,0,0,.42)}
+#trackList .node.rear{opacity:.2;filter:saturate(.3) blur(.25px);transform:scale(.92)}
+#trackList .node.rear .dot,#trackList .node.rear .lbl{visibility:hidden}
+#trackList .node.rear::after{content:"";position:absolute;inset:19px 16px;border:1px solid rgba(49,225,196,.16);border-radius:11px;background:linear-gradient(145deg,rgba(49,225,196,.08),rgba(76,141,255,.05));box-shadow:0 0 20px rgba(49,225,196,.05)}
+#trackList .dot{width:38px;height:38px;border-radius:12px;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
+#trackList .dot svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
+#trackList .grp{display:none}
+#trackList .lbl{font-size:11px;max-width:78px;color:var(--text-2)}
+.ring-dock-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.ring-caption{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.ring-play{padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:10.5px;color:var(--text-2);background:var(--bg-container)}
+.ring-mini{display:none;flex-direction:column;gap:6px;padding:4px 0}
+.ring-mini button{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-2);background:var(--bg-container)}
+.mini-mark{display:block;width:11px;height:3px;border-radius:3px;background:var(--text-4);transition:width .2s,background .2s,box-shadow .2s}
+.ring-mini button.active{border-color:var(--glow-line);background:rgba(49,225,196,.08);box-shadow:0 0 14px var(--glow-dim)}
+.ring-mini button.active .mini-mark{width:18px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
+.ring-dock.collapsed{width:58px;padding:8px}
+.ring-dock.collapsed .ring-dock-head{justify-content:center;margin:0}
+.ring-dock.collapsed .ring-dock-head span,.ring-dock.collapsed .ring-dock-body,.ring-dock.collapsed .ring-dock-foot{display:none}
+.ring-dock.collapsed .ring-mini{display:flex}
+
+/* ============================================================
+   5. 能力清单（6 大能力域，口径=手册 §7.2 页面分组）
+   ============================================================ */
+.domains{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--sp-4)}
+.domain{padding:0;position:relative;overflow:hidden;perspective:1200px;transition:border-color .2s,box-shadow .2s,transform .2s}
+.domain:hover{border-color:var(--glow-line);transform:translateY(-2px);box-shadow:var(--sh-2)}
+.domain-flip{display:grid;transform-style:preserve-3d;transition:transform .68s cubic-bezier(.2,.75,.2,1);min-height:100%}
+.domain.flipped .domain-flip{transform:rotateY(180deg)}
+.domain-face{grid-area:1/1;display:flex;flex-direction:column;gap:12px;padding:var(--sp-5);backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--bg-container)}
+.domain-front{position:relative;overflow:hidden}
+.domain-front::after{content:"";position:absolute;inset:auto -30% -60% auto;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,var(--glow-dim),transparent 70%);opacity:0;transition:.24s;pointer-events:none}
+.domain:hover .domain-front::after{opacity:1}
+.domain .hd{display:flex;align-items:center;gap:8px}
+.domain h3{font-size:18px;margin-right:auto}
+.domain .cnt{font-family:var(--mono);font-size:11.5px;color:var(--text-4)}
+.flip-btn{flex:none;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:11px;color:var(--text-2);background:var(--bg-sunken);transition:.16s}
+.flip-btn:hover{border-color:var(--glow-line);color:var(--glow)}
+.domain ul{display:grid;gap:7px;color:var(--text-2);font-size:13.5px}
+.domain li{display:flex;gap:8px}
+.domain li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--glow);margin-top:9px;flex:none}
+.domain .ft{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:4px}
+.domain .ft a{font-size:13px;color:var(--glow);font-weight:600}
+.domain-back{transform:rotateY(180deg);padding:0;background:transparent;overflow:hidden}
+.control-ticket{position:relative;height:100%;display:flex;flex-direction:column;gap:10px;padding:18px;border:1px solid var(--glow-line);border-radius:18px;background:radial-gradient(circle at 100% 0,rgba(49,225,196,.12),transparent 35%),linear-gradient(150deg,#0C1A24,#081019);box-shadow:inset 0 0 32px rgba(49,225,196,.035),0 0 24px rgba(49,225,196,.07);isolation:isolate}
+.control-ticket::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.18;background-image:linear-gradient(rgba(49,225,196,.2) 1px,transparent 1px),linear-gradient(90deg,rgba(49,225,196,.2) 1px,transparent 1px);background-size:22px 22px;mask-image:linear-gradient(145deg,#000,transparent 65%)}
+.control-ticket::after{content:"";position:absolute;inset:7px;pointer-events:none;border:1px dashed rgba(49,225,196,.14);border-radius:13px}
+.ticket-top{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em}
+.ticket-status{display:inline-flex;align-items:center;gap:6px;color:var(--glow)}
+.ticket-status i,.ticket-foot i{width:6px;height:6px;border-radius:50%;background:var(--glow);box-shadow:0 0 9px var(--glow)}
+.ticket-run{color:var(--text-4)}
+.ticket-title{padding-bottom:9px;border-bottom:1px solid rgba(49,225,196,.14)}
+.ticket-title span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--text-4)}
+.ticket-title h4{margin-top:4px;font-size:18px;letter-spacing:-.02em}
+.ticket-title code{display:block;margin-top:5px;font-size:10.5px;color:var(--glow)}
+.ticket-section,.ticket-boundary{position:relative;padding-left:11px}
+.ticket-section::before,.ticket-boundary::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:2px;border-radius:2px;background:var(--glow)}
+.ticket-section span,.ticket-boundary span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--glow)}
+.ticket-section p,.ticket-boundary p{margin-top:4px;font-size:12.5px;line-height:1.55;color:var(--text-2)}
+.ticket-boundary{background:rgba(76,141,255,.045);border:1px solid rgba(76,141,255,.12);border-radius:9px;padding:8px 9px 8px 12px}
+.ticket-boundary::before{top:8px;bottom:8px;background:var(--accent)}
+.ticket-boundary span{color:var(--accent)}
+.ticket-meter{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9px;color:var(--text-4)}
+.ticket-meter i{width:34px;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--accent) 45%,rgba(76,141,255,.18) 45%)}
+.control-ticket .page-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ticket-foot{margin-top:auto;padding-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px dashed rgba(168,188,211,.18)}
+.ticket-foot span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3)}
+
+/* ============================================================
+   6. 架构区
+   ============================================================ */
+.arch{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:var(--sp-6); align-items:start}
+.topo{padding:var(--sp-5); background:var(--bg-container); border:1px solid var(--border-2); border-radius:var(--r-lg); display:grid; gap:14px}
+.tier{display:grid; gap:9px}
+.tier .cap{font-family:var(--mono); font-size:11px; color:var(--text-4); letter-spacing:.1em}
+.boxes{display:flex; gap:10px; flex-wrap:wrap}
+.box{padding:10px 13px; border-radius:var(--r-md); border:1px solid var(--border-2); background:var(--bg-elevated); font-size:13px}
+.box b{display:block; font-size:13.5px; font-weight:600}
+.box span{font-size:11.5px; color:var(--text-3)}
+.box.pub{border-color:var(--glow-line); background:rgba(49,225,196,.07)}
+.box.srv{border-color:rgba(76,141,255,.35); background:rgba(76,141,255,.07)}
+.arrow{display:flex; align-items:center; gap:10px; color:var(--text-4); font-size:11.5px; font-family:var(--mono)}
+.arrow::before{content:""; width:1px; height:18px; background:linear-gradient(180deg,var(--border),var(--glow-line),var(--border)); margin-left:14px}
+.boundary{display:grid; gap:10px}
+.boundary .item{padding:14px; border-radius:var(--r-md); border:1px solid var(--border-2); background:var(--bg-container); display:flex; gap:11px}
+.boundary .item i{width:7px; height:7px; border-radius:50%; background:var(--glow); margin-top:8px; flex:none; box-shadow:0 0 10px var(--glow)}
+.boundary .item b{display:block; font-size:14px; font-weight:600; margin-bottom:3px}
+.boundary .item p{font-size:13px; color:var(--text-3)}
+
+/* ============================================================
+   7. 在线体验问答（区块 6）
+   ============================================================ */
+.qa-block{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); gap:var(--sp-6); align-items:center}
+.qa-demo{padding:var(--sp-4); border-radius:var(--r-lg); background:var(--bg-container); border:1px solid var(--border-2); box-shadow:var(--sh-2)}
+.qa-demo .hd{display:flex; align-items:center; gap:9px; padding-bottom:12px; border-bottom:1px solid var(--border-3); margin-bottom:14px}
+.chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px}
+.chip{padding:7px 12px; border-radius:var(--r-pill); border:1px solid var(--border-2); background:var(--bg-elevated); font-size:13px; color:var(--text-2); transition:.16s}
+.chip:hover{border-color:var(--glow-line); color:var(--text)}
+
+/* ============================================================
+   8. FINAL CTA + FOOTER
+   ============================================================ */
+.final{text-align:center; padding:var(--sp-9) 0}
+.final h2{font-size:clamp(28px,3.4vw,44px); margin-bottom:16px}
+.final p{color:var(--text-2); max-width:58ch; margin:0 auto 30px}
+.final .ctas{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+footer{border-top:1px solid var(--border-3); padding:var(--sp-7) 0 var(--sp-6); background:rgba(4,7,16,.6); position:relative; z-index:1}
+footer .cols{display:grid; grid-template-columns:1.4fr repeat(3,1fr); gap:var(--sp-6)}
+footer h4{font-size:13px; color:var(--text-3); text-transform:uppercase; letter-spacing:.1em; margin-bottom:14px}
+footer li{margin-bottom:9px}
+footer li a{font-size:13.5px; color:var(--text-2)}
+footer li a:hover{color:var(--glow)}
+footer .legal{margin-top:var(--sp-6); padding-top:var(--sp-4); border-top:1px solid var(--border-3); display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-4)}
+
+/* ============================================================
+   模拟层 SHELL（Minimal chrome：Logo + 8 步轨道 + 关闭）
+   ============================================================ */
+.sim{position:fixed; inset:0; z-index:80; display:none; flex-direction:column; background:var(--bg-layout)}
+.sim[aria-hidden="false"]{display:flex; animation:simIn .22s ease-out}
+@keyframes simIn{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+.sim-top{height:56px; flex:none; display:flex; align-items:center; gap:var(--sp-4); padding:0 var(--sp-5); border-bottom:1px solid var(--border-3); background:rgba(6,9,16,.85)}
+.sim-track{display:flex; gap:4px; margin-inline:auto; overflow-x:auto; scrollbar-width:thin}
+.sim-track button{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; color:var(--text-4); border:1px solid var(--border-2); background:var(--bg-container); flex:none; transition:.2s}
+.sim-track button:hover{color:var(--text); border-color:var(--glow-line)}
+.sim-track button.done{color:var(--glow); border-color:var(--glow-line)}
+.sim-track button.active{background:linear-gradient(140deg,var(--glow),#26B6F0); color:#04121A; border-color:transparent; box-shadow:0 0 0 3px var(--glow-dim)}
+.sim-body{flex:1; overflow:auto; padding:var(--sp-5)}
+.sim-inner{width:min(1400px,100%); margin-inline:auto; display:grid; gap:var(--sp-4)}
+.sim-meta{display:flex; align-items:center; gap:12px; flex-wrap:wrap; color:var(--text-3); font-size:12.5px}
+.sim-meta h1{margin:0;color:var(--text);font-size:20px;line-height:1.35;letter-spacing:-.01em}
+.sim-meta .flow{font-family:var(--mono); color:var(--glow)}
+.sim-actions{margin-left:auto;display:flex;gap:8px}
+.sim-grid{display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:var(--sp-4); align-items:start}
+.spec-rail{position:sticky; top:0; padding:var(--sp-4); border-radius:var(--r-lg); background:var(--bg-container); border:1px solid var(--border-2); display:grid; gap:12px; font-size:12.5px}
+.spec-rail h4{font-size:12px; color:var(--text-3); text-transform:uppercase; letter-spacing:.1em}
+.spec-rail dl{display:grid; gap:9px; margin:0}
+.spec-rail dt{font-family:var(--mono); font-size:10.5px; color:var(--text-4); letter-spacing:.08em}
+.spec-rail dd{margin:2px 0 0; color:var(--text-2); line-height:1.5}
+.spec-rail .branch{display:grid; gap:7px}
+.spec-rail .branch .btn[aria-pressed="true"]{border-color:var(--glow-line); color:var(--glow); background:var(--glow-dim); font-weight:600}
+.screen{padding:var(--sp-5); border-radius:var(--r-lg); background:var(--bg-container); border:1px solid var(--border-2); box-shadow:var(--sh-2)}
+
+/* ---------- 工作台外壳（模拟真实系统前端） ---------- */
+.wb{border:1px solid var(--border-2); border-radius:var(--r-md); overflow:hidden; background:var(--bg-layout); display:grid; grid-template-columns:236px minmax(0,1fr); min-height:520px}
+.wb-list{border-right:1px solid var(--border-3); background:var(--bg-sunken); padding:12px; display:grid; gap:8px; align-content:start}
+.wb-list .t{font-size:11px; color:var(--text-4); font-family:var(--mono); letter-spacing:.08em; margin-bottom:2px}
+.sess{padding:9px 11px; border-radius:var(--r-sm); border:1px solid transparent; font:inherit; text-align:left; width:100%; font-size:13px; color:var(--text-2); cursor:pointer; transition:.16s}
+.sess:hover{background:var(--bg-container)}
+.sess.on{background:var(--bg-elevated); border-color:var(--border-2); color:var(--text)}
+.sess small{display:block; font-size:11px; color:var(--text-4); margin-top:3px}
+.wb-main{display:flex; flex-direction:column; min-width:0}
+.wb-hd{padding:12px 16px; border-bottom:1px solid var(--border-3); display:flex; align-items:center; gap:10px; font-size:13.5px}
+.wb-stream{flex:1; padding:18px 16px; display:grid; gap:16px; align-content:start; overflow:auto}
+.wb-input{border-top:1px solid var(--border-3); padding:12px; background:var(--bg-sunken)}
+.bubble{display:flex; gap:11px}
+.bubble .av{width:30px; height:30px; border-radius:9px; flex:none; display:grid; place-items:center; font-size:12px; font-weight:700; color:#04121A; background:linear-gradient(140deg,var(--accent),var(--violet))}
+.bubble .av.z{background:linear-gradient(140deg,var(--glow),#26B6F0)}
+.bubble .av.u{background:var(--bg-elevated); color:var(--text-2); border:1px solid var(--border-2)}
+.bubble .body{flex:1; min-width:0}
+.bubble .who{font-size:11.5px; color:var(--text-3); margin-bottom:5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.bubble .txt{background:var(--bg-elevated); border:1px solid var(--border-2); border-radius:12px; padding:12px 14px; font-size:14px; color:var(--text)}
+.bubble.me .txt{background:rgba(76,141,255,.1); border-color:rgba(76,141,255,.28)}
+.route-bar{margin:0 0 12px; padding:9px 12px; border-radius:var(--r-sm); border:1px dashed var(--glow-line); background:var(--glow-dim); font-size:12.5px; color:var(--text-2); display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.route-bar.self{border-color:var(--border); background:var(--bg-container); }
+.tool-card{border:1px solid var(--border-2); border-radius:var(--r-sm); background:var(--bg-sunken); margin-top:10px; overflow:hidden}
+.tool-card .th{display:flex; align-items:center; gap:9px; padding:9px 12px; font-size:12.5px; cursor:pointer; background:rgba(19,28,43,.5)}
+.tool-card .th .nm{font-family:var(--mono); color:var(--text); font-size:12px}
+.tool-card .th .du{margin-left:auto; color:var(--text-4); font-family:var(--mono); font-size:11px}
+.tool-card .pre{border-top:1px solid var(--border-3); padding:10px 12px; font-family:var(--mono); font-size:11.5px; color:var(--text-3); white-space:pre-wrap; display:none}
+.tool-card.open .pre{display:block}
+.progress-steps{display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--text-4)}
+.progress-steps i{display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:var(--r-pill); border:1px solid var(--border-2); font-style:normal; background:var(--bg-container)}
+.progress-steps i.done{color:var(--glow); border-color:var(--glow-line)}
+.progress-steps i.now{color:var(--text); border-color:var(--accent); background:rgba(76,141,255,.1)}
+.agent-card{margin-top:10px; border:1px solid var(--border-2); border-radius:var(--r-sm); padding:11px 13px; background:var(--bg-sunken); font-size:13px; display:grid; gap:7px}
+.agent-card .hd{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.confirm-card{border:1px solid rgba(245,165,36,.4); border-radius:var(--r-md); background:rgba(245,165,36,.06); padding:15px; margin-top:12px; display:grid; gap:12px}
+.confirm-card h5{margin:0; font-size:14.5px}
+.confirm-card .meta{font-family:var(--mono); font-size:11.5px; color:var(--text-3); display:grid; gap:5px}
+.confirm-card .diff{font-family:var(--mono); font-size:12px; border-radius:var(--r-sm); overflow:hidden; border:1px solid var(--border-2)}
+.confirm-card .diff div{padding:7px 11px; display:flex; gap:9px}
+.confirm-card .diff .del{background:rgba(255,92,108,.08); color:#FFC7CD}
+.confirm-card .diff .add{background:rgba(62,207,142,.08); color:#B8F0D2}
+.confirm-card .btns{display:flex; gap:9px; flex-wrap:wrap}
+.confirm-card .decided{font-size:13px; color:var(--text-2); padding:10px 12px; border-radius:var(--r-sm); background:var(--bg-container); border:1px solid var(--border-2)}
+.cite{display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:var(--r-pill); font-size:11.5px; background:rgba(76,141,255,.12); border:1px solid rgba(76,141,255,.3); color:#BFD8FF; vertical-align:2px; cursor:pointer}
+.src-list{display:grid; gap:10px}
+.src{padding:12px; border-radius:var(--r-md); border:1px solid var(--border-2); background:var(--bg-sunken)}
+.src .hd{display:flex; gap:9px; align-items:center; margin-bottom:7px; flex-wrap:wrap}
+.src .sc{font-size:11px; color:var(--text-4); font-family:var(--mono); flex-basis:100%}
+.src .frag{font-size:12.5px; color:var(--text-3); border-left:2px solid var(--glow-line); padding-left:10px; margin-top:8px}
+.drawer{position:absolute; inset:0 0 0 auto; width:min(430px,86%); background:var(--bg-container); border-left:1px solid var(--border-2); box-shadow:var(--sh-3); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); z-index:5}
+.drawer.open{transform:none}
+.drawer .dh{display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border-3)}
+.drawer .db{flex:1; overflow:auto; padding:16px; position:relative}
+.wb-hd .tabs{display:flex; gap:4px; margin-left:auto; flex-wrap:wrap}
+.tab{padding:6px 12px; border-radius:var(--r-pill); font-size:12.5px; color:var(--text-3); border:1px solid transparent}
+.tab:hover{color:var(--text)}
+.tab.on{background:var(--bg-elevated); border-color:var(--border-2); color:var(--text)}
+table.tbl{width:100%; border-collapse:collapse; font-size:13px}
+table.tbl th{text-align:left; font-weight:600; font-size:11.5px; color:var(--text-3); text-transform:uppercase; letter-spacing:.06em; padding:10px 12px; border-bottom:1px solid var(--border-2); white-space:nowrap; background:var(--bg-sunken)}
+table.tbl td{padding:11px 12px; border-bottom:1px solid var(--border-3); color:var(--text-2); vertical-align:top}
+table.tbl tr:hover td{background:rgba(19,28,43,.45)}
+table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
+.stat-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.stat{padding:14px; border-radius:var(--r-md); border:1px solid var(--border-2); background:var(--bg-sunken)}
+.stat span{font-size:11.5px; color:var(--text-4); display:block}
+.stat b{font-size:23px; font-weight:700; letter-spacing:-.02em; display:block; margin-top:5px}
+.stat em{font-style:normal; font-size:11.5px; color:var(--glow)}
+.bar-chart{display:grid; gap:9px; margin-top:14px}
+.bar-chart .r{display:grid; grid-template-columns:96px minmax(0,1fr) 78px; align-items:center; gap:10px; font-size:12px; color:var(--text-3)}
+.bar-chart .b{height:8px; border-radius:var(--r-pill); background:var(--border-2); overflow:hidden}
+.bar-chart .b i{display:block; height:100%; border-radius:var(--r-pill); background:linear-gradient(90deg,var(--glow),var(--accent))}
+.health-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:9px}
+.hc{padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--border-2); background:var(--bg-sunken); font-size:12.5px; display:flex; align-items:center; gap:9px}
+.hc .led{width:8px; height:8px; border-radius:50%; flex:none}
+.hc.pass .led{background:var(--ok); box-shadow:0 0 8px var(--ok)}
+.hc.warn .led{background:var(--warn); box-shadow:0 0 8px var(--warn)}
+.hc.fail .led{background:var(--err); box-shadow:0 0 8px var(--err)}
+.hc.info .led{background:var(--accent); box-shadow:0 0 8px var(--accent)}
+.hc small{margin-left:auto; font-family:var(--mono); font-size:10.5px; color:var(--text-4)}
+.checklist{display:grid; gap:10px}
+.cl-item{display:flex; gap:12px; align-items:center; padding:13px 15px; border-radius:var(--r-md); border:1px solid var(--border-2); background:var(--bg-sunken)}
+.cl-item .n{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; border:1px solid var(--border); color:var(--text-4); flex:none}
+.cl-item.done{border-color:rgba(62,207,142,.35)}
+.cl-item.done .n{background:var(--ok); color:#04121A; border-color:transparent}
+.resource-check{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.cl-item:focus-within{outline:2px solid var(--glow);outline-offset:3px}
+.cl-item.now{border-color:var(--glow-line); box-shadow:var(--glow-ring)}
+.cl-item.now .n{color:var(--glow); border-color:var(--glow-line)}
+.cl-item .tt{flex:1; min-width:0; font-size:14px}
+.cl-item .tt small{display:block; font-size:12px; color:var(--text-3); margin-top:2px}
+.empty{text-align:center; padding:44px 20px; color:var(--text-3)}
+.empty .ic{width:52px; height:52px; margin:0 auto 14px; border-radius:16px; border:1px dashed var(--border); display:grid; place-items:center; color:var(--text-4); font-size:20px}
+.banner{padding:13px 15px; border-radius:var(--r-md); border:1px solid var(--glow-line); background:var(--glow-dim); font-size:13.5px; display:flex; gap:11px; align-items:center; flex-wrap:wrap}
+.banner.err{border-color:rgba(255,92,108,.4); background:rgba(255,92,108,.07)}
+.banner.warn{border-color:rgba(245,165,36,.4); background:rgba(245,165,36,.07)}
+.notice{font-size:12px; color:var(--text-4); display:flex; gap:8px; align-items:flex-start; line-height:1.5}
+.notice::before{content:"ⓘ"; color:var(--glow); flex:none}
+.field{display:grid; gap:6px; margin-bottom:14px}
+.field label{font-size:12.5px; color:var(--text-3)}
+.field input,.field select,.field textarea{padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--border-2); background:var(--bg-sunken); color:var(--text); font:inherit; font-size:14px}
+.field input:focus{outline:none; border-color:var(--glow-line); box-shadow:0 0 0 3px var(--glow-dim)}
+.field .hint{font-size:11.5px; color:var(--text-4)}
+.kv{display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 14px; font-size:12.5px}
+.kv dt{color:var(--text-4); font-family:var(--mono)}
+.kv dd{margin:0; color:var(--text-2)}
+.spinner{width:14px; height:14px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--glow); animation:spin .8s linear infinite; display:inline-block; vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.shim{height:14px; border-radius:6px; background:linear-gradient(90deg,var(--bg-elevated),var(--bg-container),var(--bg-elevated)); background-size:200% 100%; animation:shim 1.2s linear infinite}
+@keyframes shim{to{background-position:-200% 0}}
+.steps-h{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--text-4); font-family:var(--mono)}
+
+/* ============================================================
+   通用视图容器（#/exit #/qa #/onboard 及降级页）
+   ============================================================ */
+.view{display:none; padding-top:var(--nav-h); min-height:100vh; position:relative; z-index:1}
+.view.on{display:block}
+#view-landing.on{display:block}
+.view-hd{padding:var(--sp-7) 0 var(--sp-5)}
+.view-hd h1{font-size:clamp(24px,3vw,34px)}
+.view-hd p{color:var(--text-2); margin-top:12px; max-width:70ch}
+.flow-cards{display:grid; gap:var(--sp-4)}
+.screen-block{padding:var(--sp-5); border-radius:var(--r-lg); background:var(--bg-container); border:1px solid var(--border-2); display:grid; gap:var(--sp-4)}
+.screen-block .sh{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding-bottom:14px; border-bottom:1px solid var(--border-3)}
+.screen-block .sh .id{font-family:var(--mono); font-size:11.5px; color:var(--glow); letter-spacing:.08em}
+.screen-block .sh h3{font-size:18px}
+.screen-block .sh .entry{margin-left:auto; font-size:12px; color:var(--text-4)}
+.states{display:flex; gap:8px; flex-wrap:wrap; padding-top:6px}
+.pill-toggle{display:inline-flex; padding:3px; gap:3px; border-radius:var(--r-pill); background:var(--bg-sunken); border:1px solid var(--border-2)}
+.pill-toggle button{padding:6px 13px; border-radius:var(--r-pill); font-size:12.5px; color:var(--text-3)}
+.pill-toggle button.on{background:var(--bg-elevated); color:var(--text); border-radius:var(--r-pill)}
+.terminal{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:6px}
+.term{padding:13px; border-radius:var(--r-md); border:1px solid var(--border-2); background:var(--bg-sunken); font-size:12.5px}
+.term b{display:block; font-size:12.5px; margin-bottom:5px}
+.term.ok{border-color:rgba(62,207,142,.3)} .term.ok b{color:var(--ok)}
+.term.err{border-color:rgba(255,92,108,.3)} .term.err b{color:var(--err)}
+.term.ab{border-color:var(--border-2)} .term.ab b{color:var(--text-3)}
+.terminal-cta{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px}
+
+/* 响应式断点（质量标准 #3：≥3 断点，写明栅格/间距/密度变化）
+   ≥1280 桌面：营销 6 列栅格；模拟层 spec rail 常驻右侧
+   1100-1279 笔电：能力域 3→2 列；rail 下移；hero 栅格保持双列但收窄
+   860-1099 平板：hero/arch/qa 转单列；轨道节点只显数字+短标签；表格横向滚动
+   ≤859 手机：全部单列；rail 折叠；工作台隐藏会话列表列；轨道横向滚动 */
+@media(max-width:1279px){
+  .metrics .container{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .domains{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sim-grid{grid-template-columns:minmax(0,1fr)}
+  .spec-rail{position:static}
+  footer .cols{grid-template-columns:1fr 1fr 1fr}
+}
+@media(max-width:1099px){
+  :root{--sp-9:64px}
+  .hero-grid,.arch,.qa-block,.flow-panel{grid-template-columns:minmax(0,1fr)}
+  .node .lbl{font-size:11px}
+  .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .terminal{grid-template-columns:minmax(0,1fr)}
+  table.tbl{font-size:12.5px}
+  .tbl-wrap{overflow-x:auto}
+}
+@media(max-width:859px){
+  .nav-links{display:none}
+  .metrics .container{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .domains{grid-template-columns:minmax(0,1fr)}
+  footer .cols{grid-template-columns:1fr 1fr}
+  .ring-dock{left:12px;right:12px;top:auto;bottom:12px;width:auto;transform:translateY(24px);border-radius:18px}
+  .ring-dock.visible{transform:translateY(0)}
+  .ring-dock.collapsed{left:12px;right:12px;width:auto;padding:8px 10px;display:flex;align-items:center;gap:10px}
+  .ring-dock.collapsed .ring-mini{display:flex;flex:1;flex-direction:row;justify-content:space-between}
+  .ring-viewport{height:210px}
+  #trackList{transform:rotateX(-7deg) rotateY(var(--rotation)) scale(.88)}
+  .wb{grid-template-columns:minmax(0,1fr)}
+  .wb-list{display:none}
+  .sim-top{padding:10px 12px;gap:8px;height:auto;min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto}
+  .sim-track{grid-column:1/-1;grid-row:2;width:100%;margin:0;gap:2px;justify-content:space-between;padding:3px 0}
+  .sim-track button{width:44px;height:44px}
+  #simClose{min-height:44px}
+  .btn-sm{min-height:44px}
+  .flip-btn{min-height:44px}
+  .sim-meta{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 12px}
+  .sim-meta h1{font-size:19px}
+  .sim-meta>.tag{justify-self:end}
+  .sim-actions{grid-column:1/-1;margin-left:0}
+  .sim-actions .btn{flex:1}
+  .sim-body{padding:16px}
+  .drawer{width:100%; border-left:0}
+  .sim-top .brand .name small{display:none}
+  .stat-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .container{width:calc(100% - 32px)}
+}
+@media(max-width:420px){
+  .swarm-links{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1!important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+  .title-lit .hero h1 .title-fill{animation:none;clip-path:inset(0);filter:drop-shadow(0 0 5px rgba(49,225,196,.18));background-position:0 0}
+  .swarm-cursor,.swarm-piece,.swarm-grid{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ 营销层导航 ============================ -->
+<nav class="nav" id="nav">
+  <div class="container">
+    <a class="brand" href="#/" aria-label="AgentHub 首页">
+      <span class="mark" aria-hidden="true"></span>
+      <span class="name">AgentHub<small>企业级智能业务运行平台</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="#flow">运行流程</a>
+      <a href="#domains">能力</a>
+      <a href="#arch">架构</a>
+      <a href="#trial">在线体验</a>
+    </div>
+    <div class="nav-cta">
+      <button class="btn btn-ghost btn-sm" data-exit="doc">开发文档</button>
+      <button class="btn btn-primary btn-sm" data-exit="system">进入系统</button>
+    </div>
+  </div>
+</nav>
+
+<main id="view-landing" class="view on">
+
+  <!-- ==================== 区块 1 · HERO ==================== -->
+  <header class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">AgentHub · 2026</span>
+        <!-- 文案草案：仓库无正式 slogan，按设计稿 §1 定位句改写，待队长审定 -->
+        <div class="title-lock">
+          <h1><span class="title-line"><span class="title-outline" aria-hidden="true">让每一次 AI 作业</span><span class="title-fill">让每一次 AI 作业</span></span><span class="title-line"><span class="title-outline" aria-hidden="true">可运营 · 可审计 · 可控 · 可评测</span><span class="title-fill hl">可运营 · 可审计 · 可控 · 可评测</span></span></h1>
+          <div class="title-aim" aria-hidden="true"><span class="aim-frame"></span><i class="aim-corner tl"></i><i class="aim-corner tr"></i><i class="aim-corner bl"></i><i class="aim-corner br"></i><span class="aim-cross"></span><span class="title-warm"></span><span class="title-needle"></span></div>
+        </div>
+        <p class="lead">用户用自然语言提问，入口智能体「小Z」判定意图并路由到领域专家；专家在受控权限内调用工具与知识库完成作业，写操作经人工确认后落地，每一环都留下可查的凭证。</p>
+        <div class="four">
+          <span class="tag glow">可运营</span><span class="tag glow">可审计</span><span class="tag glow">可控</span><span class="tag glow">可评测</span>
+          <span class="tag draft">文案草案 · 待队长审定</span>
+        </div>
+        <div class="ctas">
+          <button class="btn btn-primary" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
+          <a class="btn btn-ghost" href="#flow">观看运行流程</a>
+        </div>
+        <p class="hero-note"><span aria-hidden="true">⌁</span> 真实系统部署在云服务器，前端与 API 同源；本页只承载介绍、公开问答与跳转链接，不承载真实系统页面、不接触业务数据。</p>
+      </div>
+      <div>
+        <div class="hero-stage">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>AgentHub · 任务工作台（模拟）</span></div>
+          <div class="mini" id="heroMini" aria-hidden="true"></div>
+          <div class="swarm-stage" id="swarmLayer" aria-hidden="true"></div>
+          <div class="foot"><span id="heroMiniLabel">小Z 路由 → 专家作业 → HITL 确认 → 留痕</span><button class="btn btn-ghost btn-sm" id="heroReplay" type="button">↻ 重播构建</button><span class="tag info">智能模拟数据</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 区块 2 · 数字证明带 ==================== -->
+  <section class="metrics" aria-label="平台规模与评测基线">
+    <div class="container">
+      <div class="metric"><b>6</b><span>大能力域</span></div>
+      <div class="metric"><b>34</b><span>功能页</span></div>
+      <div class="metric"><b>98</b><span>按钮权限</span></div>
+      <div class="metric"><b>40</b><span>张 <em>ai_</em> 表 · 双方言</span></div>
+      <div class="metric"><b>75.0%</b><span>RAG hit@1 <em>基线</em></span></div>
+      <div class="metric"><b>0.829</b><span>MRR@5 <em>基线</em></span></div>
+    </div>
+  </section>
+
+  <!-- ==================== 区块 3 · 流程动画区（核心） ==================== -->
+  <section class="sec flowsec" id="flow">
+    <div class="container">
+      <div class="sec-h">
+        <div>
+          <span class="eyebrow">一轮对话的完整链路</span>
+          <h2 style="margin-top:12px">8 步跑完：从提问到复盘</h2>
+          <p class="sub">口径取自《开发总览手册》§6.1 核心链路：能自己答就不路由、专家正文不被二次改写、写操作一律受控、每一环都留痕。点任意节点进入高保真走查。</p>
+        </div>
+        <div class="playbar">
+          <button class="btn btn-ghost btn-sm" id="playBtn" aria-pressed="false">▶ 播放</button>
+          <div class="prog" aria-hidden="true"><i id="playProg"></i></div>
+        </div>
+      </div>
+
+      <div class="ring-dock" id="ringDock" role="region" aria-label="八步运行流程 3D 圆环" data-state="idle">
+        <div class="ring-dock-head"><span>FLOW ORBIT</span><button class="ring-dock-toggle" id="ringDockToggle" type="button" aria-expanded="true" aria-label="收起八步圆环">−</button></div>
+        <div class="ring-dock-body">
+          <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
+          <div class="ring-viewport"><ol id="trackList" aria-label="8 步运行流程"></ol></div>
+          <button class="ring-arrow" id="ringNext" type="button" aria-label="下一步">→</button>
+        </div>
+        <div class="ring-dock-foot"><span class="ring-caption" id="ringCaption">01 / 08 · 首登就绪</span><button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button></div>
+        <div class="ring-mini" id="ringMini" aria-label="八步紧凑导航"></div>
+      </div>
+
+      <div class="flow-panel" style="margin-top:var(--sp-5)">
+        <div class="card detail" id="flowDetail"></div>
+        <div class="card preview" id="flowPreview" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 区块 4 · 能力清单（6 大能力域） ==================== -->
+  <section class="sec" id="domains">
+    <div class="container">
+      <div class="sec-h">
+        <div>
+          <span class="eyebrow">能力域</span>
+          <h2 style="margin-top:12px">6 大能力域，34 个功能页</h2>
+          <p class="sub">分组口径=《开发总览手册》§7.2 前端页面结构。每域标注它在 8 步链路里承担的环节。</p>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="#arch">看架构 ↓</a>
+      </div>
+      <div class="domains" id="domainGrid"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 区块 5 · 架构区 ==================== -->
+  <section class="sec" id="arch">
+    <div class="container">
+      <div class="sec-h">
+        <div>
+          <span class="eyebrow">部署形态</span>
+          <h2 style="margin-top:12px">介绍页公开，业务跑在云上</h2>
+          <p class="sub">拓扑口径=设计稿 §2.2。浏览器只与本 Pages 层交互；「进入系统」是链接跳转，不在本页发起任何业务 API 调用。</p>
+        </div>
+      </div>
+      <div class="arch">
+        <div class="topo">
+          <div class="tier"><span class="cap">L1 · 浏览器</span>
+            <div class="boxes"><div class="box pub"><b>产品介绍页</b><span>Qoder Sites · 公开访问</span></div><div class="box"><b>在线体验问答</b><span>云端 Agent，仅公开内容</span></div></div>
+          </div>
+          <div class="arrow">「进入系统」「开发文档」= 仅链接跳转，不发起业务调用</div>
+          <div class="tier"><span class="cap">L2 · 云服务器（公网 IP + 域名 + 证书）</span>
+            <div class="boxes"><div class="box srv"><b>Nginx</b><span>前端静态产物 + /prod-api 反代 + SSE</span></div><div class="box srv"><b>Spring Boot</b><span>单 jar，内含 AgentScope Java 内核</span></div></div>
+          </div>
+          <div class="arrow">真实系统前端与 API 同源伺服 · 前后端同版本发布</div>
+          <div class="tier"><span class="cap">L3 · 数据与中间件</span>
+            <div class="boxes"><div class="box"><b>PostgreSQL 14</b><span>PG 栈 :8080</span></div><div class="box"><b>MySQL 8.0</b><span>MySQL 栈 :8081</span></div><div class="box"><b>Redis</b><span>会话状态 / HITL / 锁 / 限流</span></div><div class="box"><b>Milvus + etcd</b><span>向量集合 + BM25 集合</span></div><div class="box"><b>对象存储</b><span>附件 / 文档原文 / 大结果</span></div></div>
+          </div>
+        </div>
+        <div class="boundary">
+          <h3 style="font-size:16px; margin-bottom:2px">数据边界与暴露收敛</h3>
+          <div class="item"><i aria-hidden="true"></i><div><b>密钥只在服务端</b><p>模型密钥、渠道凭据、MCP 请求头密文落库；介绍页侧不放任何密钥。</p></div></div>
+          <div class="item"><i aria-hidden="true"></i><div><b>云端 Agent 不接触业务数据</b><p>在线体验问答只用公开介绍内容与平台使用文档，不接入业务知识库正文、工具回参、会话数据或任何 PII。</p></div></div>
+          <div class="item"><i aria-hidden="true"></i><div><b>系统必须登录</b><p>演示期采用演示账号 + IP 白名单；写工具确认链路不无鉴权暴露公网；管理页深链需鉴权回跳。</p></div></div>
+          <div class="item"><i aria-hidden="true"></i><div><b>私有化可整体搬走</b><p>整套系统可私有化部署在云服务器，运行不依赖介绍页。</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 区块 6 · 在线体验问答 ==================== -->
+  <section class="sec" id="trial">
+    <div class="container qa-block">
+      <div>
+        <span class="eyebrow">在线体验</span>
+        <h2 style="margin-top:12px; font-size:clamp(24px,3vw,34px)">先问它，再决定</h2>
+        <p class="sub" style="color:var(--text-2); margin-top:12px">云端 Agent 回答平台使用问题：怎么配专家、写工具为什么要确认、审计在哪看。答案附开发文档出处。</p>
+        <div class="chips" style="margin-top:22px">
+          <button class="chip" data-q="专家提示词怎么写才好？">专家提示词怎么写才好？</button>
+          <button class="chip" data-q="写工具为什么要人工确认？">写工具为什么要人工确认？</button>
+          <button class="chip" data-q="审计在哪里看？">审计在哪里看？</button>
+        </div>
+        <div class="terminal-cta">
+          <a class="btn btn-primary" href="#/qa">开始问答</a>
+          <span class="tag err">数据边界常驻</span>
+        </div>
+      </div>
+      <div class="qa-demo">
+        <div class="hd"><span class="tag glow">云端 Agent</span><span class="muted" style="font-size:12.5px">只答平台使用问题 · 不接触业务数据</span></div>
+        <div class="bubble"><span class="av z" aria-hidden="true">小Z</span><div class="body"><p class="txt">写操作命中「需确认」档位时本轮暂停，对话内弹确认卡片；你处置后同轮继续，决策写入权限决策审计。这是三层权限模型的第 ② 层。</p></div></div>
+        <div class="states" style="margin-top:14px"><span class="tag">允许本次</span><span class="tag">记住该工具</span><span class="tag err">拒绝</span></div>
+        <div class="notice" style="margin-top:14px">来源：《开发总览手册》§6.3 三层权限模型（演示为模拟回答，非真实模型输出）</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 区块 7 · FINAL CTA + FOOTER ==================== -->
+  <section class="final">
+    <div class="container">
+      <h2>进入系统，跑一轮你自己的</h2>
+      <p>演示账号与 IP 白名单由管理员发放；登录后先到任务工作台首登检查清单，4 项配完即可提问。</p>
+      <div class="ctas">
+        <button class="btn btn-primary" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
+        <button class="btn btn-ghost" data-exit="doc">开发文档</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="cols">
+        <div>
+          <a class="brand" href="#/"><span class="mark" aria-hidden="true"></span><span class="name">AgentHub<small>企业级智能业务运行平台</small></span></a>
+          <p style="font-size:13px; color:var(--text-3); margin-top:14px; max-width:34ch">本页仅承载产品介绍、公开内容问答与跳转链接，不承载真实系统页面，不保存密钥，不接触业务数据。</p>
+        </div>
+        <div><h4>产品</h4><ul><li><a href="#flow">运行流程</a></li><li><a href="#domains">能力域</a></li><li><a href="#arch">部署架构</a></li><li><a href="#trial">在线体验</a></li></ul></div>
+        <div><h4>走查</h4><ul><li><a href="#/flow/1">S1 首登就绪</a></li><li><a href="#/flow/5">S5 写操作确认</a></li><li><a href="#/flow/7">S7 全链路留痕</a></li><li><a href="#/onboard">E 首登引导深化</a></li></ul></div>
+        <div><h4>出口</h4><ul><li><a href="#/exit">进入系统（跳转说明）</a></li><li><a href="#/exit">开发文档（跳转说明）</a></li><li><a href="#/qa">平台使用问答</a></li></ul></div>
+      </div>
+      <div class="legal">
+        <span>© 2026 AgentHub · 高保真设计稿，界面与数据均为智能模拟，不含真实功能与业务数据。</span>
+        <span class="mono">mockup v1 · 文案待队长审定</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<!-- ============================ 其余视图（C / D / E / 降级） ============================ -->
+<main id="view-exit" class="view container"></main>
+<main id="view-qa" class="view container"></main>
+<main id="view-onboard" class="view container"></main>
+
+<!-- ============================ 模拟层（Flow A + B · 8 屏） ============================ -->
+<div class="sim" id="sim" role="region" aria-label="8 步运行流程高保真走查" aria-hidden="true">
+  <div class="sim-top">
+    <a class="brand" href="#/"><span class="mark" aria-hidden="true"></span><span class="name" style="font-size:15px">AgentHub<small>运行流程走查 · 模拟</small></span></a>
+    <div class="sim-track" id="simTrack" role="tablist" aria-label="流程步骤"></div>
+    <button class="btn btn-ghost btn-sm" id="simClose">✕ 关闭走查</button>
+  </div>
+  <div class="sim-body"><div class="sim-inner" id="simInner"></div></div>
+</div>
+
+<script>
+/* ============================================================
+   数据层（口径来源见各行注释；全部为智能模拟数据）
+   ============================================================ */
+const STEPS = [
+  { id:1, key:"首登就绪", short:"S1 首登就绪", flow:"A", title:"首登引导 · 任务工作台",
+    desc:"管理员首次登录、会话为空时，工作台显示 4 项首登检查：对话模型密钥 / 向量模型密钥 / 文档解析与向量化 / 发送首条消息。状态由服务端实时推导，点击直达对应页。",
+    src:"手册 §4.1.1 首登检查清单", chips:["会话列表","消息流","首登清单 4 项","服务端实时推导"], anchor:"智能体" },
+  { id:2, key:"组建资源", short:"S2 组建资源", flow:"A", title:"组建本轮资源",
+    desc:"底栏输入框的资源选择器分组勾选：专家 / 场景包 / 技能 / MCP 工具，并可上传附件。选中项以 chip 展示、可移除；业务工具不提供用户直选入口，只能由智能体、场景包或技能绑定生效。",
+    src:"手册 §4.1.1 输入栏资源选择器 / 附件", chips:["分组选择器","chip 可移除","附件 ≤5 个","业务工具不可直选"], anchor:"工具集成" },
+  { id:3, key:"提问路由", short:"S3 提问 · 小Z", flow:"A", title:"提问与小Z 判定",
+    desc:"小Z 用唯一内置协议工具 route_decision 判定：能准确回答就 self 自答，需要领域能力就 route 选专家并下发任务片段。判定结果以路由提示条呈现，「能自己答就不路由」。",
+    src:"手册 §6.1 ② 判定 / §4.1.2 route_decision", chips:["route_decision","路由提示条","自答分支","任务片段"], anchor:"智能体" },
+  { id:4, key:"专家作业", short:"S4 专家作业", flow:"A", title:"专家流式作业",
+    desc:"专家带只读工具 / 知识库 / 技能作业，进度按思考 → 调用工具 → 咨询专家 → 汇总四段播报，正文直接交付用户、小Z 不再转述。工具调用卡片默认收起，专家侧调用在主会话汇总为「工具调用 N 次」。",
+    src:"手册 §6.1 ③ 作业 / §4.1.1 消息流", chips:["四段进度","工具调用卡片","专家卡片","正文不被二次改写"], anchor:"智能体" },
+  { id:5, key:"HITL 确认", short:"S5 HITL", flow:"B", title:"写操作人工确认（HITL）",
+    desc:"写工具命中「需确认」档即本轮暂停，对话内弹确认卡片：允许本次 / 记住该工具 / 拒绝。执行期还会按提问用户复核业务权限；刷新页面后卡片可还原。",
+    src:"手册 §6.3 三档授权 / §6.1 ④ 写工具", chips:["0 允许 / 1 需确认 / 2 禁止","本轮暂停","ConfirmResult 恢复","执行期业务权限复核"], anchor:"安全" },
+  { id:6, key:"交付溯源", short:"S6 溯源", flow:"B", title:"回答交付与参考来源",
+    desc:"正文流式落成后，命中片段以来源卡片抽屉呈现（标题 / 所属知识库 / 相似度 / 片段），查看全文需要对应权限。无对应权限时入口不渲染，而不是点了报错。",
+    src:"手册 §4.1.1 参考来源 / §7.3 权限驱动显隐", chips:["来源卡片抽屉","相似度与片段","查看全文需权限","向量 + BM25 + Rerank"], anchor:"知识库" },
+  { id:7, key:"全链路留痕", short:"S7 审计", flow:"B", title:"全链路留痕审计",
+    desc:"本轮留下六类审计：消息 / 工具 / 权限决策 / 链路追踪 / 编排运行 / 日报。审计表按保留策略清理（默认 180 天，清理范围不含会话正文），每日 03:30 执行。",
+    src:"手册 §7.2 审计观测 / 设计稿 §12.4", chips:["六类审计","入参出参耗时","决策与确认","保留 180 天"], anchor:"审计观测" },
+  { id:8, key:"运营复盘", short:"S8 复盘", flow:"B", title:"运营复盘",
+    desc:"每天 08:00 生成昨日日报五块：用量配额 / 定时任务成败 / 待办积压 / 权限决策 / 登录。数字服务端现取、模型只出日期与正文。健康自检按 FAIL / WARN / INFO 三档出结论，发布门禁要求 0 FAIL。",
+    src:"手册 §12 / 设计稿 §12.3-12.4", chips:["08:00 日报五块","Token 用量","配额","健康自检三档"], anchor:"模型" },
+];
+
+const DOMAINS = [
+  { name:"智能体", cnt:"8 页", step:2, pages:["任务工作台","小Z 配置","专家配置","任务管理","定时任务","技能仓库","子智能体","场景包"],
+    li:["唯一入口智能体 + route_decision 协议工具","9 类领域模板一键套用，保存前体检只建议不硬拦","实例按「智能体 × 会话资源集签名」装配缓存"],out:"路由决策 · 任务片段 · 运行记录",boundary:"能自答就不路由；专家正文直接交付，小Z 不再转述。" },
+  { name:"模型", cnt:"4 页", step:8, pages:["模型配置","用量配额","上下文压缩","编排预算"],
+    li:["连通性测试不保存即可试","日 / 月 Token 与请求配额按智能体与用户双维度计","编排预算触顶即停止重试并降级如实说明"],out:"配额账单 · 压缩结果 · 预算降级",boundary:"预算触顶即停止重试；降级原因如实说明，不伪装成功。" },
+  { name:"知识库", cnt:"3 页", step:6, pages:["知识库","文档切片","检索测试"],
+    li:["向量 + BM25 混合检索，索引未就绪自动降级纯向量","Rerank 未配或超时保持向量原序","56 用例 / 10 篇语料基线：hit@1 75.0%、MRR@5 0.829"],out:"命中片段 · 来源卡片 · 检索评测",boundary:"查看全文需对应权限；索引未就绪时自动降级纯向量。" },
+  { name:"工具集成", cnt:"4 页", step:5, pages:["工具注册","MCP 服务端","MCP 客户端","渠道接入"],
+    li:["两段式：表元数据 + 代码侧工厂，杜绝裸 SQL / Shell 万能工具","MCP 双向：既接外部工具，也对外暴露","四渠道 Webhook + 长连接"],out:"工具注册 · MCP 连接 · 调用凭证",boundary:"写工具命中三档授权；执行期再次复核业务权限。" },
+  { name:"审计观测", cnt:"8 页", step:7, pages:["消息审计","工具审计","权限审计","追踪审计","编排运行","平台运行日报","健康自检","保留管理"],
+    li:["六类审计逐轮留痕，链路追踪看耗时分布","日报五块数字服务端现取","健康自检三档，发布门禁 0 FAIL"],out:"六类审计 · trace · 运营日报",boundary:"默认保留 180 天；清理范围不含会话正文。" },
+  { name:"安全", cnt:"3 页", step:5, pages:["敏感词","安全事件","合规配置"],
+    li:["三档授权 + 执行期业务权限复核，纵深防御","外部审核引擎缺配置时降级本地词库","无人值守链路写工具默认拒绝，仅白名单放行"],out:"授权决策 · 安全事件 · 合规配置",boundary:"无人值守链路的写工具默认拒绝，仅白名单放行。" },
+];
+
+/* ---------- 小工具 ---------- */
+const $ = (s,r)=>(r||document).querySelector(s);
+const $$ = (s,r)=>Array.from((r||document).querySelectorAll(s));
+const esc = t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ============================================================
+   L1 营销页渲染
+   ============================================================ */
+const FLOW_ICONS = [
+  '<circle cx="12" cy="8" r="3"/><path d="M6 19v-2a6 6 0 0 1 12 0v2M4 5h3M4 11h3M17 5h3M17 11h3"/>',
+  '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M17 14v6M14 17h6"/>',
+  '<path d="M4 5h16v10H9l-5 4zM8 9h8M8 12h5"/>',
+  '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM8 12l3 3 5-6"/>',
+  '<path d="M4 4h7v16H4zM13 4h7v16h-7zM6.5 8h2M15.5 8h2M6.5 12h2M15.5 12h2M6.5 16h2M15.5 16h2"/>',
+  '<path d="M4 4h16v16H4zM8 9h8M8 13h8M8 17h5"/>',
+  '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>'
+];
+function renderTrack(){
+  $("#trackList").innerHTML = STEPS.map(s=>`
+    <li style="--angle:${(s.id-1)*45}deg"><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
+      <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[s.id-1]}</svg></span><span class="lbl">${s.key}</span><span class="grp">FLOW ${s.flow}</span>
+    </button></li>`).join("");
+  $("#ringMini").innerHTML = STEPS.map(s=>`<button type="button" data-ring-step="${s.id}" aria-label="切换到第 ${s.id} 步 ${s.short}"><span class="mini-mark" aria-hidden="true"></span></button>`).join("");
+}
+function renderFlowDetail(idx){
+  const s = STEPS[idx];
+  $("#flowDetail").innerHTML = `
+    <div class="idx">FLOW ${s.flow} · ${s.src}</div>
+    <h3>${esc(s.title)}</h3>
+    <p class="desc">${esc(s.desc)}</p>
+    <div class="chips">${s.chips.map(c=>`<span class="tag">${esc(c)}</span>`).join("")}</div>
+    <div class="acts">
+      <a class="btn btn-primary btn-sm" href="#/flow/${s.id}">查看运行过程</a>
+      <a class="btn btn-ghost btn-sm" href="#domains">了解${esc(s.anchor)}能力</a>
+    </div>`;
+  const map = {1:["会话列表","空态 + 4 项检查","服务端实时推导"],2:["分组：专家/场景/技能/MCP","chip 可移除","附件 512KB / 5MB 上限"],3:["route_decision","action=route｜self","提示条：自答 / 路由 / 已指定"],4:["思考→调用→咨询→汇总","工具调用卡片默认收起","专家正文直答"],5:["内联确认卡片","允许本次｜记住该工具｜拒绝","刷新后可还原"],6:["来源卡片抽屉","相似度 + 命中片段","查看全文需对应权限"],7:["六类审计表","trace_id 贯穿","保留 180 天 · 03:30 清理"],8:["08:00 日报五块","Token/费用/配额","健康自检 FAIL/WARN/INFO"]}[s.id];
+  $("#flowPreview").innerHTML =
+    `<div class="row"><span class="k">界面要素</span><span class="v">${map.map(m=>`<span class="tag">${esc(m)}</span>`).join(" ")}</span></div>`+
+    `<div class="row"><span class="k">口径来源</span><span class="v">${esc(s.src)}</span></div>`+
+    `<div class="row"><span class="k">设计取向</span><span class="v">${["首登即可跑通","装配按选择生效","能自己答就不路由","专家正文不被二次改写","写操作一律受控","每一环都留痕","每一环都留痕","可评测可复盘"][s.id-1]}</span></div>`+
+    `<div class="row"><span class="k">终态</span><span class="v">✅ 轨道推进到下一步 · ❌ 见分支说明 · ↩ 关层后原位续播</span></div>`;
+}
+function paintTrack(idx){
+  const nodes = $$("#trackList .node");
+  const moveFocus = nodes.includes(document.activeElement);
+  nodes.forEach((n,i)=>{
+    let relative = (i-idx+STEPS.length)%STEPS.length;
+    if(relative>STEPS.length/2) relative-=STEPS.length;
+    const angle = relative*(360/STEPS.length);
+    n.classList.toggle("active", i===idx);
+    n.classList.toggle("done", i<idx);
+    n.classList.toggle("rear", Math.abs(angle)>90);
+    n.tabIndex = i===idx?0:-1;
+    n.setAttribute("aria-hidden",String(i!==idx));
+    n.setAttribute("aria-current",i===idx?"step":"false");
+  });
+  if(moveFocus) nodes[idx].focus({preventScroll:true});
+  $$("#ringMini button").forEach((n,i)=>{
+    n.classList.toggle("active",i===idx);
+    n.setAttribute("aria-current",i===idx?"step":"false");
+  });
+  $("#trackList").style.setProperty("--rotation",`${-idx*45}deg`);
+  $("#ringCaption").textContent = `${String(idx+1).padStart(2,"0")} / 08 · ${STEPS[idx].key}`;
+  const p = ((idx+1)/STEPS.length*100).toFixed(1)+"%";
+  $("#playProg").style.setProperty("--p", p);
+}
+let cur = 0, playing = false, timer = null;
+function setStep(i, stopPlay){
+  cur = (i+STEPS.length)%STEPS.length;
+  renderFlowDetail(cur); paintTrack(cur);
+  if(stopPlay) setPlaying(false);
+}
+function setPlaying(on){
+  playing = on;
+  [$("#playBtn"),$("#ringPlay")].forEach(b=>{
+    b.setAttribute("aria-pressed", String(on));
+    b.textContent = on ? "❙❙ 暂停" : "▶ 播放";
+  });
+  clearInterval(timer);
+  if(on) timer = setInterval(()=>setStep(cur+1), 3800);
+}
+function renderDomains(){
+  $("#domainGrid").innerHTML = DOMAINS.map(d=>`
+    <article class="card domain">
+      <div class="domain-flip">
+        <div class="domain-face domain-front">
+          <div class="hd"><h3>${esc(d.name)}</h3><span class="cnt">${esc(d.cnt)}</span><button class="flip-btn" type="button" data-flip aria-pressed="false" aria-label="翻转${esc(d.name)}卡片，查看输出与边界">看边界</button></div>
+          <ul>${d.li.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+          <div class="ft"><a href="#/flow/${d.step}">看运行 → 步 ${d.step}</a><span class="muted mono" style="font-size:11px">${d.pages.length} 页</span></div>
+        </div>
+        <div class="domain-face domain-back" aria-hidden="true" inert>
+          <div class="control-ticket">
+            <div class="ticket-top"><span class="ticket-status"><i aria-hidden="true"></i>CONTROLLED</span><span class="ticket-run">RUN-${String(d.step).padStart(2,"0")}</span></div>
+            <div class="ticket-title"><span>AGENTHUB / CAPABILITY OUTPUT</span><h4>${esc(d.name)}</h4><code>trace_id: tr_${String(d.step).padStart(2,"0")}a7</code></div>
+            <div class="ticket-section"><span>RUN OUTPUT</span><p>${esc(d.out)}</p></div>
+            <div class="ticket-meter"><i aria-hidden="true"></i><span>RUN NODE · ${String(d.step).padStart(2,"0")}</span></div>
+            <div class="ticket-boundary"><span>CONTROL BOUNDARY</span><p>${esc(d.boundary)}</p></div>
+            <div class="page-tags">${d.pages.slice(0,4).map(p=>`<span class="tag">${esc(p)}</span>`).join("")}</div>
+            <div class="ticket-foot"><span><i aria-hidden="true"></i>权限复核 · 全程留痕</span><button class="flip-btn" type="button" data-flip aria-pressed="true" aria-label="翻转${esc(d.name)}卡片，返回正面">返回</button></div>
+          </div>
+        </div>
+      </div>
+    </article>`).join("");
+}
+/* Hero 舞台轮播（纯 CSS 状态推进，无外部依赖） */
+const HERO_FRAMES = [
+  {who:"你",cls:"me",txt:"帮我把上个月华东区的对账单核对一下，有差异的写回备注。"},
+  {who:"小Z",cls:"z",txt:"需要领域能力 → route_decision(action=route, expert=财务专家) 已下发任务片段。"},
+  {who:"财务专家",cls:"z",txt:"思考 → 调用工具 3 次 → 汇总中<span class='cursor'></span>"},
+  {who:"AgentHub",cls:"e",txt:"写操作命中「需确认」：ai_expense_note_update，本轮暂停等你处置。",cls2:"confirm"},
+];
+let heroIdx = 0;
+function renderHeroMini(){
+  const f = HERO_FRAMES[heroIdx];
+  const body = heroIdx===2 ? `<div class="bub"><div class="ln"></div><div class="ln"></div><div class="ln"></div>${esc(f.txt)}</div>`
+    : `<div class="bub ${f.cls2||""}">${esc(f.txt)}</div>`;
+  $("#heroMini").innerHTML = HERO_FRAMES.slice(0,heroIdx+1).map((x,i)=>`
+    <div class="msg"><span class="av ${x.cls==='me'?'u':(x.cls2==='confirm'?'e':'z')}">${x.who.slice(0,2)}</span>
+      <div class="bd"><div class="who">${esc(x.who)}${i===heroIdx?' · 正在流式':''}</div>
+      ${i===heroIdx?body:`<div class="bub ${x.cls2||''}">${esc(x.txt)}</div>`}</div></div>`).join("");
+  $("#heroMiniLabel").textContent = ["提问已送达","小Z 判定完成","专家作业中","等待人工确认"][heroIdx];
+}
+function heroTick(){ heroIdx = (heroIdx+1)%HERO_FRAMES.length; renderHeroMini(); }
+const SWARM_CURSORS = [
+  ["产品",8,12,12,18,"#31E1C4"],["前端",72,6,84,18,"#4C8DFF"],["设计",92,30,18,31,"#9B6CFF"],
+  ["架构",4,48,86,42,"#31E1C4"],["内容",24,86,28,50,"#4C8DFF"],["QA",58,94,36,64,"#F5A524"],
+  ["智能体",84,72,32,78,"#31E1C4"],["安全",12,76,84,88,"#9B6CFF"],["模型",38,8,86,58,"#4C8DFF"],
+  ["工具",66,18,70,18,"#31E1C4"],["知识",94,58,86,34,"#4C8DFF"],["审计",2,22,55,90,"#F5A524"]
+];
+let heroTimer = null, swarmTimer = null, titleTimers = [], swarmObserver = null;
+function setTitlePhase(phase){
+  document.body.dataset.titlePhase = phase;
+  if(phase==="ignite") document.body.classList.add("title-lit");
+}
+function playTitle(){
+  titleTimers.forEach(clearTimeout); titleTimers = [];
+  document.body.classList.remove("title-lit"); document.body.dataset.titlePhase = "armed";
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){ setTitlePhase("lit"); return; }
+  setTitlePhase("aim");
+  titleTimers = [
+    setTimeout(()=>setTitlePhase("lock"),650),
+    setTimeout(()=>setTitlePhase("warm"),1150),
+    setTimeout(()=>setTitlePhase("ignite"),1800),
+    setTimeout(()=>setTitlePhase("lit"),2500)
+  ];
+}
+function startHeroTimer(){
+  clearInterval(heroTimer);
+  if(!matchMedia("(prefers-reduced-motion: reduce)").matches) heroTimer = setInterval(heroTick,2100);
+}
+function startSwarm(){
+  swarmObserver?.disconnect(); swarmObserver = null;
+  clearTimeout(swarmTimer); clearInterval(heroTimer); playTitle();
+  heroIdx = 2; renderHeroMini();
+  const layer = $("#swarmLayer");
+  const ui = `<div class="swarm-ui">
+    <div class="swarm-windowbar"><i></i><i></i><i></i><span>AgentHub · product preview</span></div>
+    <div class="swarm-piece swarm-appnav" style="--i:0"><span class="swarm-brandmark"></span><b>AgentHub</b><span class="swarm-links">运行流程 能力 架构 在线体验</span><span class="swarm-actions"><span>开发文档</span><span>进入系统</span></span></div>
+    <div class="swarm-workspace">
+      <div class="swarm-conversation">
+        <div class="swarm-piece swarm-chat-head" style="--i:1"><i></i>AgentHub · 任务工作站（模拟）<span>LIVE</span></div>
+        <div class="swarm-piece swarm-message user" style="--i:2"><span class="swarm-avatar">你</span><div class="swarm-copy"><div class="swarm-who">你 · 正在流式</div><div class="swarm-bubble">帮我把上个月华东区的对账单核对一下，有差异的写回备注。</div></div></div>
+        <div class="swarm-piece swarm-message router" style="--i:3"><span class="swarm-avatar">小Z</span><div class="swarm-copy"><div class="swarm-who">小Z · 判定完成</div><div class="swarm-bubble">需要领域能力 → <code>route_decision(action=route, expert=财务专家)</code></div></div></div>
+        <div class="swarm-piece swarm-message expert" style="--i:4"><span class="swarm-avatar">财务</span><div class="swarm-copy"><div class="swarm-who">财务专家 · 作业中</div><div class="swarm-bubble">思考 → 调用工具 3 次 → 汇总中</div></div></div>
+        <div class="swarm-piece swarm-trace" style="--i:5">trace_id: tr_8f2a · ai:message:send · HITL pending</div>
+      </div>
+      <div class="swarm-side">
+        <div class="swarm-piece swarm-stat" style="--i:6"><b>34</b><span>功能页</span><em>6 大能力域</em></div>
+        <div class="swarm-piece swarm-stat" style="--i:7"><b>75.0%</b><span>RAG hit@1</span><em>评测基线</em></div>
+        <div class="swarm-piece swarm-stat" style="--i:8"><b>98</b><span>按钮权限</span><em>逐项受控</em></div>
+        <div class="swarm-piece swarm-runcta" style="--i:9">进入系统 →</div>
+      </div>
+    </div>
+  </div>`;
+  const cursors = SWARM_CURSORS.map((c,i)=>`<div class="swarm-cursor" style="--sx:${c[1]}%;--sy:${c[2]}%;--tx:${c[3]}%;--ty:${c[4]}%;--d:${(i*.22).toFixed(2)}s;--c:${c[5]}"><span class="tip"></span><span class="name">${c[0]}</span></div>`).join("");
+  layer.innerHTML = `<div class="swarm-grid"></div>${ui}${cursors}`;
+  layer.classList.remove("done"); layer.dataset.state = "building";
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){
+    layer.classList.add("done"); layer.dataset.state = "complete"; startHeroTimer(); return;
+  }
+  swarmTimer = setTimeout(()=>{ layer.classList.add("done"); layer.dataset.state = "complete"; startHeroTimer(); },5000);
+}
+function armSwarm(){
+  clearTimeout(swarmTimer); clearInterval(heroTimer);
+  const layer = $("#swarmLayer");
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){ startSwarm(); return; }
+  layer.classList.add("done"); layer.dataset.state = "armed";
+  swarmObserver = new IntersectionObserver(entries=>{
+    if(entries.some(entry=>entry.isIntersecting)){
+      swarmObserver?.disconnect(); swarmObserver = null; startSwarm();
+    }
+  },{threshold:.25});
+  swarmObserver.observe($(".hero-stage"));
+}
+
+/* ============================================================
+   路由（hash）：#/ → landing；#/flow/n → 模拟层；#/exit #/qa #/onboard
+   ============================================================ */
+const SIM_OPEN = ()=>$("#sim").getAttribute("aria-hidden")==="false";
+function showView(name){
+  $$(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+name));
+  $("#nav").style.display = name==="landing" ? "flex" : "none";
+  document.documentElement.style.overflow = name==="sim" ? "hidden" : "";
+  document.body.style.overflow = name==="sim" ? "hidden" : "";
+}
+function route(){
+  const h = location.hash.replace(/^#/,"") || "/";
+  if(h.startsWith("/flow/")){ openSim(parseInt(h.split("/")[2],10)||1); return; }
+  if(!SIM_OPEN() && document.activeElement!==document.body) lastLandingFocus = document.activeElement;
+  closeSim(true);
+  if(h==="/exit"){ renderExit(); showView("exit"); document.title="系统入口与开发文档 · AgentHub"; }
+  else if(h==="/qa"){ renderQA(); showView("qa"); document.title="公开问答体验 · AgentHub"; }
+  else if(h==="/onboard"){ renderOnboard(); showView("onboard"); document.title="首次使用配置 · AgentHub"; }
+  else { showView("landing"); document.title="AgentHub · 企业级智能业务运行平台"; if(h && !h.startsWith("/")) { const el=document.getElementById(h); if(el) setTimeout(()=>el.scrollIntoView({block:"start",behavior:"instant"}),0); } }
+  window.scrollTo({top:0,behavior:"instant"});
+  if(h==="/" || h.startsWith("/")) requestAnimationFrame(()=>$("#view-"+nameOfRoute(h)+" h1")?.focus({preventScroll:true}));
+}
+function nameOfRoute(h){
+  return h==="/exit"?"exit":h==="/qa"?"qa":h==="/onboard"?"onboard":"landing";
+}
+function openSim(n){
+  if(!SIM_OPEN()) lastLandingFocus = document.activeElement;
+  cur = Math.min(Math.max(n,1),8)-1;
+  renderSim(); showView("sim"); $("#sim").setAttribute("aria-hidden","false");
+  paintSim(cur);
+  document.title = `AgentHub 运行走查 ${cur+1}/8 · ${STEPS[cur].key}`;
+  $("#simTitle").focus({preventScroll:true});
+}
+function closeSim(keepScroll){
+  const wasOpen = SIM_OPEN();
+  $("#sim").setAttribute("aria-hidden","true");
+  showView("landing");
+  if(wasOpen && lastLandingFocus?.isConnected) requestAnimationFrame(()=>lastLandingFocus.focus({preventScroll:true}));
+  if(!keepScroll) return;
+  const t = $("#flow"); if(t && lastLandingY) window.scrollTo(0,lastLandingY);
+}
+let lastLandingY = 0, lastLandingFocus = null;
+addEventListener("scroll",()=>{ if(!SIM_OPEN() && !document.hidden) lastLandingY = scrollY; }, {passive:true});
+
+/* ============================================================
+   模拟层渲染（8 屏，屏幕模板见 SCREENS）
+   ============================================================ */
+function renderSim(){
+  const step = STEPS[cur];
+  $("#simTrack").innerHTML = STEPS.map(s=>`<button id="simTab-${s.id}" role="tab" aria-controls="simPanel" aria-selected="${s.id===step.id}" tabindex="${s.id===step.id?0:-1}" data-goto="${s.id}" aria-label="步 ${s.id} ${s.key}">${s.id}</button>`).join("");
+  paintSim(cur);
+  $("#simInner").innerHTML = `
+    <div class="sim-meta">
+      <span class="flow">运行走查 ${step.id} / 8</span>
+      <h1 id="simTitle" tabindex="-1">${esc(step.title)}</h1>
+      <span class="tag info">智能模拟数据</span>
+      <span class="sim-actions">
+        <button class="btn btn-ghost btn-sm" data-nav="-1">上一步</button>
+        <button class="btn btn-primary btn-sm" data-nav="1">${step.id===8?'查看完成结果':'下一步'}</button>
+      </span>
+    </div>
+    <div class="sim-grid" id="simPanel" role="tabpanel" aria-labelledby="simTab-${step.id}">
+      <div class="screen" id="screenBox"></div>
+      <aside class="spec-rail" id="specRail"></aside>
+    </div>`;
+  $("#screenBox").innerHTML = SCREENS[step.id](simState);
+  $("#specRail").innerHTML = SPEC[step.id]();
+  bindScreenEvents();
+}
+function paintSim(i){
+  const tabs = $$("#simTrack button");
+  tabs.forEach((b,k)=>{
+    b.classList.toggle("active",k===i);
+    b.classList.toggle("done",k<i);
+    b.setAttribute("aria-selected",String(k===i));
+    b.tabIndex = k===i?0:-1;
+  });
+  $("#simPanel")?.setAttribute("aria-labelledby",`simTab-${i+1}`);
+  const active = tabs[i], track = $("#simTrack");
+  if(active && track) track.scrollTo({left:active.offsetLeft-(track.clientWidth-active.offsetWidth)/2,behavior:"instant"});
+}
+
+/* ============================================================
+   下一步 / 上一步 / 轨道点击 / 播放控制 / 出口态
+   ============================================================ */
+function gotoStep(n){
+  const focus = document.activeElement;
+  const wasTab = focus?.matches("#simTrack button");
+  const navDirection = focus?.dataset.nav;
+  simState = "default";
+  cur = Math.min(Math.max(n,1),8)-1;
+  renderSim();
+  $(".sim-body").scrollTop = 0;
+  document.title = `AgentHub 运行走查 ${cur+1}/8 · ${STEPS[cur].key}`;
+  if(wasTab) $(`#simTab-${cur+1}`).focus({preventScroll:true});
+  else if(navDirection) $(`[data-nav="${navDirection}"]`).focus({preventScroll:true});
+}
+$("#simTrack").addEventListener("keydown",e=>{
+  if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+  e.preventDefault();
+  const next = e.key==="Home"?1:e.key==="End"?8:e.key==="ArrowRight"?(cur===7?1:cur+2):(cur===0?8:cur);
+  gotoStep(next);
+});
+document.addEventListener("click", e=>{
+  const flip = e.target.closest("[data-flip]");
+  if(flip){
+    const card = flip.closest(".domain");
+    const on = !card.classList.contains("flipped");
+    card.classList.toggle("flipped",on);
+    $$("[data-flip]",card).forEach(b=>b.setAttribute("aria-pressed",String(on)));
+    const front = $(".domain-front",card), back = $(".domain-back",card);
+    front.inert = on; back.inert = !on;
+    $(on?".domain-back [data-flip]":".domain-front [data-flip]",card).focus({preventScroll:true});
+    front.setAttribute("aria-hidden",String(on)); back.setAttribute("aria-hidden",String(!on));
+    return;
+  }
+  if(e.target.id==="ringNext"){ setStep(cur+1,true); return; }
+  if(e.target.id==="ringPrev"){ setStep(cur-1,true); return; }
+  if(e.target.id==="ringDockToggle"){
+    const dock = $("#ringDock"), collapsed = dock.classList.toggle("collapsed");
+    e.target.setAttribute("aria-expanded",String(!collapsed));
+    e.target.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
+    e.target.textContent = collapsed?"＋":"−";
+    return;
+  }
+  const mini = e.target.closest("#ringMini [data-ring-step]");
+  if(mini){ setStep(parseInt(mini.dataset.ringStep,10)-1,true); return; }
+  const node = e.target.closest("#trackList .node");
+  if(node){ const n = parseInt(node.dataset.step,10); setStep(n-1, true); location.hash = "#/flow/"+n; return; }
+  const tab = e.target.closest("#simTrack button[data-goto]");
+  if(tab){ gotoStep(parseInt(tab.dataset.goto,10)); return; }
+  const nav = e.target.closest("[data-nav]");
+  if(nav){ const nx = cur + parseInt(nav.dataset.nav,10); if(nx<0||nx>7){ if(nx>7) location.hash="#/exit"; return; } gotoStep(nx+1); return; }
+  if(e.target.closest("#simClose")){ location.hash = "#flow"; return; }
+  const ex = e.target.closest("[data-exit]");
+  if(ex){ location.hash = "#/exit"; setTimeout(()=>{ EXIT_KIND = ex.dataset.exit==="doc"?"doc":"system"; renderExit(); },0); return; }
+  const q = e.target.closest("#trial .chip");
+  if(q){ location.hash="#/qa"; setTimeout(()=>{ QA_SEED = q.dataset.q; renderQA(); },0); return; }
+  if(e.target.id==="playBtn" || e.target.id==="ringPlay"){ setPlaying(!playing); return; }
+});
+/* hover 暂停自动播放（场景 Anti-Pattern：预览动画不应抢读） */
+$("#flow").addEventListener("mouseenter",()=>{ if(playing){ clearInterval(timer); } });
+$("#flow").addEventListener("mouseleave",()=>{ if(playing){ timer=setInterval(()=>setStep(cur+1),3800); } });
+
+function setRingDockCollapsed(collapsed){
+  const dock = $("#ringDock"), toggle = $("#ringDockToggle");
+  dock.classList.toggle("collapsed",collapsed);
+  toggle.setAttribute("aria-expanded",String(!collapsed));
+  toggle.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
+  toggle.textContent = collapsed?"＋":"−";
+}
+function bindRingDock(){
+  const dock = $("#ringDock"), plane = $("#trackList");
+  const mobile = matchMedia("(max-width:859px)");
+  setRingDockCollapsed(mobile.matches);
+  mobile.addEventListener("change",e=>setRingDockCollapsed(e.matches));
+  if("IntersectionObserver" in window){
+    new IntersectionObserver(entries=>{
+      const visible = entries[0].isIntersecting;
+      dock.classList.toggle("visible",visible); dock.dataset.state = visible?"docked":"idle";
+    },{threshold:.08}).observe($("#flow"));
+  }
+  let drag = null, dragged = false;
+  plane.addEventListener("pointerdown",e=>{
+    if(e.button!==0) return;
+    drag = {x:e.clientX}; dragged = false;
+  });
+  plane.addEventListener("pointermove",e=>{
+    if(drag && !dragged && Math.abs(e.clientX-drag.x)>8){
+      dragged = true;
+      plane.setPointerCapture(e.pointerId);
+    }
+  });
+  plane.addEventListener("pointerup",e=>{
+    if(!drag) return;
+    const dx = e.clientX-drag.x; drag = null;
+    if(!dragged) return;
+    const steps = Math.min(2,Math.max(1,Math.round(Math.abs(dx)/70)));
+    setStep(cur+(dx<0?steps:-steps),true);
+  });
+  plane.addEventListener("pointercancel",()=>{ drag = null; dragged = false; });
+  plane.addEventListener("click",e=>{
+    if(dragged){ e.preventDefault(); e.stopImmediatePropagation(); dragged = false; }
+  },true);
+}
+
+renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm(); bindRingDock();
+$("#heroReplay").addEventListener("click",startSwarm);
+addEventListener("hashchange", route);
+
+/* ============================================================
+   Flow A + B · 8 屏高保真模板
+   每屏 SCREENS[id](state)，state = 分支 / 状态变体（默认 default）
+   ============================================================ */
+let simState = "default";
+
+/* ---------- 共享片段 ---------- */
+const SESSIONS = [
+  {t:"华东区对账单核对", d:"1 分钟前 · 财务专家", on:true},
+  {t:"合同条款检索", d:"昨天 16:20 · 法务专家"},
+  {t:"差旅报销标准咨询", d:"周二 · 小Z 自答"},
+  {t:"月度用量报表生成", d:"每月 1 日 · 定时任务"},
+];
+const sessions = () => `<div class="t">会话</div>
+  <a class="btn btn-ghost btn-sm" style="justify-content:flex-start" href="#/flow/1">+ 新建会话</a>` +
+  SESSIONS.map(s=>`<button type="button" class="sess ${s.on?'on':''}" aria-pressed="${!!s.on}">${esc(s.t)}<small>${esc(s.d)}</small></button>`).join("");
+
+function inputBar(chips, locked){
+  return `<div aria-live="polite" style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:9px">
+      ${chips ? chips.map(c=>`<span class="tag ${c.t==='附件'?'info':'glow'}" ${c.t==='附件'?'':`data-resource-chip="${esc(c.v)}"`}>${esc(c.t)} · ${esc(c.v)} <button class="muted" data-chip-x ${c.t==='附件'?'':`data-resource="${esc(c.v)}"`} aria-label="移除 ${esc(c.v)}" style="cursor:pointer">✕</button></span>`).join("") : `<span class="muted" style="font-size:12px">未选专家 / 场景包 / 技能 / MCP 工具 · 本轮由小Z 自动判定</span>`}
+    </div>
+    <div style="display:flex; gap:9px; align-items:flex-end">
+      <textarea class="field" rows="1" aria-label="向 AgentHub 提问" ${locked?'disabled':''} style="flex:1; margin:0; padding:10px 12px; border-radius:10px; border:1px solid var(--border-2); background:var(--bg-container); color:var(--text); font:inherit; resize:none" placeholder="向 AgentHub 提问，Enter 发送 / Shift+Enter 换行">帮我把上个月华东区的对账单核对一遍，有差异的写回备注。</textarea>
+      <button class="btn btn-ghost btn-sm" data-open-drawer="res" aria-label="资源选择器">＋ 资源</button>
+      <label class="btn btn-ghost btn-sm file-upload" aria-label="上传附件">📎<input type="file" aria-label="选择附件" multiple></label>
+      <button class="btn ${locked?'btn-ghost':'btn-primary'} btn-sm" data-send-prompt ${locked?'disabled':''}>${locked?'等待确认…':'发送'}</button>
+    </div>
+    <div class="notice" style="margin-top:9px">业务工具不提供用户直选入口，仅由智能体 / 场景包 / 技能绑定生效（手册 §4.1.1）。</div>`;
+}
+const bubble = (who, cls, txt, meta) => `<div class="bubble ${cls==='me'?'me':''}"><span class="av ${cls}">${who.slice(0,2)}</span>
+  <div class="body"><div class="who">${esc(who)}${meta?' · '+esc(meta):''}</div><div class="txt">${txt}</div></div></div>`;
+const toolCard = (name, status, dur, pre, open) => `<div class="tool-card ${open?'open':''}">
+  <div class="th" role="button" tabindex="0"><span class="tag ${status==='ok'?'ok':status==='err'?'err':'info'}">${status==='ok'?'成功':status==='err'?'失败':'进行中'}</span>
+  <span class="nm">${esc(name)}</span><span class="muted" style="font-size:11px">MCP · 只读</span><span class="du">${dur}</span><span class="muted">▾</span></div>
+  <div class="pre">${esc(pre)}</div></div>`;
+const screenNote = (src, extra) => `<div class="notice" style="margin-top:14px">口径：${esc(src)}${extra?' · '+esc(extra):''}。本屏全部为智能模拟数据与模拟交互，不接入真实系统与业务数据。</div>`;
+
+/* ---------- SCREENS ---------- */
+const SCREENS = {
+  /* FLOW: A · SCREEN 1 of 8 · ENTRY: 演示账号首次登录工作台 · EXIT: 4 项检查完成 → S2 */
+  1: (st = "default") => {
+    if (st === "loading") return `<div class="wb"><div class="wb-main" style="grid-column:1/-1">
+      <div class="wb-hd">任务工作台 <span class="tag">已登录 · 演示账号</span></div>
+      <div class="wb-stream"><div class="shim" style="width:38%"></div><div class="shim" style="height:74px"></div><div class="shim" style="width:64%"></div></div>
+    </div></div>` + screenNote("手册 §4.1.1", "清单状态服务端实时推导，加载期不闪现假完成");
+    const done = st === "done";
+    const CK = done
+      ? [["对话模型密钥","已连通 · 自检 820 ms"],["向量模型密钥","已连通 · 集合维度一致"],["文档解析与向量化","412 片写入集合 · BM25 就绪"],["发送首条消息","已收到回答 · 端到端跑通"]]
+      : [["对话模型密钥","未配置 · 缺失则小Z 与专家均无法输出"],["向量模型密钥","未配置 · 影响知识库检索"],["文档解析与向量化","未执行 · 知识库尚无向量集合"],["发送首条消息","未发送"]];
+    return `<div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
+      <div class="wb-hd">任务工作台 <span class="tag">管理员 · 首次登录</span><span class="tag ${done?'ok':'warn'}">首登检查 ${done?'4 / 4':'0 / 4'}</span></div>
+      <div class="wb-stream">
+        ${done
+          ? `<div class="banner"><span aria-hidden="true">✓</span> 4 项全部完成，清单收起至侧边栏，工作台已可用 → <a href="#/flow/2" style="color:var(--glow); font-weight:600">组建资源发起提问（S2）</a></div>`
+          : `<div class="empty"><div class="ic">⌁</div><b style="font-size:15px">还没有会话</b>
+        <p style="margin-top:8px; font-size:13.5px">跑通 4 项首登检查，就能开始提问。状态由服务端实时推导，可随时暂时隐藏。</p></div>`}
+        <div class="checklist">
+          ${CK.map((x,i)=>`
+            <div class="cl-item ${done?'done':'now'}"><span class="n">${done?'✓':i+1}</span><div class="tt">${x[0]}<small>${x[1]}</small></div>
+              ${done?'':`<a class="btn btn-ghost btn-sm" href="${i<3?'#/onboard':'#/flow/2'}">${['去配置','去配置','去执行','去提问'][i]} →</a>`}</div>`).join("")}
+        </div>
+        ${done?'':`<div class="banner"><span aria-hidden="true">🧭</span> 想先看效果？<a href="#/onboard" style="color:var(--glow); font-weight:600">进入首登引导深化（Flow E）</a>，4 屏演完从密钥校验到发出首条消息。</div>`}
+      </div>
+      <div class="wb-input">${inputBar()}</div>
+    </div></div>` + screenNote("手册 §4.1.1 首登检查清单", done?"4/4 后清单收起，不再遮挡首条提问":"点击直达对应页");
+  },
+
+  /* FLOW: A · SCREEN 2 of 8 · ENTRY: 输入栏「＋资源」 · EXIT: 发送问题 → S3 */
+  2: (st = "default") => `<div style="position:relative; overflow:hidden">
+    <div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
+      <div class="wb-hd">任务工作台 <span class="tag">本轮装配</span></div>
+      <div class="wb-stream">${bubble("你","me","帮我把上个月华东区的对账单核对一遍，有差异的写回备注。")}</div>
+      <div class="wb-input">${inputBar(st==="empty"?null:[{t:"专家",v:"财务专家"},{t:"场景包",v:"对账合规包"},{t:"技能",v:"差异汇总"},{t:"MCP",v:"ledger-read"},{t:"附件",v:"华东差异清单.xlsx · 1.2 MB"}])}</div>
+    </div></div>
+    <aside class="drawer ${st==='empty'?'':'open'}" id="drawer" aria-label="资源选择器">
+      <div class="dh"><b style="font-size:14px">组建本轮资源</b><span class="muted" style="font-size:12px">选中项下一轮生效</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" data-close-drawer>收起</button></div>
+      <div class="db">
+        ${[["专家",[{k:"财务专家",on:1,d:"擅长对账 / 差异定位"},{k:"法务专家",d:"合同条款与风险"},{k:"运维专家",d:"告警与工单"}]],
+           ["场景包",[{k:"对账合规包",on:1,d:"绑定 6 工具 + 3 档授权"},{k:"合同审阅包",d:"含条款抽取技能"}]],
+           ["技能",[{k:"差异汇总",on:1},{k:"金额脱敏"},{k:"报表导出"}]],
+           ["MCP 工具",[{k:"ledger-read",on:1,d:"外部台账 · 只读"},{k:"oa-ticket",d:"工单系统"}]]]
+        .map(([g,items])=>`<div style="margin-bottom:18px">
+          <div class="t" style="font-size:11px; color:var(--text-4); font-family:var(--mono); margin-bottom:8px">${g}</div>
+          ${items.map(i=>{const on=i.on&&st!=='empty';return `<label class="cl-item ${on?'done':''}" style="cursor:pointer">
+            <input class="resource-check" type="checkbox" data-resource="${esc(i.k)}" data-group="${g}" aria-label="${esc(i.k)}" ${on?'checked':''}>
+            <span class="n" aria-hidden="true">${on?'✓':''}</span>
+            <div class="tt">${esc(i.k)}${i.d?`<small>${esc(i.d)}</small>`:''}</div></label>`}).join("")}
+        </div>`).join("")}
+        <div class="divider" style="margin:6px 0 14px"></div>
+        <div class="field"><label>附件</label>
+          <div class="cl-item"><span class="n">📎</span><div class="tt">华东差异清单.xlsx<small>1.2 MB · 解析为纯文本内联，不落知识库、不做切片</small></div></div>
+          <span class="hint">图片单张 ≤ 512KB（需视觉模型）· 文档单文件 ≤ 5MB · 单条消息 ≤ 5 个附件 · 流式中不可上传</span></div>
+        ${st==='empty'?`<div class="empty"><div class="ic">∅</div><p style="font-size:13px">未选任何资源：本轮按会话默认装配，小Z 仍可自行判定路由。</p></div>`:''}
+      </div>
+    </aside></div>` + screenNote("手册 §4.1.1 输入栏资源选择器 / 附件", "资源变更由装配指纹触发实例重建"),
+
+  /* FLOW: A · SCREEN 3 of 8 · ENTRY: 发送问题 · EXIT: 路由 → S4 / 自答 → 直接出回答 */
+  3: (st = "default") => `<div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
+    <div class="wb-hd">华东区对账单核对 <span class="tag glow">${st==='self'?'小Z 自答':'路由专家'}</span></div>
+    <div class="wb-stream">
+      ${bubble("你","me","帮我把上个月华东区的对账单核对一遍，有差异的写回备注。","10:24")}
+      <div class="route-bar ${st==='self'?'self':''}">
+        ${st==='self'
+          ? `<span class="tag">route_decision(action=self)</span> 意图属平台使用咨询，无需领域能力 → 小Z 直接回答，本轮不路由`
+          : `<span class="tag glow">route_decision(action=route)</span> 命中领域能力 → <b>财务专家</b> · 已下发任务片段（含附件摘要与口径约束）`}
+      </div>
+      ${st==='self'
+        ? bubble("小Z","z","「写回备注」属写操作，需要财务专家在受控权限内执行。建议指定 <b>财务专家</b> 后重试——<a href=\"#/flow/3\" style=\"color:var(--glow)\">看路由分支</a>","10:24")
+        : bubble("小Z","z","已转交财务专家，正在作业…<span class='cursor'></span>","10:24")}
+      ${st==='self'?`<div class="banner warn"><span aria-hidden="true">↩</span> ❌ Error 分支：自答判定命中时，轨道标记「未路由」并从 S3 直接跳到 S6 的回答块。</div>`:''}
+    </div>
+    <div class="wb-input">${inputBar([{t:"专家",v:"财务专家"},{t:"场景包",v:"对账合规包"}])}</div>
+  </div></div>` + screenNote("手册 §6.1 ② 判定 / §4.1.2 route_decision", "设计取向：能自己答就不路由"),
+
+  /* FLOW: A · SCREEN 4 of 8 · ENTRY: 路由成功 · EXIT: 命中写工具 → S5 */
+  4: (st = "default") => `<div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
+    <div class="wb-hd">华东区对账单核对 <span class="tag info">专家作业中</span></div>
+    <div class="wb-stream">
+      ${bubble("你","me","帮我把上个月华东区的对账单核对一遍，有差异的写回备注。","10:24")}
+      <div class="route-bar"><span class="tag glow">route → 财务专家</span> 任务片段已下发 · 会话资源集签名 <span class="mono" style="font-size:11px">R:7f3a…c1</span></div>
+      ${bubble("财务专家","z",
+        `<div class="progress-steps">
+          <i class="done">✓ 思考</i><i class="done">✓ 调用工具 3 次</i><i class="${st==='degraded'?'':'now'}">◎ 咨询专家</i><i>汇总</i>
+        </div>
+        <p style="margin:12px 0 0; font-size:14px">${st==='degraded'
+          ? '<b style="color:var(--err)">本轮未拿到专家结论</b> · 专家连续 2 次超时，按降级策略由小Z 兜底自答，并如实说明未经专家核实。'
+          : '台账侧 <b>42 笔</b> 与发票侧 <b>40 笔</b>，差异 <b>2 笔</b>：#E-2231 金额差 1,280.00；#E-2244 发票缺失。差异明细已按月份归集…<span class="cursor"></span>'}</p>
+        ${st==='degraded'
+          ? `<div class="banner err" style="margin-top:12px"><span aria-hidden="true">⚠</span> 降级兜底卡（手册 §6.7）：不换专家、就地重试后降级如实声明；编排预算未触顶。</div>`
+          : toolCard("ledger_read", "ok", "312 ms", '{ "period":"2026-10", "region":"华东", "rows":42 }', true) + toolCard("kb_search", "ok", "188 ms", '{ "kb":"财务口径手册", "q":"对账差异判定标准", "top_k":5 }') + toolCard("invoice_match", "ok", "504 ms", '{ "missing":["E-2244"], "diff":["E-2231"] }')}
+        ${st==='degraded'?'':`<div class="agent-card"><div class="hd"><span class="tag ok">在线</span><b>财务专家</b><span class="muted" style="font-size:12px">重试 0 次 · 工具调用 3 次（明细进审计页）</span></div>
+          <span class="muted" style="font-size:12.5px">展开可见原始结论；专家正文直接交付，小Z 不转述、不二次改写。</span></div>`}`,
+        st==='degraded'?"10:26 · 降级":"10:25")}
+    </div>
+    <div class="wb-input">${inputBar()}</div>
+  </div></div>` + screenNote("手册 §6.1 ③ 作业 / §4.1.1 消息流 / §6.7 降级", st==='degraded'?"当前为 Error 分支":"专家侧工具调用在主会话汇总"),
+
+  /* FLOW: B · SCREEN 5 of 8 · ENTRY: 写工具命中「需确认」 · EXIT: 允许 → S6 / 拒绝 → 终止分支 */
+  5: (st = "default") => `<div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
+    <div class="wb-hd">华东区对账单核对 <span class="tag warn">本轮暂停 · 等待确认</span></div>
+    <div class="wb-stream">
+      ${bubble("财务专家","z","差异 2 笔已定位。按你的要求，将<b>写入 2 条备注</b>到台账差异行。","10:25")}
+      <div class="confirm-card">
+        <h5>写操作确认 · <span class="mono" style="font-size:13px">finance_expense_note_write</span></h5>
+        <div class="meta">
+          <span>决策档：1 需确认（HITL） · 来源：场景包「对账合规包」</span>
+          <span>权限标识：ai:{expense}:write-note · 执行期复核提问用户业务权限</span>
+          <span>幂等键：E-2231:2026-10 · 会话 4f2…9a · 可还原（刷新后仍在）</span>
+        </div>
+        <div class="diff">
+          <div class="del"><span>-</span><span>#E-2231 备注：（空）</span></div>
+          <div class="add"><span>+</span><span>#E-2231 备注：与发票金额差 1,280.00，待供应商确认</span></div>
+          <div class="add"><span>+</span><span>#E-2244 备注：发票缺失，已挂起</span></div>
+        </div>
+        ${st==='rejected'
+          ? `<div class="decided"><b style="color:var(--err)">已拒绝</b> · 本轮任务终止，未执行写入。拒绝原因与处置结果已写入权限决策审计（<a href="#/flow/7" style="color:var(--glow)">去看留痕 →</a>）。</div>
+             <div class="banner err"><span aria-hidden="true">⛔</span> ❌ 这是本 flow 最重要的一条分支：拒绝不留悬空状态，必须同时给出终止卡与审计去向。</div>`
+          : st==='allowed'
+          ? `<div class="decided"><b style="color:var(--glow)">已允许本次</b> · ConfirmResult 回传，专家同轮继续：2 条备注已写入 #E-2231 / #E-2244。仅放行这一条工具调用，下一轮写操作仍会弹卡。</div>
+             <div class="banner"><span aria-hidden="true">▶</span> 同轮继续 → 交付与留痕见 <a href="#/flow/6" style="color:var(--glow)">S6 来源卡片 →</a></div>`
+          : st==='remember'
+          ? `<div class="decided"><b style="color:var(--glow)">已记住该工具</b> · 按 (userId, sessionId) 槽位每轮并入，不写进共享实例；本会话后续同工具不再弹卡。</div>
+             <div class="banner"><span aria-hidden="true">▶</span> 同轮继续：专家恢复执行，正文继续流式 → S6。</div>`
+          : `<div class="btns">
+              <button class="btn btn-primary btn-sm" data-state="allowed">允许本次</button>
+              <button class="btn btn-ghost btn-sm" data-state="remember">记住该工具</button>
+              <button class="btn btn-danger btn-sm" data-state="rejected">拒绝</button>
+            </div>
+            <div class="notice">无人值守链路（定时任务 / 渠道）无人类可确认，写工具默认一律拒绝，仅白名单放行。</div>`}
+      </div>
+    </div>
+    <div class="wb-input">${inputBar(null, true)}</div>
+  </div></div>` + screenNote("手册 §6.3 三档授权 / §6.1 ④ 写工具", "ConfirmResult 恢复同轮执行"),
+
+  /* FLOW: B · SCREEN 6 of 8 · ENTRY: 确认放行 · EXIT: 关闭抽屉 → S7 */
+  6: (st = "default") => `<div style="position:relative; overflow:hidden">
+    <div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
+      <div class="wb-hd">华东区对账单核对 <span class="tag ok">已交付</span></div>
+      <div class="wb-stream">
+        ${bubble("财务专家","z",
+          `核对结论：台账 42 笔 / 发票 40 笔，差异 2 笔。<span class="cite" data-open-drawer="src">[1]</span><span class="cite" data-open-drawer="src">[2]</span>
+          <ul style="margin:11px 0 0; display:grid; gap:7px; font-size:13.5px">
+            <li>· #E-2231：金额差 <b>1,280.00</b>，已按你的确认写回备注。</li>
+            <li>· #E-2244：发票缺失，已挂起并标注原因。</li>
+            ${st==='noperm'?'<li>· 判定口径见《财务口径手册》第 3.2 节 —— <span class="muted">你的角色无该文档「查看全文」权限，入口不渲染。</span></li>':'<li>· 判定口径见《财务口径手册》第 3.2 节（向量 + BM25 混合命中，Rerank 后 Top 2）。</li>'}
+          </ul>
+          <div style="margin-top:11px; display:flex; gap:7px; flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" data-open-drawer="src">参考来源 2</button>
+            <button class="btn btn-ghost btn-sm" data-copy>复制</button>
+            <button class="btn btn-ghost btn-sm" disabled title="含写操作的轮次不可重新生成">重新生成</button>
+            <span id="copyStatus" class="muted" aria-live="polite" style="font-size:12px"></span>
+          </div>`,"10:26")}
+      </div>
+      <div class="wb-input">${inputBar()}</div>
+    </div></div>
+    <aside class="drawer ${st==='empty-src'?'':'open'}" aria-label="参考来源">
+      <div class="dh"><b style="font-size:14px">参考来源</b><span class="muted" style="font-size:12px">命中片段可见 · 全文需权限</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" data-close-drawer>收起</button></div>
+      <div class="db">
+        ${st==='empty-src'
+          ? `<div class="empty"><div class="ic">∅</div><b style="font-size:14.5px">本轮无知识命中</b><p style="font-size:13px; margin-top:8px">回答全部来自工具回参；未做 RAG 检索。BM25 索引未就绪时已自动降级纯向量（§6.7）。</p></div>`
+          : `<div class="src-list">
+            ${[["财务口径手册 · 3.2 对账差异判定","知识库 · kb_finance","cos 0.81 · bm25 7.4 · rerank 0.92","…差异金额绝对值 ≤ 0.01 视为一致；跨月到账挂起至下期初判，并在备注标注原因…"],
+               ["华东区供应商结算补充约定","知识库 · kb_finance","cos 0.74 · bm25 6.1 · rerank 0.87","…发票缺失的单据不参与当月核销，由财务专家挂起并写明缺失项…"]].map(([t,k,s,f])=>`
+              <div class="src"><div class="hd"><b style="font-size:13.5px">${esc(t)}</b><span class="tag ${st==='noperm'?'err':'info'}">${st==='noperm'?'无查看全文权限':'查看全文'}</span><span class="sc">${esc(s)}</span></div>
+                <span class="muted mono" style="font-size:11px">${esc(k)}</span><div class="frag">${esc(f)}</div></div>`).join("")}
+          </div>`}
+      </div>
+    </aside></div>` + screenNote("手册 §4.1.1 参考来源 / §7.3 权限驱动显隐", "写操作轮次的「重新生成」禁用"),
+
+  /* FLOW: B · SCREEN 7 of 8 · ENTRY: 交付完成 · EXIT: → S8 */
+  7: (st = "default") => {
+    const TABS = [["消息","msg"],["工具调用","tool"],["权限决策","perm"],["链路追踪","trace"],["编排运行","run"],["日报","digest"]];
+    const body = {
+      msg:`<table class="tbl"><thead><tr><th>时间</th><th>角色</th><th>内容摘要</th><th>Token</th><th>trace_id</th></tr></thead><tbody>
+        <tr><td class="m">10:24:02</td><td>用户</td><td>帮我把上个月华东区的对账单核对一遍…</td><td class="m">38</td><td class="m">tr_9f2c…1a</td></tr>
+        <tr><td class="m">10:24:03</td><td>助手（小Z）</td><td>route_decision(action=route, expert=财务专家)</td><td class="m">112</td><td class="m">tr_9f2c…1a</td></tr>
+        <tr><td class="m">10:26:41</td><td>助手（专家）</td><td>核对结论：台账 42 笔 / 发票 40 笔，差异 2 笔</td><td class="m">1,048</td><td class="m">tr_9f2c…1a</td></tr></tbody></table>`,
+      tool:`<table class="tbl"><thead><tr><th>工具</th><th>来源</th><th>状态</th><th>耗时</th><th>入参摘要</th><th>归属</th></tr></thead><tbody>
+        <tr><td class="m">ledger_read</td><td>MCP</td><td><span class="tag ok">成功</span></td><td class="m">312 ms</td><td>period=2026-10 / region=华东</td><td>财务专家</td></tr>
+        <tr><td class="m">kb_search</td><td>内置</td><td><span class="tag ok">成功</span></td><td class="m">188 ms</td><td>top_k=5 / kb=财务口径手册</td><td>财务专家</td></tr>
+        <tr><td class="m">finance_expense_note_write</td><td>代码侧工厂</td><td><span class="tag ok">成功</span></td><td class="m">421 ms</td><td>2 条备注 · 幂等键 E-2231:2026-10</td><td>财务专家</td></tr></tbody></table>`,
+      perm:`<table class="tbl"><thead><tr><th>工具</th><th>决策档</th><th>处置</th><th>操作人</th><th>时间</th><th>执行期复核</th></tr></thead><tbody>
+        <tr><td class="m">finance_expense_note_write</td><td>1 需确认</td><td><span class="tag ok">允许本次</span></td><td>admin · 财务部</td><td class="m">10:26:12</td><td>通过（菜单权限 ai:expense:write-note）</td></tr>
+        <tr><td class="m">oa_ticket_write</td><td>2 禁止</td><td><span class="tag err">未注册</span></td><td>—</td><td class="m">装配期</td><td>禁止档对模型不可见</td></tr></tbody></table>`,
+      trace:`<div style="display:grid; gap:9px; font-size:13px">
+        ${[["装配","4 ms","实例命中缓存 R:7f3a…c1"],["小Z 判定","820 ms","route_decision → route"],["专家作业","96 s","工具 3 次 · 迭代 4/8"],["HITL 暂停","29 s","等待人工确认"],["交付 + 留痕","61 ms","写入 4 类审计"]].map(([k,d,e],i)=>`
+          <div class="cl-item ${i===3?'now':''}" style="padding:10px 13px"><span class="n">${i+1}</span><div class="tt">${esc(k)}<small>${esc(e)}</small></div><span class="mono muted" style="font-size:11.5px">${esc(d)}</span></div>`).join("")}
+      </div>`,
+      run:`<table class="tbl"><thead><tr><th>轮次</th><th>编排事件</th><th>预算</th><th>结果</th></tr></thead><tbody>
+        <tr><td class="m">1</td><td>小Z 路由 → 财务专家</td><td class="m">0 / 3</td><td><span class="tag ok">成功</span></td></tr>
+        <tr><td class="m">2</td><td>专家咨询子智能体（发票匹配）</td><td class="m">1 / 3</td><td><span class="tag ok">成功</span></td></tr>
+        <tr><td class="m">3</td><td>写工具 HITL</td><td class="m">1 / 3</td><td><span class="tag info">人工放行</span></td></tr></tbody></table>`,
+      digest:`<table class="tbl"><thead><tr><th>日期</th><th>生成时间</th><th>五块</th><th>状态</th></tr></thead><tbody>
+        <tr><td class="m">2026-11-23</td><td class="m">08:00:12</td><td>用量/定时/待办/决策/登录</td><td><span class="tag ok">已落库</span></td></tr>
+        <tr><td class="m">2026-11-22</td><td class="m">08:00:09</td><td>同上</td><td><span class="tag ok">已落库</span></td></tr>
+        <tr><td class="m">2026-11-21</td><td class="m">—</td><td>—</td><td><span class="tag warn">近 7 天缺失，已提示</span></td></tr></tbody></table>`,
+    };
+    const active = st.startsWith("tab:") ? st.slice(4) : "tool";
+    return `<div class="card" style="padding:var(--sp-4)">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px">
+        <b style="font-size:15px">全链路留痕审计</b>
+        <span class="tag info">trace_id tr_9f2c…1a</span>
+        <span class="tag">保留 180 天 · 每日 03:30 清理</span>
+        <span class="tag err">清理范围不含会话正文</span>
+      </div>
+      <div class="tabs" role="tablist" style="gap:6px; flex-wrap:wrap; margin-bottom:14px">
+        ${TABS.map(([n,k])=>`<button id="auditTab-${k}" class="tab ${k===active?'on':''}" data-state="tab:${k}" role="tab" aria-controls="auditPanel" aria-selected="${k===active}" tabindex="${k===active?0:-1}">${n}</button>`).join("")}
+      </div>
+      <div id="auditPanel" role="tabpanel" aria-labelledby="auditTab-${active}">
+      ${st==='error'
+        ? `<div class="banner err"><span aria-hidden="true">⚠</span> 查询失败：ai:audit:query 未授予当前角色，或后端超时。已保留筛选条件，<button class="btn btn-ghost btn-sm" data-state="default">重试</button></div>`
+        : st==='loading'
+        ? `<div style="display:grid; gap:9px">${[1,2,3,4].map(()=>`<div class="shim" style="height:36px"></div>`).join("")}</div>`
+        : `<div class="tbl-wrap">${body[active]}</div>
+           <div class="notice" style="margin-top:12px">专家侧工具调用明细在此页呈现，主会话只汇总「工具调用 N 次」。</div>`}
+      </div>
+    </div>` + screenNote("手册 §7.2 审计观测 / 设计稿 §12.4", "权限标识 ai:audit:query");
+  },
+
+  /* FLOW: B · SCREEN 8 of 8 · ENTRY: 复盘 · EXIT: 8 节点全亮 → Final CTA */
+  8: (st = "default") => `<div style="display:grid; gap:var(--sp-4)">
+    <div class="stat-grid">
+      ${[["Token 用量","1.84 M","+12% 环比"],["费用","¥ 2,146","按模型分账"],["配额命中","3 / 42","日 Token 触顶"],["工具调用","1,296","失败 0.4%"]].map(([a,b,c])=>`
+        <div class="stat"><span>${esc(a)}</span><b>${esc(b)}</b><em>${esc(c)}</em></div>`).join("")}
+    </div>
+    <div class="card" style="padding:var(--sp-4)">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px">
+        <b style="font-size:15px">平台运行日报 · 2026-11-23</b>
+        <span class="tag">08:00 自动生成</span><span class="tag info">数字服务端现取，模型只出日期与正文</span>
+      </div>
+      <div class="bar-chart">
+        ${[["用量配额","86%"],["定时任务成败","97%"],["待办积压","34%"],["权限决策","71%"],["登录","58%"]].map(([n,w])=>`
+          <div class="r"><span>${esc(n)}</span><div class="b"><i style="width:${w}"></i></div><span class="mono">${esc(w)}</span></div>`).join("")}
+      </div>
+    </div>
+    <div class="card" style="padding:var(--sp-4)">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px">
+        <b style="font-size:15px">健康自检</b>
+        <span class="tag ${st==='fail'?'err':'ok'}">${st==='fail'?'1 FAIL · 阻塞发布门禁':'0 FAIL'}</span>
+        <span class="tag">三档：FAIL / WARN / INFO</span><span class="tag warn">对象存储写删未接入 → UNKNOWN</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" data-rerun>重新执行</button>
+        <span id="healthStatus" class="muted" aria-live="polite" style="font-size:12px"></span>
+      </div>
+      <div class="health-grid">
+        ${[["ok","数据库连通且 40 表齐备（PG 栈）","PASS"],["ok","数据库连通且 40 表齐备（MySQL 栈）","PASS"],["ok","Redis 读写","PASS"],["ok","对话模型连通","PASS"],
+           ["ok","向量模型连通","PASS"],["warn","对象存储读 / 写 / 删","UNKNOWN"],["ok","Milvus 集合维度一致","PASS"],["ok","生产密钥门禁未命中出厂示例值","PASS"],
+           ["fail","Rerank 配置","FAIL"],["warn","BM25 索引就绪","WARN"],["warn","渠道长连接（飞书）","WARN"],["warn","近 24h ERROR 日志","WARN"],
+           ["info","版本号与 profile","INFO"],["info","栈标识 PG / MySQL","INFO"],["info","各 ai_ 表行数","INFO"],["info","最近日报生成时间","INFO"]].map(([lv,n,v])=>`
+          <div class="hc ${st==='fail'&&v==='FAIL'?(n==='Rerank 配置'?'fail':'pass'):lv}"><span class="led" aria-hidden="true"></span>${esc(n)}<small>${v}</small></div>`).join("")}
+      </div>
+      ${st==='fail'
+        ? `<div class="banner err" style="margin-top:12px"><span aria-hidden="true">⛔</span> FAIL 项标红并给出诊断日志入口：<button class="btn btn-ghost btn-sm" data-diag aria-expanded="false" aria-controls="diagLog">看诊断日志</button>（单项超时 3s / 总预算 30s，超时记 UNKNOWN 并写明「判定超时」）
+          <pre id="diagLog" class="pre mono" hidden style="margin:10px 0 0;white-space:pre-wrap">[health.rerank] FAIL · 配置缺失或连通失败\n建议：检查服务地址与密钥 → 重跑连通自检 → 重新执行健康检查。本次未修改任何生产配置。</pre></div>`
+        : `<div class="notice" style="margin-top:12px">触发时机：每日 08:00 日报后自动执行、发布流程「灰度 → 健康自检 → 冒烟 → 全量」、管理页手动刷新。门禁要求 0 FAIL。</div>`}
+    </div>
+    <div class="banner"><span aria-hidden="true">✓</span> 8 个节点全部常亮 —— ✅ Success 终态：<a class="btn btn-primary btn-sm" href="#/exit">进入系统，跑一轮你自己的</a></div>
+  </div>` + screenNote("手册 §12 / 设计稿 §12.3-12.4", "权限标识 ai:health:query / ai:digest:query")
+};
+
+/* ---------- 每屏规格轨（Entry / Exit / 三终态 / 分支） ---------- */
+const STATES = {
+  1:[["default","默认 · 空态"],["loading","加载"],["done","4/4 完成"]],
+  2:[["default","默认 · 已选"],["empty","空态 · 未选资源"]],
+  3:[["default","路由分支"],["self","自答分支（未路由）"]],
+  4:[["default","作业中"],["degraded","专家失败 → 降级兜底"]],
+  5:[["default","待处置"],["allowed","允许 · 同轮继续"],["remember","记住该工具"],["rejected","拒绝（终止）"]],
+  6:[["default","命中来源"],["noperm","无全文权限"],["empty-src","空命中"]],
+  7:[["default","工具调用页"],["loading","加载中"],["error","查询失败"]],
+  8:[["default","0 FAIL"],["fail","1 FAIL 阻塞门禁"]],
+};
+const SPEC = {
+  1:()=>spec("A","1 of 8","演示账号首次登录，工作台无任何会话","4 项检查完成 → S2 组建资源","首登清单是服务端状态而非本地草稿：下次登录从断点续（手册 §4.1.1）","S1 只做清单摘要，深化见 Flow E（4 屏）"),
+  2:()=>spec("A","2 of 8","输入栏「＋ 资源」→ 分组选择器","发送问题 → S3","选中项以 chip 呈现，移除后下一轮生效；改选择不影响已在跑的轮次","附件不落知识库、不做切片，避免越权沉淀"),
+  3:()=>spec("A","3 of 8","发送自然语言问题","route → S4；self → 直接出回答（轨道标「未路由」）","小Z 唯一内置协议工具 route_decision，只有 route / self 两种 action","任务片段含附件摘要与口径约束"),
+  4:()=>spec("A","4 of 8","路由成功，专家开始作业","命中写工具 → S5；纯只读轮次 → 直接 S6","专家正文不被二次改写；小Z 不转述","失败不换专家，就地重试后降级如实声明（§6.7）"),
+  5:()=>spec("B","5 of 8","写工具命中决策档 1 需确认","允许 / 记住 → S6；拒绝 → 终止卡 + 审计留痕","三选一即三档授权的人侧入口；执行期还要复核业务权限","无人值守链路无人类可确认，写工具默认拒绝"),
+  6:()=>spec("B","6 of 8","HITL 放行，正文流式落成","关闭来源抽屉 → S7","命中片段默认可见，查看全文需对应权限；无权限则入口不渲染","写操作轮次禁用「重新生成」，旧回答在新回答落成后才替换"),
+  7:()=>spec("B","7 of 8","本轮结束，进入审计页","切到日报 / 健康自检 → S8","六类：消息 / 工具 / 权限决策 / 链路追踪 / 编排运行 / 日报","保留默认 180 天，每日 03:30 清理，不含会话正文"),
+  8:()=>spec("B","8 of 8","复盘昨日运行与平台健康","✅ 8 节点全亮 → Final CTA 浮现","日报五块数字服务端现取，模型只出日期与正文","健康自检 0 FAIL 是发布门禁之一"),
+};
+function spec(flow, screen, entry, exit, note1, note2){
+  const id = parseInt(screen,10);
+  return `<h4>屏幕规格</h4>
+    <dl>
+      <dt>FLOW / SCREEN</dt><dd>Flow ${flow} · SCREEN ${screen}</dd>
+      <dt>ENTRY</dt><dd>${esc(entry)}</dd>
+      <dt>EXIT</dt><dd>${esc(exit)}</dd>
+      <dt>约束</dt><dd>${esc(note1)}</dd>
+      <dt>口径</dt><dd>${esc(note2)}</dd>
+    </dl>
+    <div class="divider"></div>
+    <h4>状态变体 / 分支</h4>
+    <div class="branch">${(STATES[id]||[]).map(([k,l])=>`<button class="btn btn-ghost btn-sm" aria-pressed="${simState===k}" data-state="${k}">${esc(l)}</button>`).join("")}</div>
+    <div class="divider"></div>
+    <h4>三种终态</h4>
+    <div class="terminal" style="grid-template-columns:minmax(0,1fr)">
+      <div class="term ok"><b>✅ Success</b>本屏完成，轨道推进</div>
+      <div class="term err"><b>❌ Error</b>见上方分支按钮</div>
+      <div class="term ab"><b>↩ Abandon</b>关层即保留最后节点与滚动位置，再进原位续播</div>
+    </div>`;
+}
+/* ============================================================
+   屏内交互绑定（每次 renderSim 后重新绑定）
+   ============================================================ */
+function bindScreenEvents(){
+  const box = $("#screenBox"); if(!box) return;
+  $$(".tool-card .th", box).forEach(th=>{
+    const t = ()=>th.parentElement.classList.toggle("open");
+    th.addEventListener("click", t);
+    th.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); t(); } });
+  });
+  const drawer = $(".drawer", box);
+  $$("[data-open-drawer]", box).forEach(b=>b.addEventListener("click", ()=>{ if(drawer) drawer.classList.add("open"); }));
+  $$("[data-close-drawer]", box).forEach(b=>b.addEventListener("click", ()=>{ if(drawer) drawer.classList.remove("open"); }));
+  $$("[data-copy]",box).forEach(b=>b.addEventListener("click",()=>{
+    $("#copyStatus",box).textContent="已复制（模拟）";
+    b.textContent="已复制";
+    setTimeout(()=>{ if(b.isConnected) b.textContent="复制"; },1400);
+  }));
+  $$("[data-rerun]",box).forEach(b=>b.addEventListener("click",()=>{
+    const status=$("#healthStatus",box);
+    status.textContent="检查中… 16 项"; b.disabled=true; b.textContent="检查中…";
+    setTimeout(()=>{
+      if(!b.isConnected) return;
+      status.textContent="检查完成 · 结果同上"; b.disabled=false; b.textContent="重新执行";
+    },650);
+  }));
+  $$("[data-diag]",box).forEach(b=>b.addEventListener("click",()=>{
+    const log=$("#diagLog",box), open=log.hidden;
+    log.hidden=!open; b.setAttribute("aria-expanded",String(open)); b.textContent=open?"收起诊断日志":"看诊断日志";
+  }));
+  $$(".sess", box).forEach(s=>s.addEventListener("click", ()=>{ $$(".sess",box).forEach(x=>{x.classList.remove("on");x.setAttribute("aria-pressed","false");}); s.classList.add("on"); s.setAttribute("aria-pressed","true"); }));
+  $$("[data-state]", box).concat($$("#specRail [data-state]")).forEach(b=>b.addEventListener("click", ()=>{
+    simState = b.dataset.state; renderSim();
+  }));
+  $$("[role=tab]",box).forEach((tab,index,tabs)=>tab.addEventListener("keydown",e=>{
+    if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+    e.preventDefault();
+    const next=e.key==="Home"?0:e.key==="End"?tabs.length-1:e.key==="ArrowRight"?(index+1)%tabs.length:(index+tabs.length-1)%tabs.length;
+    const key=tabs[next].dataset.state.slice(4);
+    tabs[next].click();
+    $(`#auditTab-${key}`)?.focus({preventScroll:true});
+  }));
+  $$("[data-chip-x]", box).forEach(b=>b.addEventListener("click", ()=>{
+    const resource = b.dataset.resource;
+    if(resource){
+      const input = $(`.resource-check[data-resource="${CSS.escape(resource)}"]`,box);
+      if(input){ input.checked=false; input.closest("label").classList.remove("done"); $(".n",input.closest("label")).textContent=""; }
+    }
+    b.closest(".tag").remove();
+  }));
+  $$("[data-send-prompt]",box).forEach(b=>b.addEventListener("click",()=>{ location.hash="#/flow/3"; }));
+  $$("input[type=file]",box).forEach(input=>input.addEventListener("change",()=>{
+    const chips=$(".wb-input > div",box);
+    const attachments=$$(".tag:not([data-resource-chip]) [data-chip-x]",box).length;
+    [...input.files].slice(0,Math.max(0,5-attachments)).forEach(file=>{
+      const chip=document.createElement("span");
+      chip.className="tag info";
+      chip.innerHTML=`附件 · ${esc(file.name)} <button class="muted" data-chip-x aria-label="移除 ${esc(file.name)}">✕</button>`;
+      chips.append(chip);
+      $("[data-chip-x]",chip).addEventListener("click",()=>chip.remove());
+    });
+    input.value="";
+  }));
+  $$(".resource-check",box).forEach(input=>input.addEventListener("change",()=>{
+    const label=input.closest("label"), name=input.dataset.resource, group=input.dataset.group;
+    label.classList.toggle("done",input.checked);
+    $(".n",label).textContent=input.checked?"✓":"";
+    $(`[data-resource-chip="${CSS.escape(name)}"]`,box)?.remove();
+    if(input.checked){
+      const chip=document.createElement("span");
+      chip.className="tag glow"; chip.dataset.resourceChip=name;
+      chip.innerHTML=`${esc(group)} · ${esc(name)} <button class="muted" data-chip-x data-resource="${esc(name)}" aria-label="移除 ${esc(name)}">✕</button>`;
+      $(".wb-input > div",box).append(chip);
+      $("[data-chip-x]",chip).addEventListener("click",()=>{
+        input.checked=false; label.classList.remove("done"); $(".n",label).textContent=""; chip.remove();
+      });
+    }
+  }));
+}
+
+/* ============================================================
+   Flow C · 转化出口（状态机：C1 待命 → C3 落地 / C2 未配置）
+   口径：设计稿 §2.3 第 8 项「介绍页 → 工作台、开发文档；管理页深链需鉴权回跳」
+   ============================================================ */
+let EXIT_KIND = "system", EXIT_CFG = false, EXIT_LANDED = false, QA_SEED = null;
+const OUT = {
+  system:{ label:"进入系统", tgt:"系统域名（待队长登记）", desc:"跳转到云服务器上的任务工作台，需登录（演示账号 + IP 白名单）" },
+  doc:{ label:"开发文档", tgt:"文档站域名（待队长登记）", desc:"跳转到平台使用与开发文档，公开可读" },
+};
+function viewHead(kicker, title, sub, tags){
+  return `<div class="view-hd"><span class="eyebrow">${esc(kicker)}</span>
+    <h1 id="viewTitle" tabindex="-1" style="margin-top:12px">${esc(title)}</h1><p>${sub}</p>
+    <div class="chips" style="margin-top:18px">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
+    <div class="terminal-cta" style="margin-top:20px"><a class="btn btn-ghost btn-sm" href="#/" ${location.hash==='#/'?'aria-current="page"':''}>← 回介绍页</a>
+      <a class="btn btn-ghost btn-sm" href="#/flow/1">8 步运行走查</a>
+      <a class="btn btn-ghost btn-sm" href="#/qa" ${location.hash==='#/qa'?'aria-current="page"':''}>在线体验问答</a>
+      <a class="btn btn-ghost btn-sm" href="#/onboard" ${location.hash==='#/onboard'?'aria-current="page"':''}>首登引导</a></div></div>`;
+}
+function renderExit(){
+  const k = OUT[EXIT_KIND] ? EXIT_KIND : "system", o = OUT[k];
+  $("#view-exit").innerHTML = viewHead("继续使用 AgentHub",
+    "选择进入系统，或先查看开发文档",
+    "两个入口都会在新标签打开，当前页面与浏览位置保持不变。入口地址尚未配置时会明确说明原因，不会跳到错误页面。",
+    ["进入工作台","查看开发文档","新标签打开","地址未配置时明确提示"])+
+  `<div class="flow-cards">
+    <div class="card" style="padding:var(--sp-4); display:flex; gap:14px; align-items:center; flex-wrap:wrap">
+      <b style="font-size:14px">部署配置（模拟）</b>
+      <div class="pill-toggle" role="group" aria-label="域名注入状态">
+        <button class="${!EXIT_CFG?'on':''}" data-cfg="0">未注入（当前仓库状态）</button>
+        <button class="${EXIT_CFG?'on':''}" data-cfg="1">已注入系统域名</button>
+      </div>
+      <span class="muted mono" style="font-size:11.5px">system_origin = ${EXIT_CFG?'https://&lt;已登记&gt;':'null'}</span>
+      <span class="tag draft">域名字段名为草案，待 §3.2 命名表定位</span>
+    </div>
+
+    <!-- SCREEN C1 of 3 · ENTRY: 顶栏 / Hero / Final CTA 任一出口按钮 · EXIT: 已配置 → C3；未配置 → C2 -->
+    <section class="screen-block">
+      <div class="sh"><span class="id">入口选择</span><h3>选择你的下一步</h3><span class="entry">鼠标悬停或键盘聚焦时显示说明</span></div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
+        <button class="btn btn-primary" data-out="system" ${EXIT_CFG?'':'disabled'}>进入系统 →</button>
+        <button class="btn btn-ghost" data-out="doc" ${EXIT_CFG?'':'disabled'}>开发文档</button>
+        <span class="muted" style="font-size:12.5px">${EXIT_CFG?'可点击：将在新标签打开目标，本页停留位置不变':'当前未注入域名，按钮置灰（见 C2）'}</span>
+      </div>
+      <dl class="kv">
+        <dt>目标</dt><dd>${esc(o.tgt)}</dd>
+        <dt>行为</dt><dd>${esc(o.desc)}；<span class="mono">target="_blank" rel="noopener"</span>，不改写当前页 history</dd>
+        <dt>鉴权</dt><dd>管理页深链需登录后回跳，介绍页不伪造直连管理能力</dd>
+      </dl>
+    </section>
+
+    <!-- SCREEN C2 of 3 · ❌ Error 终态：地址未配置 · EXIT: 终态（等待配置注入） -->
+    <section class="screen-block">
+      <div class="sh"><span class="id">地址未配置</span><h3>入口暂未开放</h3><span class="entry">我们会说明原因，不会显示无效链接</span></div>
+      <div class="banner ${EXIT_CFG?'warn':'err'}">
+        <span aria-hidden="true">${EXIT_CFG?'◐':'⛔'}</span>
+        ${EXIT_CFG?'已注入域名，C2 当前不触发。切回「未注入」查看降级态。':'系统域名尚未注入本 Pages 工程，「进入系统」「开发文档」置灰并给出原因；<b>不出现死链、不出现 404、不假装能直连管理页</b>。'}
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:6px">
+        <button class="btn btn-primary" disabled>进入系统 →</button>
+        <button class="btn btn-ghost" disabled>开发文档</button>
+        <p style="font-size:12.5px; color:var(--text-3); max-width:44ch">InlineNote：域名由队长在服务端配置后注入构建产物；介绍页侧不放任何密钥（设计稿 §2.3 第 6 项）。</p>
+      </div>
+    </section>
+
+    <!-- SCREEN C3 of 3 · ✅ Success：新标签打开目标 · EXIT: 跳出 flow -->
+    <section class="screen-block">
+      <div class="sh"><span class="id">打开目标</span><h3>${EXIT_LANDED?'已为你打开新标签':'等待你的选择'}</h3><span class="entry">当前页面与浏览位置保持不变</span></div>
+      ${EXIT_LANDED
+        ? `<div class="banner"><span aria-hidden="true">↗</span> 已按 <span class="mono">target=_blank</span> 发起出站：<b>${esc(o.label)}</b> → ${esc(o.tgt)}。本页停留位置与 <span class="mono">${location.hash||"#/"}</span> 锚点完整保留，未劫持当前标签。</div>
+           <div class="terminal-cta"><button class="btn btn-ghost btn-sm" data-land="0">撤销，回到待命态</button></div>`
+        : `<div class="empty"><div class="ic">↗</div><b style="font-size:14.5px">尚未触发出站</b>
+           <p style="font-size:13px; margin-top:8px">${EXIT_CFG?'点击上方「进入系统」或「开发文档」查看落地态。':'先在上方切到「已注入系统域名」，再从 C1 触发。'}</p></div>`}
+      <div class="terminal">
+        <div class="term ok"><b>✅ Success</b>新标签打开真实目标，原页位置不变</div>
+        <div class="term err"><b>❌ Error</b>C2：未注入 → 置灰 + 原因，禁死链</div>
+        <div class="term ab"><b>↩ Abandon</b>切回本页时滚动位置与 #flow 锚点全保留</div>
+      </div>
+    </section>
+  </div>`;
+  $$("[data-cfg]").forEach(b=>b.addEventListener("click", ()=>{ EXIT_CFG = b.dataset.cfg==="1"; EXIT_LANDED=false; renderExit(); }));
+  $$("[data-out]").forEach(b=>b.addEventListener("click", ()=>{ EXIT_KIND=b.dataset.out; EXIT_LANDED=true; renderExit(); scrollTo({top:300,behavior:"smooth"}); }));
+  const un = $("[data-land]"); if(un) un.addEventListener("click", ()=>{ EXIT_LANDED=false; renderExit(); });
+}
+
+/* ============================================================
+   Flow D · 在线体验问答（4 屏 + 边界拦截）
+   口径：设计稿 D5 / D9 —— 云端 Agent 不接触业务知识库正文、工具回参、会话数据与 PII
+   ============================================================ */
+const QA_KB = [
+  { q:"专家提示词怎么写才好？", a:"专家的「描述」参与路由提示词，写清擅长什么最影响命中；「系统提示词」承载领域知识与口径，行为纪律由平台强制注入，不必自己重复写。配 AI 辅助生成（一次调用补全描述 + 提示词建议，可继续编辑）、9 类领域模板一键套用、保存前体检（提示词长度、能力边界与拒答口径、知识库与写操作一致性，只建议不硬拦）。", src:"《开发总览手册》§4.1.3 专家配置 · 填写辅助" },
+  { q:"写工具为什么要人工确认？", a:"写操作命中决策档「1 需确认」时本轮暂停，对话内弹确认卡片，你处置后同轮继续 —— 这是三层权限模型的第 ② 层。第 ① 层在装配期就把「禁止」档工具不注册，模型根本看不见；第 ③ 层在执行期按提问用户复核业务权限。三选一：允许本次 / 记住该工具 / 拒绝。", src:"《开发总览手册》§6.3 三层权限模型" },
+  { q:"审计在哪里看？", a:"审计观测域共六类：消息、工具调用、权限决策、链路追踪、编排运行、日报，一个 trace_id 贯穿一轮。默认保留 180 天，每日 03:30 清理，清理范围不含会话正文。主会话只汇总「工具调用 N 次」，明细在审计页。", src:"《开发总览手册》§7.2 · 设计稿 §12.4 审计保留管理" },
+  { q:"怎么接 MCP？", a:"工具是两段式：表元数据（编码 / 描述 / 参数 Schema / 类型 / 实现标识 / 启停）+ 代码侧工厂登记，页面登记本身不产生可执行能力，杜绝裸 SQL / Shell 万能工具。MCP 支持双向：既接外部工具，也对外暴露；MCP 出口口令未设时 fail-closed，功能不可用而不是裸奔。", src:"《开发总览手册》§6.4 工具两段式" },
+];
+const QA_BIZ = /对账|发票|工资|薪酬|报销|台账|客户|订单|合同全文|合同正文|手机号|身份证|个人信息|知识库正文|这个人的|我部门的/;
+let QA_MSGS = [], QA_TIMER = null, QA_ERR = false, QA_ARMED = false;
+/* D2 流式：只更新文本节点，不整屏重绘 */
+function qaType(el, done){
+  const full = el.dataset.full || ""; let i = 0;
+  clearInterval(QA_TIMER);
+  el.textContent = "";
+  QA_TIMER = setInterval(()=>{
+    i += 11;
+    el.textContent = full.slice(0, i);
+    if(i >= full.length){ clearInterval(QA_TIMER); QA_TIMER = null; if(done) done(); }
+  }, 26);
+}
+function qaAsk(text){
+  const q = (text||"").trim(); if(!q || QA_MSGS.some(m=>m.live)) return;
+  QA_ARMED = false;
+  QA_MSGS.push({role:"u", text:q});
+  const hit = QA_KB.find(k=>k.q===q || q.includes(k.q.slice(0,6)));
+  if(QA_BIZ.test(q)){
+    QA_MSGS.push({role:"blocked", text:q});
+  } else if(QA_ERR){
+    QA_MSGS.push({role:"err", text:q});
+  } else {
+    const a = hit ? hit.a : "这个问题超出我的范围：我只回答 AgentHub 平台使用与部署口径，依据是公开介绍内容与平台使用文档。业务口径请在登录后的工作台提问。想看具体配置页怎么填，可以先跑一遍 8 步运行走查。";
+    QA_MSGS.push({role:"a", text:a, src: hit ? hit.src : "设计稿 §2.3 第 7 项 · 云端 Agent 数据边界", cite:true, live:true});
+  }
+  renderQA();
+}
+function renderQA(){
+  const busy = QA_MSGS.some(m=>m.live);
+  const chips = QA_KB.map(k=>`<button class="chip" data-q="${esc(k.q)}" ${busy?'disabled':''}>${esc(k.q)}</button>`).join("")
+    + `<button class="chip" data-q="帮我把上个月华东区的对账差异列出来" style="border-color:rgba(255,92,108,.4)" ${busy?'disabled':''}>⚠ 业务数据问题（演示拦截）</button>`;
+  const body = QA_MSGS.length===0
+    ? `<div class="empty"><div class="ic">💬</div><b style="font-size:15px">问我平台怎么用</b>
+       <p style="font-size:13.5px; margin-top:8px">点上方推荐问题，或直接输入。会话历史仅在本次浏览内存在，关闭即清、不持久化。</p></div>`
+    : QA_MSGS.map((m,i)=>{
+        if(m.role==="u") return bubble("你","me",esc(m.text),"你的问题");
+        if(m.role==="a") return bubble("云端 Agent","z",
+            (m.live ? `<span id="qaTyped" data-full="${esc(m.text)}"></span><span class="cursor" id="qaCursor"></span>` : esc(m.text))
+            + (m.cite?`<div style="margin-top:10px"><span class="tag info">出处</span><span class="muted" style="font-size:12px"> ${esc(m.src)}</span></div>`:''),
+            m.live ? "正在回答" : "回答");
+        if(m.role==="blocked") return `<div class="banner err" style="align-items:flex-start">
+            <span aria-hidden="true" style="font-size:16px">🚫</span>
+            <div><b>D4 · 边界拦截：这个问题我不能答</b>
+              <p style="font-size:13px; margin-top:6px; color:var(--text-2)">你问的属业务数据。按设计稿 D5 / D9，云端 Agent <b>仅</b>接触介绍页公开内容与平台使用文档，
+              不接入业务知识库正文、工具回参、会话数据或任何 PII；业务主链路内核跑在云服务器，不在本页。</p>
+              <div style="margin-top:10px; display:flex; gap:9px; flex-wrap:wrap">
+                <a class="btn btn-ghost btn-sm" href="#/exit">进入系统后提问 →</a>
+                <button class="btn btn-ghost btn-sm" data-reset>换个平台使用问题</button>
+              </div></div></div>`;
+        if(m.role==="err") return `<div class="banner err"><span aria-hidden="true">⚠</span>
+          <div><b>问答服务当前不可用</b><p style="font-size:13px; margin-top:5px">未静默转圈：明确报错并保留你的提问。
+          <button class="btn btn-ghost btn-sm" data-retry>重试</button> <button class="btn btn-ghost btn-sm" data-ok>模拟服务恢复</button></p></div></div>`;
+        return "";
+      }).join("");
+  $("#view-qa").innerHTML = viewHead("在线体验问答",
+    "先了解平台怎么用",
+    "直接询问配置、权限、审计或工具接入。回答会标注公开出处；涉及业务数据的问题会被拦截，并引导你到登录后的工作台。",
+    ["公开内容问答","回答附出处","业务数据不进入","历史仅本次浏览"])+
+  `<div class="flow-cards">
+    <div class="card" style="overflow:hidden">
+      <div class="hd" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px 16px; border-bottom:1px solid var(--border-3)">
+        <span class="tag glow">云端 Agent</span>
+        <b style="font-size:14.5px">平台使用问答</b>
+        <span class="tag err" style="margin-left:auto">边界声明常驻</span>
+        <label class="muted" style="font-size:12px; display:flex; gap:6px; align-items:center">
+          <input type="checkbox" style="width:auto" ${QA_ERR?'checked':''} ${busy?'disabled':''} data-toggle-err aria-label="模拟服务不可用"/> 模拟服务不可用</label>
+      </div>
+      <div style="padding:16px">
+        <div class="chips" id="qaChips">${chips}</div>
+        <div class="wb-stream" style="border:1px solid var(--border-3); border-radius:var(--r-md); background:var(--bg-sunken); padding:16px; max-height:460px">${body}</div>
+        <div style="display:flex; gap:9px; align-items:flex-end; margin-top:14px">
+          <input id="qaInput" aria-label="向 AgentHub 提问" placeholder="例如：审计在哪里看？" ${busy?'disabled':''} style="flex:1; padding:11px 13px; border-radius:10px; border:1px solid var(--border-2); background:var(--bg-container); color:var(--text); font:inherit" />
+          <button class="btn btn-primary btn-sm" data-send ${busy?'disabled':''}>${busy?'回答中…':'发送'}</button>
+          <button class="btn btn-ghost btn-sm" data-clear ${busy?'disabled':''}>${QA_ARMED?'再点一次确认清空':'清空'}</button>
+        </div>
+        <div class="notice" style="margin-top:12px">本问答为智能模拟回答，非真实模型输出。真实部署时云端 Agent 只索引公开介绍内容与平台使用文档；密钥只在服务端，介绍页侧不放任何密钥。</div>
+      </div>
+    </div>
+    <div class="terminal">
+      <div class="term ok"><b>✅ Success</b>拿到平台使用答案，D3 出处指向开发文档</div>
+      <div class="term err"><b>❌ Error</b>服务不可用 → 全区块错误态 + 重试；问到业务数据 → D4 拒答卡</div>
+      <div class="term ab"><b>↩ Abandon</b>关闭浮层即清上下文，会话内历史不持久化</div>
+    </div>
+  </div>`;
+  $$("[data-q]").forEach(b=>b.addEventListener("click",()=>qaAsk(b.dataset.q)));
+  const send=()=>qaAsk($("#qaInput").value);
+  $$("[data-send]").forEach(b=>b.addEventListener("click",send));
+  $("#qaInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();send();} });
+  $$("[data-reset]").forEach(b=>b.addEventListener("click",()=>{ QA_ARMED=false; QA_MSGS=[]; clearInterval(QA_TIMER); QA_TIMER=null; renderQA(); }));
+  $$("[data-clear]").forEach(b=>b.addEventListener("click",()=>{
+    if(!QA_ARMED){ QA_ARMED=true; renderQA(); return; }
+    QA_ARMED=false; QA_MSGS=[]; clearInterval(QA_TIMER); QA_TIMER=null; renderQA();
+  }));
+  $$("[data-retry]").forEach(b=>b.addEventListener("click",()=>{
+    const q=[...QA_MSGS].reverse().find(m=>m.role==="u")?.text;
+    QA_MSGS.pop();
+    const userIndex=QA_MSGS.findLastIndex(m=>m.role==="u");
+    if(userIndex>=0) QA_MSGS.splice(userIndex,1);
+    if(q) qaAsk(q); else renderQA();
+  }));
+  $$("[data-ok]").forEach(b=>b.addEventListener("click",()=>{ QA_ERR=false; QA_MSGS.pop(); renderQA(); }));
+  const te=$("[data-toggle-err]"); if(te) te.addEventListener("change",()=>{ QA_ERR=te.checked; renderQA(); });
+  const tv=$("#qaTyped");
+  if(tv) qaType(tv, ()=>{ QA_MSGS.forEach(m=>{ m.live=false; }); renderQA(); });
+  if(QA_SEED){ const s=QA_SEED; QA_SEED=null; qaAsk(s); }
+}
+
+/* ============================================================
+   Flow E · 首登引导深化（4 屏：0/4 → 4/4）
+   口径：手册 §4.1.1 首登检查清单 + §12.3 健康自检检项
+   ============================================================ */
+let OB = { done:[false,false,false,false], now:1, keyTest:"idle", vecTest:"idle", firstMsg:false };
+function renderOnboard(){
+  const items = [["对话模型密钥","小Z 与专家的输出通道","chat-main","密钥校验 + 连通自检"],
+                 ["向量模型密钥","知识库检索依赖","embed-1024","密钥校验 + 集合维度一致"],
+                 ["文档解析与向量化","把知识库正文变成可检索切片","解析 → 切片 → 向量化 → 写入集合","Milvus 可达 + BM25 就绪"],
+                 ["发送首条消息","端到端验证一轮链路","工作台提问 → 回答落地","清单 4/4"]];
+  const prog = OB.done.filter(Boolean).length;
+  const stepBar = `<div class="steps-h">${items.map((x,i)=>`<i class="tag ${OB.done[i]?'ok':OB.now===i+1?'glow':''}">${i+1} ${esc(x[0])}</i>${i<3?'<span aria-hidden="true">→</span>':''}`).join("")}</div>`;
+  $("#view-onboard").innerHTML = viewHead("首次使用配置",
+    "先完成四项准备，再开始第一轮对话",
+    "按顺序配置模型、准备知识库并发送首条消息。每一步都会显示当前结果；中途离开后，可从上次完成的位置继续。",
+    ["配置对话模型","准备知识库","验证端到端链路","完成首轮对话"])+
+  `<div class="flow-cards">
+    <div class="card" style="padding:var(--sp-4)">${stepBar}
+      <div style="display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap">
+        <b style="font-size:16px">首登检查清单</b><span class="tag ${prog===4?'ok':'warn'}">${prog} / 4</span>
+        <div style="flex:1; min-width:180px; height:5px; border-radius:5px; background:var(--border-2); overflow:hidden">
+          <i style="display:block; height:100%; width:${prog/4*100}%; background:linear-gradient(90deg,var(--glow),var(--accent))"></i></div>
+        <span class="muted" style="font-size:12px">状态服务端实时推导 · 可暂时隐藏</span>
+      </div>
+    </div>
+
+    <!-- SCREEN E2 · 对话模型密钥 -->
+    <section class="screen-block">
+      <div class="sh"><span class="id">E2 · 对话模型密钥</span><h3>填密钥 → 连通自检</h3><span class="entry">不保存即可试（手册 §7.3 表单辅助）</span></div>
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--sp-4)">
+        <div>
+          <div class="field"><label>模型标识</label><input aria-label="对话模型标识" value="chat-main" /></div>
+          <div class="field"><label>API Key</label><input aria-label="对话模型 API Key" type="password" value="${OB.keyTest==='fail'?'':'••••••••••••'}" placeholder="模拟值，不落盘" />
+            <span class="hint">真实部署：密钥只在服务端密文落库，介绍页侧不放任何密钥。</span></div>
+          <button class="btn btn-primary btn-sm" data-test="key">${OB.keyTest==='pass'?'重新自检':'连通自检'}</button>
+          <button class="btn btn-ghost btn-sm" data-test="keyfail">模拟自检失败</button>
+        </div>
+        ${OB.keyTest==="idle"?`<div class="empty"><div class="ic">⌁</div><p style="font-size:13px">尚未自检。自检通过后第 1 项标绿。</p></div>`
+          :OB.keyTest==="pass"?`<div class="banner"><span aria-hidden="true">✓</span> 连通自检通过 · 模型回参正常 · 耗时 820 ms · 配额：日 Token 2.0M / 日请求 5k 已登记</div>`
+          :`<div class="banner err"><span aria-hidden="true">⛔</span> 自检失败：401 Invalid API key<br/>
+             <div class="pre mono" style="font-size:11.5px; margin-top:8px; color:var(--text-3)">诊断日志摘要（模拟）<br/>chat-main · 连通性自检 · 401 · 未写入实例缓存 · 装配指纹未变更<br/>排查：确认密钥有效性 → 确认绑定的角色模型槽位留空回退主模型</div></div>`}
+      </div>
+    </section>
+
+    <!-- SCREEN E3 · 向量模型密钥 + 向量化 -->
+    <section class="screen-block">
+      <div class="sh"><span class="id">E3 · 向量模型 + 文档向量化</span><h3>配向量模型 → 跑解析向量化</h3><span class="entry">Milvus 集合维度须与知识库声明一致</span></div>
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--sp-4)">
+        <div>
+          <div class="field"><label>向量模型标识</label><input aria-label="向量模型标识" value="embed-1024" /></div>
+          <div class="field"><label>输出维度</label><input aria-label="向量输出维度" value="1024" /></div>
+          <button class="btn btn-primary btn-sm" data-test="vec">${OB.vecTest==='pass'?'重新执行':'向量化（10 篇语料 / 56 用例基线）'}</button>
+        </div>
+        <div>
+          ${OB.vecTest==="idle"?`<div class="empty"><div class="ic">⇄</div><p style="font-size:13px">尚未执行。知识库当前无向量集合，检索会命中 0 条。</p></div>`:`
+          <div class="checklist">
+            ${[["文档解析","10 / 10 篇",1],["切片","412 片",1],["向量化写入集合","412 / 412",OB.vecTest==="pass"],["BM25 索引","就绪中",OB.vecTest==="pass"]].map(([n,d,ok],i)=>`
+              <div class="cl-item ${ok?'done':(i===2?'now':'')}" style="padding:9px 12px"><span class="n">${ok?'✓':i+1}</span>
+                <div class="tt" style="font-size:13px">${esc(n)}<small>${esc(d)}</small></div>${ok?'':'<span class="spinner" aria-hidden="true"></span>'}</div>`).join("")}
+          </div>
+          <div class="health-grid" style="margin-top:12px">
+            <div class="hc ${OB.vecTest==='pass'?'pass':'warn'}"><span class="led"></span>Milvus 集合维度一致<small>${OB.vecTest==='pass'?'PASS':'UNKNOWN'}</small></div>
+            <div class="hc pass"><span class="led"></span>Redis 读写<small>PASS</small></div>
+          </div>`}
+        </div>
+      </div>
+      <div class="notice" style="margin-top:6px">降级口径：BM25 索引未就绪或检索异常 → 自动降级纯向量；Rerank 未配或超时 → 保持向量原序（手册 §6.7）。</div>
+    </section>
+
+    <!-- SCREEN E4 · 发送首条消息 -->
+    <section class="screen-block">
+      <div class="sh"><span class="id">E4 · 发出首条消息</span><h3>在工作台问第一轮</h3><span class="entry">清单 4 / 4 → 退出 E → A2</span></div>
+      ${OB.firstMsg
+        ? `<div class="banner"><span aria-hidden="true">🎉</span> <b>4 / 4 全部完成</b> · 首条消息已收到回答，清单收起至侧边栏。
+           <a class="btn btn-primary btn-sm" href="#/flow/2">带着这一轮进 8 步走查 →</a></div>
+          <div class="wb" style="min-height:auto; margin-top:14px">${`<div class="wb-main" style="grid-column:1/-1"><div class="wb-stream">
+            ${bubble("你","me","我们平台的写操作要怎么才能自动放行？","10:02")}
+            ${bubble("小Z","z","这是平台使用问题，我能直接答：把工具决策档设为「0 允许」，或按「记住该工具」在会话内累积。默认写操作是「1 需确认」。","10:02")}
+          </div><div class="wb-input">${inputBar()}</div></div>`}</div>`
+        : `<div class="empty"><div class="ic">⌨</div><b style="font-size:14.5px">尚未发送首条消息</b>
+            <p style="font-size:13px; margin-top:8px">第 4 项检查在这一步完成，需要前 3 项已就绪。</p>
+            <div class="terminal-cta" style="justify-content:center; margin-top:14px"><button class="btn btn-primary btn-sm" data-first>发送首条消息</button></div></div>`}
+      <div class="terminal">
+        <div class="term ok"><b>✅ Success</b>4/4 全绿，首条消息有回复，横幅引导进工作台</div>
+        <div class="term err"><b>❌ Error</b>密钥校验失败 / Milvus 不可达 → 该项标红 + 诊断日志摘要</div>
+        <div class="term ab"><b>↩ Abandon</b>清单为服务端状态，下次登录从断点续（非本地草稿）</div>
+      </div>
+    </section>
+  </div>`;
+  $$("[data-test]").forEach(b=>b.addEventListener("click",()=>{
+    if(b.dataset.test==="key"){ OB.keyTest="pass"; OB.done[0]=true; }
+    if(b.dataset.test==="keyfail"){ OB.keyTest="fail"; OB.done[0]=false; }
+    if(b.dataset.test==="vec"){ OB.vecTest="pass"; OB.done[1]=true; OB.done[2]=true; }
+    renderOnboard();
+  }));
+  const f=$("[data-first]"); if(f) f.addEventListener("click",()=>{ OB.firstMsg=true; OB.done[3]=true; renderOnboard(); });
+}
+
+/* ---------- 首屏引导 ---------- */
+$("#simInner") && addEventListener("keydown", e=>{ if(e.key==="Escape" && SIM_OPEN()) location.hash="#flow"; });
+route();
+</script>
+</body>
+</html>
