@@ -96,6 +96,9 @@ code,.mono{font-family:var(--mono); font-size:.88em}
 .btn-danger{border-color:rgba(255,92,108,.42); background:rgba(255,92,108,.08); color:#FFC7CD}
 .btn-danger:hover{border-color:var(--err); background:rgba(255,92,108,.14)}
 .btn-sm{padding:7px 13px; font-size:13px; border-radius:var(--r-sm)}
+/* 首屏次级动作：降为文字链，避免与唯一暖色主 CTA 抢焦点 */
+.cta-link{align-self:center; color:var(--text-2); font-size:14px; text-decoration:none; border-bottom:1px solid transparent; transition:color .2s, border-color .2s}
+.cta-link:hover{color:var(--glow); border-bottom-color:var(--glow-line)}
 .file-upload{position:relative;overflow:hidden}
 .file-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .file-upload:focus-within{outline:2px solid var(--glow);outline-offset:3px}
@@ -683,7 +686,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         </div>
         <div class="ctas">
           <button class="btn btn-cta" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
-          <a class="btn btn-ghost" href="#flow">观看运行流程</a>
+          <a class="cta-link" href="#flow">观看运行流程 →</a>
         </div>
         <p class="hero-note"><span aria-hidden="true">⌁</span> 真实系统部署在云服务器，前端与 API 同源；本页只承载介绍、公开问答与跳转链接，不承载真实系统页面、不接触业务数据。</p>
       </div>
