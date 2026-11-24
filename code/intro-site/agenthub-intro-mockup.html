@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   AgentHub 产品介绍页 · 高保真交互演示稿（单文件 HTML）
-  STATUS: 设计稿 v2 · 文案故事句化（v1 四字定位降为标签行），待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
+  STATUS: 设计稿 v3 · 文案故事句化 + 区块 3 星球轨道舞台（中心=你的目标，8 步=卫星），待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
   SCOPE: 营销单页 7 区块 + 5 个 flow / 19 屏，hash 路由，无外部依赖，双击即开
   ROUTES:
     #/            L1 营销单页
@@ -243,22 +243,69 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .metric b,.stat b,.stat em,.mono,table.tbl td,table.tbl th,.node .dot,#playTime{font-variant-numeric:tabular-nums}
 
 /* ============================================================
-   4. 流程动画区 — 8 节点发光轨道 + 步骤详情面板（本次核心）
+   4. 流程动画区 — 星球轨道舞台（中心=你的目标，8 步=卫星）+ 步骤详情面板
    ============================================================ */
 .flowsec .wrap{display:grid; gap:var(--sp-5)}
-.track{position:relative; padding:var(--sp-6) 0 var(--sp-4)}
-.track .rail{position:absolute; left:0; right:0; top:calc(var(--sp-6) + 17px); height:2px; background:var(--border-2); border-radius:2px}
-.track .rail i{position:absolute; inset:0 auto 0 0; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); box-shadow:0 0 14px var(--glow-dim); transition:width .5s cubic-bezier(.4,0,.2,1)}
-.track ol{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:6px; position:relative}
-.node{display:flex; flex-direction:column; align-items:center; gap:10px; padding:0; text-align:center; width:100%}
-.node .dot{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--bg-container); border:1px solid var(--border); font-size:13px; font-weight:700; color:var(--text-3); transition:.28s}
-.node .lbl{font-size:12px; color:var(--text-3); line-height:1.35; transition:.2s}
-.node .grp{font-size:10px; color:var(--text-4); font-family:var(--mono); letter-spacing:.08em}
-.node:hover .dot{border-color:var(--glow-line); color:var(--text)}
-.node:hover .lbl{color:var(--text-2)}
-.node.done .dot{background:rgba(49,225,196,.14); border-color:var(--glow-line); color:var(--glow)}
-.node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0); color:#04121A; border-color:transparent; box-shadow:0 0 0 4px var(--glow-dim),0 0 22px rgba(49,225,196,.5); transform:scale(1.1)}
-.node.active .lbl{color:var(--text); font-weight:600}
+.orbit-stage{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:14px}
+.orbit-field{--orbitR:min(19vh,clamp(130px,20vw,205px));--nodeW:clamp(116px,11vw,150px);--planetD:min(17vh,clamp(140px,20vw,210px));position:relative;height:min(60vh,580px);min-height:420px;overflow:hidden;border:1px solid var(--border-2);border-radius:28px;
+  background:
+    radial-gradient(1.6px 1.6px at 11% 18%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1.3px 1.3px at 26% 9%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(1.7px 1.7px at 43% 16%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1.2px 1.2px at 61% 8%, rgba(255,255,255,.38), transparent 60%),
+    radial-gradient(1.6px 1.6px at 78% 20%, rgba(255,255,255,.52), transparent 60%),
+    radial-gradient(1.2px 1.2px at 90% 12%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(1.5px 1.5px at 7% 62%, rgba(255,255,255,.42), transparent 60%),
+    radial-gradient(1.3px 1.3px at 94% 55%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(1.5px 1.5px at 16% 84%, rgba(255,255,255,.36), transparent 60%),
+    radial-gradient(1.3px 1.3px at 85% 82%, rgba(255,255,255,.38), transparent 60%),
+    radial-gradient(1.6px 1.6px at 38% 92%, rgba(255,255,255,.34), transparent 60%),
+    radial-gradient(1.3px 1.3px at 55% 96%, rgba(255,255,255,.3), transparent 60%),
+    radial-gradient(circle at 50% 52%, rgba(76,141,255,.16), transparent 46%),
+    radial-gradient(circle at 50% 52%, rgba(49,225,196,.05), transparent 70%),
+    linear-gradient(180deg,#081020,#04070F);
+}
+/* 轨道虚线只做氛围：卫星按 --a+--rotation 旋转，圆心在舞台正中 */
+.orbit-path{position:absolute;left:50%;top:50%;width:calc(var(--orbitR) * 2);aspect-ratio:1;transform:translate(-50%,-50%);border:1px dashed rgba(140,180,235,.15);border-radius:50%;pointer-events:none}
+.orbit-planet{position:absolute;left:50%;top:50%;z-index:2;width:var(--planetD);aspect-ratio:1;transform:translate(-50%,-52%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border-radius:50%;padding:14%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.3), transparent 40%),
+    radial-gradient(circle at 68% 78%, rgba(16,42,90,.9), transparent 55%),
+    radial-gradient(circle at 50% 58%, #3E86DE 0%, #24509A 48%, #12294F 82%, #0A1830 100%);
+  box-shadow:0 0 0 1px rgba(130,185,255,.28),0 0 64px rgba(76,141,255,.4),0 0 140px rgba(76,141,255,.18),inset -14px -18px 44px rgba(0,0,0,.4)}
+.orbit-planet span{font-size:11px;letter-spacing:.14em;color:rgba(214,232,255,.75)}
+.orbit-planet strong{font-size:clamp(13px,1.3vw,16px);color:#EAF4FF;font-weight:650;line-height:1.4;max-width:13ch}
+#trackList{--rotation:0deg;position:absolute;left:50%;top:50%;margin:0;padding:0;list-style:none;transform-style:preserve-3d}
+/* li 先绕中心转到 (--a+--rotation)，再反向自转保持卡片竖直，最后平移半宽居中到轨道点 */
+#trackList li{position:absolute;left:0;top:0;width:var(--nodeW);height:calc(var(--nodeW) * .78);margin:0;list-style:none;transform-style:preserve-3d;z-index:3;
+  transform:rotate(calc(var(--a) + var(--rotation))) translateY(calc(-1 * var(--orbitR))) rotate(calc(-1 * (var(--a) + var(--rotation)))) translate(-50%,-50%);
+  transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform}
+#trackList li.rear{z-index:1}
+#trackList .node{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;border:1px solid rgba(168,188,211,.18);border-radius:18px;background:linear-gradient(145deg,rgba(24,36,53,.96),rgba(8,13,22,.97));box-shadow:0 12px 28px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.05);opacity:.72;filter:saturate(.75);transition:opacity .25s,filter .25s,background .25s,box-shadow .25s}
+#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.08),transparent 34%);pointer-events:none}
+#trackList .node:hover{opacity:1;filter:none}
+#trackList .node .num{position:absolute;top:8px;left:10px;font-family:var(--mono);font-size:10px;color:var(--text-4);letter-spacing:.06em}
+#trackList .dot{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
+#trackList .dot svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#trackList .lbl{font-size:13px;max-width:calc(var(--nodeW) - 24px);color:var(--text-2);line-height:1.3}
+#trackList .grp{display:none}
+#trackList .node.done .dot{background:rgba(49,225,196,.16);border-color:var(--glow-line);color:var(--glow)}
+#trackList .node.active{opacity:1;filter:none;border-color:var(--glow-line);background:radial-gradient(circle at 50% 18%,rgba(49,225,196,.17),transparent 60%),linear-gradient(145deg,#142C37,#0A1720);box-shadow:0 0 0 4px var(--glow-dim),0 0 34px rgba(49,225,196,.3),0 20px 38px rgba(0,0,0,.45)}
+#trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
+#trackList .node.active .lbl{color:var(--text);font-weight:600}
+#trackList .node.active .num{color:var(--glow)}
+/* 背面卫星压到星球之后并降透明度，但标签保持可见（设计约定：8 颗全部可见） */
+#trackList li.rear .node{opacity:.3;filter:saturate(.35)}
+.ring-arrow{width:44px;height:56px;border:1px solid var(--border-2);border-radius:14px;background:var(--bg-container);color:var(--text-2);font-size:16px}
+.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
+.orbit-foot{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:14px;flex-wrap:wrap}
+.ring-caption{font-size:12px;color:var(--text-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ring-play{padding:6px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;color:var(--text-2);background:var(--bg-container)}
+.ring-mini{display:flex;gap:8px;padding:0}
+.ring-mini button{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-2);background:var(--bg-container)}
+.mini-mark{display:block;width:11px;height:3px;border-radius:3px;background:var(--text-4);transition:width .2s,background .2s,box-shadow .2s}
+.ring-mini button.active{border-color:var(--glow-line);background:rgba(49,225,196,.08);box-shadow:0 0 14px var(--glow-dim)}
+.ring-mini button.active .mini-mark{width:18px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
 .flow-panel{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:var(--sp-5); align-items:stretch}
 .flow-panel .detail{padding:var(--sp-5); display:flex; flex-direction:column; gap:14px}
 .flow-panel .detail .idx{font-family:var(--mono); font-size:12px; color:var(--glow)}
@@ -274,42 +321,6 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .playbar .prog{flex:1; height:3px; background:var(--border-2); border-radius:3px; overflow:hidden}
 .playbar .prog i{display:block; height:100%; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); transition:width .3s}
 .playbar .t{font-family:var(--mono); font-size:11.5px; color:var(--text-3); flex:none}
-.ring-dock{position:fixed;right:18px;top:50%;z-index:40;width:320px;padding:12px;border:1px solid var(--border);border-radius:24px;background:radial-gradient(circle at 50% 35%,rgba(49,225,196,.07),transparent 42%),rgba(8,13,22,.92);backdrop-filter:blur(18px) saturate(140%);box-shadow:var(--sh-3),var(--glow-ring);opacity:0;visibility:hidden;transform:translateY(-50%) translateX(28px);transition:opacity .25s,transform .25s,visibility 0s .25s,width .25s}
-.ring-dock.visible{opacity:1;visibility:visible;transform:translateY(-50%) translateX(0);transition-delay:0s}
-.ring-dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.ring-dock-head span{font-size:11px;letter-spacing:.08em;color:var(--text-3);font-family:var(--mono)}
-.ring-dock-toggle{width:26px;height:26px;border:1px solid var(--border);border-radius:8px;background:var(--bg-container);color:var(--text-2)}
-.ring-dock-body{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;gap:4px}
-.ring-arrow{width:28px;height:34px;border:1px solid var(--border-2);border-radius:9px;background:var(--bg-container);color:var(--text-2)}
-.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
-.ring-viewport{height:270px;display:grid;place-items:center;perspective:1000px;touch-action:pan-y;cursor:grab;overflow:hidden}
-.ring-viewport:active{cursor:grabbing}
-#trackList{--rotation:0deg;position:relative;display:block;width:244px;height:244px;margin:0;padding:0;list-style:none;transform-style:preserve-3d;transform:rotateX(-7deg) rotateY(var(--rotation));transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform}
-#trackList li{position:absolute;left:50%;top:50%;width:96px;height:96px;margin:-48px;list-style:none;transform-style:preserve-3d;transform:rotateY(var(--angle)) translateZ(118px);backface-visibility:visible;-webkit-backface-visibility:visible}
-#trackList .node{width:96px;height:96px;justify-content:center;gap:6px;padding:9px;border:1px solid rgba(168,188,211,.16);border-radius:20px;background:linear-gradient(145deg,rgba(24,36,53,.94),rgba(8,13,22,.96));box-shadow:0 12px 28px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.04);opacity:.58;filter:saturate(.65);transition:opacity .25s,filter .25s,background .25s,transform .35s,box-shadow .25s;backface-visibility:visible;-webkit-backface-visibility:visible}
-#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.07),transparent 34%);pointer-events:none}
-#trackList .node:hover,#trackList .node.active{opacity:1;filter:none}
-#trackList .node.active{transform:scale(1.14) translateZ(12px);background:radial-gradient(circle at 50% 20%,rgba(49,225,196,.16),transparent 58%),linear-gradient(145deg,#142C37,#0A1720);border:1px solid var(--glow-line);box-shadow:0 0 0 5px var(--glow-dim),0 0 34px rgba(49,225,196,.28),0 20px 38px rgba(0,0,0,.42)}
-#trackList .node.rear{opacity:.2;filter:saturate(.3) blur(.25px);transform:scale(.92)}
-#trackList .node.rear .dot,#trackList .node.rear .lbl{visibility:hidden}
-#trackList .node.rear::after{content:"";position:absolute;inset:19px 16px;border:1px solid rgba(49,225,196,.16);border-radius:11px;background:linear-gradient(145deg,rgba(49,225,196,.08),rgba(76,141,255,.05));box-shadow:0 0 20px rgba(49,225,196,.05)}
-#trackList .dot{width:38px;height:38px;border-radius:12px;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
-#trackList .dot svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-#trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
-#trackList .grp{display:none}
-#trackList .lbl{font-size:11px;max-width:78px;color:var(--text-2)}
-.ring-dock-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-.ring-caption{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.ring-play{padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:10.5px;color:var(--text-2);background:var(--bg-container)}
-.ring-mini{display:none;flex-direction:column;gap:6px;padding:4px 0}
-.ring-mini button{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-2);background:var(--bg-container)}
-.mini-mark{display:block;width:11px;height:3px;border-radius:3px;background:var(--text-4);transition:width .2s,background .2s,box-shadow .2s}
-.ring-mini button.active{border-color:var(--glow-line);background:rgba(49,225,196,.08);box-shadow:0 0 14px var(--glow-dim)}
-.ring-mini button.active .mini-mark{width:18px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
-.ring-dock.collapsed{width:58px;padding:8px}
-.ring-dock.collapsed .ring-dock-head{justify-content:center;margin:0}
-.ring-dock.collapsed .ring-dock-head span,.ring-dock.collapsed .ring-dock-body,.ring-dock.collapsed .ring-dock-foot{display:none}
-.ring-dock.collapsed .ring-mini{display:flex}
 
 /* ============================================================
    5. 能力清单（6 大能力域，口径=手册 §7.2 页面分组）
@@ -585,7 +596,6 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
 @media(max-width:1099px){
   :root{--sp-9:64px}
   .hero-grid,.arch,.qa-block,.flow-panel{grid-template-columns:minmax(0,1fr)}
-  .node .lbl{font-size:11px}
   .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .terminal{grid-template-columns:minmax(0,1fr)}
   table.tbl{font-size:12.5px}
@@ -596,12 +606,20 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   .metrics .container{grid-template-columns:repeat(2,minmax(0,1fr))}
   .domains{grid-template-columns:minmax(0,1fr)}
   footer .cols{grid-template-columns:1fr 1fr}
-  .ring-dock{left:12px;right:12px;top:auto;bottom:12px;width:auto;transform:translateY(24px);border-radius:18px}
-  .ring-dock.visible{transform:translateY(0)}
-  .ring-dock.collapsed{left:12px;right:12px;width:auto;padding:8px 10px;display:flex;align-items:center;gap:10px}
-  .ring-dock.collapsed .ring-mini{display:flex;flex:1;flex-direction:row;justify-content:space-between}
-  .ring-viewport{height:210px}
-  #trackList{transform:rotateX(-7deg) rotateY(var(--rotation)) scale(.88)}
+  /* 移动端星球舞台降级：星球变横幅，8 颗卫星变 2 列卡片，箭头隐藏 */
+  .orbit-stage{grid-template-columns:minmax(0,1fr);gap:10px}
+  .orbit-stage>.ring-arrow{display:none}
+  .orbit-field{height:auto;min-height:0;padding:22px 16px}
+  .orbit-path{display:none}
+  .orbit-planet{position:static;transform:none;width:auto;max-width:520px;aspect-ratio:auto;border-radius:20px;padding:14px 18px;margin:0 auto;flex-direction:row;gap:8px}
+  .orbit-planet strong{max-width:none}
+  #trackList{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #trackList li{position:static;width:auto;height:auto;transform:none;transition:none}
+  #trackList .node{min-height:88px;flex-direction:row;gap:10px;padding:10px 12px;opacity:1;filter:none}
+  #trackList li.rear .node{opacity:1;filter:none}
+  #trackList .node .num{position:static;margin-left:auto}
+  #trackList .dot{width:38px;height:38px;flex:none}
+  #trackList .lbl{font-size:12.5px;max-width:none}
   .wb{grid-template-columns:minmax(0,1fr)}
   .wb-list{display:none}
   .sim-top{padding:10px 12px;gap:8px;height:auto;min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto}
@@ -713,15 +731,23 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         </div>
       </div>
 
-      <div class="ring-dock" id="ringDock" role="region" aria-label="八步运行流程 3D 圆环" data-state="idle">
-        <div class="ring-dock-head"><span>FLOW ORBIT</span><button class="ring-dock-toggle" id="ringDockToggle" type="button" aria-expanded="true" aria-label="收起八步圆环">−</button></div>
-        <div class="ring-dock-body">
-          <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
-          <div class="ring-viewport"><ol id="trackList" aria-label="8 步运行流程"></ol></div>
-          <button class="ring-arrow" id="ringNext" type="button" aria-label="下一步">→</button>
+      <!-- 星球轨道舞台：中心=你的目标，8 步=卫星；星球文案为示例，待队长审定 -->
+      <div class="orbit-stage" role="region" aria-label="八步运行流程星球轨道">
+        <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
+        <div class="orbit-field">
+          <i class="orbit-path" aria-hidden="true"></i>
+          <div class="orbit-planet">
+            <span>你的目标</span>
+            <strong>帮我把月度巡检报告做出来</strong>
+          </div>
+          <ol id="trackList" aria-label="8 步运行流程"></ol>
         </div>
-        <div class="ring-dock-foot"><span class="ring-caption" id="ringCaption">01 / 08 · 首登就绪</span><button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button></div>
+        <button class="ring-arrow" id="ringNext" type="button" aria-label="下一步">→</button>
+      </div>
+      <div class="orbit-foot">
+        <span class="ring-caption" id="ringCaption">01 / 08 · 首登就绪</span>
         <div class="ring-mini" id="ringMini" aria-label="八步紧凑导航"></div>
+        <button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button>
       </div>
 
       <div class="flow-panel" style="margin-top:var(--sp-5)">
@@ -834,7 +860,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
       </div>
       <div class="legal">
         <span>© 2026 AgentHub · 界面与数据均为智能模拟，不含真实功能与业务数据 · 文案待队长审定</span>
-        <span class="mono">mockup v2</span>
+        <span class="mono">mockup v3</span>
       </div>
     </div>
   </footer>
@@ -921,7 +947,8 @@ const FLOW_ICONS = [
 ];
 function renderTrack(){
   $("#trackList").innerHTML = STEPS.map(s=>`
-    <li style="--angle:${(s.id-1)*45}deg"><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
+    <li style="--a:${(s.id-1)*45}deg"><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
+      <span class="num" aria-hidden="true">${String(s.id).padStart(2,"0")}</span>
       <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[s.id-1]}</svg></span><span class="lbl">${s.key}</span><span class="grp">FLOW ${s.flow}</span>
     </button></li>`).join("");
   $("#ringMini").innerHTML = STEPS.map(s=>`<button type="button" data-ring-step="${s.id}" aria-label="切换到第 ${s.id} 步 ${s.short}"><span class="mini-mark" aria-hidden="true"></span></button>`).join("");
@@ -953,7 +980,7 @@ function paintTrack(idx){
     const angle = relative*(360/STEPS.length);
     n.classList.toggle("active", i===idx);
     n.classList.toggle("done", i<idx);
-    n.classList.toggle("rear", Math.abs(angle)>90);
+    n.parentElement.classList.toggle("rear", Math.abs(angle)>90);
     n.tabIndex = i===idx?0:-1;
     n.setAttribute("aria-hidden",String(i!==idx));
     n.setAttribute("aria-current",i===idx?"step":"false");
@@ -963,7 +990,8 @@ function paintTrack(idx){
     n.classList.toggle("active",i===idx);
     n.setAttribute("aria-current",i===idx?"step":"false");
   });
-  $("#trackList").style.setProperty("--rotation",`${-idx*45}deg`);
+  // 轨道转到「选中星在正下方」：选中星初始角度 idx*45，叠加旋转后应落在 180°（正下）
+  $("#trackList").style.setProperty("--rotation",`${180-idx*45}deg`);
   $("#ringCaption").textContent = `${String(idx+1).padStart(2,"0")} / 08 · ${STEPS[idx].key}`;
   const p = ((idx+1)/STEPS.length*100).toFixed(1)+"%";
   $("#playProg").style.setProperty("--p", p);
@@ -1215,17 +1243,10 @@ document.addEventListener("click", e=>{
   }
   if(e.target.id==="ringNext"){ setStep(cur+1,true); return; }
   if(e.target.id==="ringPrev"){ setStep(cur-1,true); return; }
-  if(e.target.id==="ringDockToggle"){
-    const dock = $("#ringDock"), collapsed = dock.classList.toggle("collapsed");
-    e.target.setAttribute("aria-expanded",String(!collapsed));
-    e.target.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
-    e.target.textContent = collapsed?"＋":"−";
-    return;
-  }
   const mini = e.target.closest("#ringMini [data-ring-step]");
   if(mini){ setStep(parseInt(mini.dataset.ringStep,10)-1,true); return; }
   const node = e.target.closest("#trackList .node");
-  if(node){ const n = parseInt(node.dataset.step,10); setStep(n-1, true); location.hash = "#/flow/"+n; return; }
+  if(node){ const n = parseInt(node.dataset.step,10); setStep(n-1, true); return; }
   const tab = e.target.closest("#simTrack button[data-goto]");
   if(tab){ gotoStep(parseInt(tab.dataset.goto,10)); return; }
   const nav = e.target.closest("[data-nav]");
@@ -1241,49 +1262,7 @@ document.addEventListener("click", e=>{
 $("#flow").addEventListener("mouseenter",()=>{ if(playing){ clearInterval(timer); } });
 $("#flow").addEventListener("mouseleave",()=>{ if(playing){ timer=setInterval(()=>setStep(cur+1),3800); } });
 
-function setRingDockCollapsed(collapsed){
-  const dock = $("#ringDock"), toggle = $("#ringDockToggle");
-  dock.classList.toggle("collapsed",collapsed);
-  toggle.setAttribute("aria-expanded",String(!collapsed));
-  toggle.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
-  toggle.textContent = collapsed?"＋":"−";
-}
-function bindRingDock(){
-  const dock = $("#ringDock"), plane = $("#trackList");
-  const mobile = matchMedia("(max-width:859px)");
-  setRingDockCollapsed(mobile.matches);
-  mobile.addEventListener("change",e=>setRingDockCollapsed(e.matches));
-  if("IntersectionObserver" in window){
-    new IntersectionObserver(entries=>{
-      const visible = entries[0].isIntersecting;
-      dock.classList.toggle("visible",visible); dock.dataset.state = visible?"docked":"idle";
-    },{threshold:.08}).observe($("#flow"));
-  }
-  let drag = null, dragged = false;
-  plane.addEventListener("pointerdown",e=>{
-    if(e.button!==0) return;
-    drag = {x:e.clientX}; dragged = false;
-  });
-  plane.addEventListener("pointermove",e=>{
-    if(drag && !dragged && Math.abs(e.clientX-drag.x)>8){
-      dragged = true;
-      plane.setPointerCapture(e.pointerId);
-    }
-  });
-  plane.addEventListener("pointerup",e=>{
-    if(!drag) return;
-    const dx = e.clientX-drag.x; drag = null;
-    if(!dragged) return;
-    const steps = Math.min(2,Math.max(1,Math.round(Math.abs(dx)/70)));
-    setStep(cur+(dx<0?steps:-steps),true);
-  });
-  plane.addEventListener("pointercancel",()=>{ drag = null; dragged = false; });
-  plane.addEventListener("click",e=>{
-    if(dragged){ e.preventDefault(); e.stopImmediatePropagation(); dragged = false; }
-  },true);
-}
-
-renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm(); bindRingDock();
+renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm();
 $("#heroReplay").addEventListener("click",startSwarm);
 addEventListener("hashchange", route);
 
