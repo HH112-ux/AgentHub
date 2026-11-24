@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   AgentHub 产品介绍页 · 高保真交互演示稿（单文件 HTML）
-  STATUS: 设计稿 v3 · 文案故事句化 + 区块 3 星球轨道舞台（中心=你的目标，8 步=卫星），待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
+  STATUS: 设计稿 v4 · 文案故事句化 + 区块 3 无边框 3D 星球轨道舞台（中心=你的目标，8 步=卫星，远近缩放+遮挡），待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
   SCOPE: 营销单页 7 区块 + 5 个 flow / 19 屏，hash 路由，无外部依赖，双击即开
   ROUTES:
     #/            L1 营销单页
@@ -247,55 +247,48 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
    ============================================================ */
 .flowsec .wrap{display:grid; gap:var(--sp-5)}
 .orbit-stage{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:14px}
-.orbit-field{--orbitR:min(19vh,clamp(130px,20vw,205px));--nodeW:clamp(116px,11vw,150px);--planetD:min(17vh,clamp(140px,20vw,210px));position:relative;height:min(60vh,580px);min-height:420px;overflow:hidden;border:1px solid var(--border-2);border-radius:28px;
+/* 无边框舞台：椭圆轨道 + 星球，不做盒状包裹；卫星坐标/深度/层级由 paintTrack 内联计算 */
+.orbit-field{--orbitR:min(21vh,clamp(180px,26vw,280px));--orbitK:.5;--nodeW:clamp(116px,11vw,150px);--planetD:min(15vh,clamp(140px,18vw,180px));--planetShift:clamp(26px,5.5vh,56px);position:relative;height:min(60vh,580px);min-height:430px}
+.orbit-field::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:
-    radial-gradient(1.6px 1.6px at 11% 18%, rgba(255,255,255,.55), transparent 60%),
-    radial-gradient(1.3px 1.3px at 26% 9%, rgba(255,255,255,.4), transparent 60%),
-    radial-gradient(1.7px 1.7px at 43% 16%, rgba(255,255,255,.5), transparent 60%),
-    radial-gradient(1.2px 1.2px at 61% 8%, rgba(255,255,255,.38), transparent 60%),
-    radial-gradient(1.6px 1.6px at 78% 20%, rgba(255,255,255,.52), transparent 60%),
-    radial-gradient(1.2px 1.2px at 90% 12%, rgba(255,255,255,.4), transparent 60%),
-    radial-gradient(1.5px 1.5px at 7% 62%, rgba(255,255,255,.42), transparent 60%),
-    radial-gradient(1.3px 1.3px at 94% 55%, rgba(255,255,255,.4), transparent 60%),
-    radial-gradient(1.5px 1.5px at 16% 84%, rgba(255,255,255,.36), transparent 60%),
-    radial-gradient(1.3px 1.3px at 85% 82%, rgba(255,255,255,.38), transparent 60%),
-    radial-gradient(1.6px 1.6px at 38% 92%, rgba(255,255,255,.34), transparent 60%),
-    radial-gradient(1.3px 1.3px at 55% 96%, rgba(255,255,255,.3), transparent 60%),
-    radial-gradient(circle at 50% 52%, rgba(76,141,255,.16), transparent 46%),
-    radial-gradient(circle at 50% 52%, rgba(49,225,196,.05), transparent 70%),
-    linear-gradient(180deg,#081020,#04070F);
+    radial-gradient(1.6px 1.6px at 11% 22%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1.3px 1.3px at 26% 12%, rgba(255,255,255,.38), transparent 60%),
+    radial-gradient(1.7px 1.7px at 43% 18%, rgba(255,255,255,.46), transparent 60%),
+    radial-gradient(1.2px 1.2px at 61% 10%, rgba(255,255,255,.34), transparent 60%),
+    radial-gradient(1.6px 1.6px at 78% 22%, rgba(255,255,255,.48), transparent 60%),
+    radial-gradient(1.2px 1.2px at 90% 14%, rgba(255,255,255,.36), transparent 60%),
+    radial-gradient(1.4px 1.4px at 8% 74%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(1.3px 1.3px at 93% 66%, rgba(255,255,255,.38), transparent 60%),
+    radial-gradient(1.4px 1.4px at 15% 92%, rgba(255,255,255,.32), transparent 60%),
+    radial-gradient(1.3px 1.3px at 86% 90%, rgba(255,255,255,.34), transparent 60%);
 }
-/* 轨道虚线只做氛围：卫星按 --a+--rotation 旋转，圆心在舞台正中 */
-.orbit-path{position:absolute;left:50%;top:50%;width:calc(var(--orbitR) * 2);aspect-ratio:1;transform:translate(-50%,-50%);border:1px dashed rgba(140,180,235,.15);border-radius:50%;pointer-events:none}
-.orbit-planet{position:absolute;left:50%;top:50%;z-index:2;width:var(--planetD);aspect-ratio:1;transform:translate(-50%,-52%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border-radius:50%;padding:14%;
+/* 轨道平面光晕：随星球上移，椭圆比例与轨道一致，替代原来的盒状底色 */
+.orbit-halo{position:absolute;left:50%;top:calc(50% - var(--planetShift));width:calc(var(--orbitR) * 3.4);height:calc(var(--orbitR) * 3.4 * var(--orbitK));transform:translate(-50%,-50%);background:radial-gradient(ellipse at center,rgba(76,141,255,.15),rgba(49,225,196,.05) 48%,transparent 72%);pointer-events:none}
+.orbit-path{position:absolute;left:50%;top:calc(50% - var(--planetShift));width:calc(var(--orbitR) * 2);height:calc(var(--orbitR) * 2 * var(--orbitK));transform:translate(-50%,-50%);border:1px dashed rgba(140,180,235,.16);border-radius:50%;pointer-events:none}
+.orbit-planet{position:absolute;left:50%;top:calc(50% - var(--planetShift));z-index:2;width:var(--planetD);aspect-ratio:1;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border-radius:50%;padding:clamp(12px,1.6vw,18px);overflow:hidden;
   background:
-    radial-gradient(circle at 32% 26%, rgba(255,255,255,.3), transparent 40%),
-    radial-gradient(circle at 68% 78%, rgba(16,42,90,.9), transparent 55%),
-    radial-gradient(circle at 50% 58%, #3E86DE 0%, #24509A 48%, #12294F 82%, #0A1830 100%);
-  box-shadow:0 0 0 1px rgba(130,185,255,.28),0 0 64px rgba(76,141,255,.4),0 0 140px rgba(76,141,255,.18),inset -14px -18px 44px rgba(0,0,0,.4)}
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,.5), transparent 34%),
+    radial-gradient(circle at 66% 72%, rgba(8,26,58,.85), transparent 52%),
+    radial-gradient(circle at 50% 60%, #4A97EE 0%, #2B5BA8 44%, #16325F 72%, #0A1730 94%);
+  box-shadow:inset -24px -28px 54px rgba(0,0,0,.6),inset 12px 16px 36px rgba(255,255,255,.12),0 0 0 1px rgba(140,195,255,.32),0 0 90px rgba(76,141,255,.42),0 30px 64px rgba(0,0,0,.45)}
 .orbit-planet span{font-size:11px;letter-spacing:.14em;color:rgba(214,232,255,.75)}
 .orbit-planet strong{font-size:clamp(13px,1.3vw,16px);color:#EAF4FF;font-weight:650;line-height:1.4;max-width:13ch}
-#trackList{--rotation:0deg;position:absolute;left:50%;top:50%;margin:0;padding:0;list-style:none;transform-style:preserve-3d}
-/* li 先绕中心转到 (--a+--rotation)，再反向自转保持卡片竖直，最后平移半宽居中到轨道点 */
-#trackList li{position:absolute;left:0;top:0;width:var(--nodeW);height:calc(var(--nodeW) * .78);margin:0;list-style:none;transform-style:preserve-3d;z-index:3;
-  transform:rotate(calc(var(--a) + var(--rotation))) translateY(calc(-1 * var(--orbitR))) rotate(calc(-1 * (var(--a) + var(--rotation)))) translate(-50%,-50%);
-  transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform}
-#trackList li.rear{z-index:1}
-#trackList .node{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;border:1px solid rgba(168,188,211,.18);border-radius:18px;background:linear-gradient(145deg,rgba(24,36,53,.96),rgba(8,13,22,.97));box-shadow:0 12px 28px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.05);opacity:.72;filter:saturate(.75);transition:opacity .25s,filter .25s,background .25s,box-shadow .25s}
+/* 卫星仅由 JS 内联 transform/opacity/z-index 驱动；这里只保留基座与过渡 */
+#trackList{position:absolute;left:50%;top:50%;margin:0;padding:0;list-style:none}
+#trackList li{position:absolute;left:0;top:0;width:var(--nodeW);height:calc(var(--nodeW) * .78);margin:0;list-style:none;transition:transform .7s cubic-bezier(.2,.75,.2,1),opacity .35s ease;will-change:transform,opacity}
+#trackList .node{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;border:1px solid rgba(168,188,211,.18);border-radius:18px;background:linear-gradient(145deg,rgba(24,36,53,.96),rgba(8,13,22,.97));box-shadow:0 12px 28px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.05);filter:saturate(.8);transition:filter .25s,background .25s,box-shadow .25s}
 #trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.08),transparent 34%);pointer-events:none}
-#trackList .node:hover{opacity:1;filter:none}
+#trackList .node:hover{filter:none}
 #trackList .node .num{position:absolute;top:8px;left:10px;font-family:var(--mono);font-size:10px;color:var(--text-4);letter-spacing:.06em}
 #trackList .dot{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
 #trackList .dot svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 #trackList .lbl{font-size:13px;max-width:calc(var(--nodeW) - 24px);color:var(--text-2);line-height:1.3}
 #trackList .grp{display:none}
 #trackList .node.done .dot{background:rgba(49,225,196,.16);border-color:var(--glow-line);color:var(--glow)}
-#trackList .node.active{opacity:1;filter:none;border-color:var(--glow-line);background:radial-gradient(circle at 50% 18%,rgba(49,225,196,.17),transparent 60%),linear-gradient(145deg,#142C37,#0A1720);box-shadow:0 0 0 4px var(--glow-dim),0 0 34px rgba(49,225,196,.3),0 20px 38px rgba(0,0,0,.45)}
+#trackList .node.active{filter:none;border-color:var(--glow-line);background:radial-gradient(circle at 50% 18%,rgba(49,225,196,.17),transparent 60%),linear-gradient(145deg,#142C37,#0A1720);box-shadow:0 0 0 4px var(--glow-dim),0 0 34px rgba(49,225,196,.3),0 20px 38px rgba(0,0,0,.45)}
 #trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
 #trackList .node.active .lbl{color:var(--text);font-weight:600}
 #trackList .node.active .num{color:var(--glow)}
-/* 背面卫星压到星球之后并降透明度，但标签保持可见（设计约定：8 颗全部可见） */
-#trackList li.rear .node{opacity:.3;filter:saturate(.35)}
 .ring-arrow{width:44px;height:56px;border:1px solid var(--border-2);border-radius:14px;background:var(--bg-container);color:var(--text-2);font-size:16px}
 .ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
 .orbit-foot{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:14px;flex-wrap:wrap}
@@ -606,17 +599,17 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   .metrics .container{grid-template-columns:repeat(2,minmax(0,1fr))}
   .domains{grid-template-columns:minmax(0,1fr)}
   footer .cols{grid-template-columns:1fr 1fr}
-  /* 移动端星球舞台降级：星球变横幅，8 颗卫星变 2 列卡片，箭头隐藏 */
+  /* 移动端星球舞台降级：星球变横幅，8 颗卫星变 2 列卡片，箭头/光晕/轨道隐藏 */
   .orbit-stage{grid-template-columns:minmax(0,1fr);gap:10px}
   .orbit-stage>.ring-arrow{display:none}
   .orbit-field{height:auto;min-height:0;padding:22px 16px}
-  .orbit-path{display:none}
-  .orbit-planet{position:static;transform:none;width:auto;max-width:520px;aspect-ratio:auto;border-radius:20px;padding:14px 18px;margin:0 auto;flex-direction:row;gap:8px}
+  .orbit-field::before{display:none}
+  .orbit-halo,.orbit-path{display:none}
+  .orbit-planet{top:auto;position:static;transform:none;width:auto;max-width:520px;aspect-ratio:auto;border-radius:20px;padding:14px 18px;margin:0 auto;flex-direction:row;gap:8px;background:linear-gradient(120deg,rgba(30,58,110,.55),rgba(10,20,40,.6));box-shadow:none}
   .orbit-planet strong{max-width:none}
   #trackList{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  #trackList li{position:static;width:auto;height:auto;transform:none;transition:none}
-  #trackList .node{min-height:88px;flex-direction:row;gap:10px;padding:10px 12px;opacity:1;filter:none}
-  #trackList li.rear .node{opacity:1;filter:none}
+  #trackList li{position:static;width:auto;height:auto;transform:none;opacity:1 !important;transition:none}
+  #trackList .node{min-height:88px;flex-direction:row;gap:10px;padding:10px 12px}
   #trackList .node .num{position:static;margin-left:auto}
   #trackList .dot{width:38px;height:38px;flex:none}
   #trackList .lbl{font-size:12.5px;max-width:none}
@@ -735,6 +728,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
       <div class="orbit-stage" role="region" aria-label="八步运行流程星球轨道">
         <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
         <div class="orbit-field">
+          <i class="orbit-halo" aria-hidden="true"></i>
           <i class="orbit-path" aria-hidden="true"></i>
           <div class="orbit-planet">
             <span>你的目标</span>
@@ -860,7 +854,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
       </div>
       <div class="legal">
         <span>© 2026 AgentHub · 界面与数据均为智能模拟，不含真实功能与业务数据 · 文案待队长审定</span>
-        <span class="mono">mockup v3</span>
+        <span class="mono">mockup v4</span>
       </div>
     </div>
   </footer>
@@ -947,7 +941,7 @@ const FLOW_ICONS = [
 ];
 function renderTrack(){
   $("#trackList").innerHTML = STEPS.map(s=>`
-    <li style="--a:${(s.id-1)*45}deg"><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
+    <li><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
       <span class="num" aria-hidden="true">${String(s.id).padStart(2,"0")}</span>
       <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[s.id-1]}</svg></span><span class="lbl">${s.key}</span><span class="grp">FLOW ${s.flow}</span>
     </button></li>`).join("");
@@ -974,13 +968,35 @@ function renderFlowDetail(idx){
 function paintTrack(idx){
   const nodes = $$("#trackList .node");
   const moveFocus = nodes.includes(document.activeElement);
+  const field = $("#trackList").parentElement;
+  const planet = $(".orbit-planet", field);
+  const mobile = matchMedia("(max-width:859px)").matches;
+  let R = 150, cy = 0, k = .5;
+  if(!mobile){
+    const fr = field.getBoundingClientRect();
+    const pr = planet.getBoundingClientRect();
+    cy = (pr.top + pr.height/2) - (fr.top + fr.height/2);
+    R = Math.max(90, $(".orbit-path", field).getBoundingClientRect().width/2);
+    k = parseFloat(getComputedStyle(field).getPropertyValue("--orbitK")) || .5;
+  }
   nodes.forEach((n,i)=>{
-    let relative = (i-idx+STEPS.length)%STEPS.length;
-    if(relative>STEPS.length/2) relative-=STEPS.length;
-    const angle = relative*(360/STEPS.length);
+    let rel = (i-idx+STEPS.length)%STEPS.length;
+    if(rel>STEPS.length/2) rel-=STEPS.length;
+    const th = rel*(360/STEPS.length)*Math.PI/180;
+    const d = Math.cos(th); // 1=正前(最下) … -1=正后(最上)
     n.classList.toggle("active", i===idx);
     n.classList.toggle("done", i<idx);
-    n.parentElement.classList.toggle("rear", Math.abs(angle)>90);
+    const li = n.parentElement;
+    if(mobile){
+      li.style.transform=""; li.style.opacity=""; li.style.zIndex="";
+    }else{
+      const x = R*Math.sin(th);
+      const y = cy + R*k*d;
+      const s = .72 + .28*(d+1)/2;
+      li.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%,-50%) scale(${s.toFixed(3)})`;
+      li.style.opacity = String(.45 + .55*(d+1)/2);
+      li.style.zIndex = d >= -.03 ? "3" : "1";
+    }
     n.tabIndex = i===idx?0:-1;
     n.setAttribute("aria-hidden",String(i!==idx));
     n.setAttribute("aria-current",i===idx?"step":"false");
@@ -990,8 +1006,6 @@ function paintTrack(idx){
     n.classList.toggle("active",i===idx);
     n.setAttribute("aria-current",i===idx?"step":"false");
   });
-  // 轨道转到「选中星在正下方」：选中星初始角度 idx*45，叠加旋转后应落在 180°（正下）
-  $("#trackList").style.setProperty("--rotation",`${180-idx*45}deg`);
   $("#ringCaption").textContent = `${String(idx+1).padStart(2,"0")} / 08 · ${STEPS[idx].key}`;
   const p = ((idx+1)/STEPS.length*100).toFixed(1)+"%";
   $("#playProg").style.setProperty("--p", p);
@@ -1263,6 +1277,8 @@ $("#flow").addEventListener("mouseenter",()=>{ if(playing){ clearInterval(timer)
 $("#flow").addEventListener("mouseleave",()=>{ if(playing){ timer=setInterval(()=>setStep(cur+1),3800); } });
 
 renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm();
+let rzT = null;
+addEventListener("resize", ()=>{ clearTimeout(rzT); rzT = setTimeout(()=>paintTrack(cur), 150); });
 $("#heroReplay").addEventListener("click",startSwarm);
 addEventListener("hashchange", route);
 
