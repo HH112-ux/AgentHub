@@ -4,7 +4,6 @@ import cn.hutool.core.io.resource.ResourceUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.lionsoul.ip2region.service.Config;
 import org.lionsoul.ip2region.service.Ip2Region;
@@ -51,36 +50,43 @@ public class RegionUtils {
             // 因为加载整个xdb文件会耗费非常大的内存，如果你不希望加载整个xdb到内存中，更推荐使用 VIndexCache 或 NoCache（即实时读取文件）策略和 setXdbPath/setXdbFile 加载方法（需要注意的一点，setXdbPath 和 setXdbFile 不支持读取ClassPath（即源码和resource目录）中的文件）。
             // 一般而言，更建议把xdb数据库放到一个指定的文件目录中（即不打包进jar包中），然后使用 VIndexCache + 配合SearcherPool的并发池读取数据，更方便随时更新xdb数据库
 
-            InputStream v4InputStream = ResourceUtil.getStream(DEFAULT_IPV4_XDB_PATH);
-
-            // IPv4配置
-            Config v4Config = Config.custom()
-                .setCachePolicy(Config.BufferCache)
-                //.setXdbFile(v4TempXdb)
-                .setXdbInputStream(v4InputStream)
-                //
-                .setCacheSliceBytes(DEFAULT_CACHE_SLICE_BYTES)
-                .asV4();
-
-            // IPv6配置
-            Config v6Config = null;
-            InputStream v6XdbInputStream = ResourceUtil.getStreamSafe(DEFAULT_IPV6_XDB_PATH);
-            if (v6XdbInputStream == null) {
-                log.warn("未加载 IPv6 地址库：未在类路径下找到文件 {}。当前仅启用 IPv4 查询。如需启用 IPv6，请将 ip2region_v6.xdb 放置到 resources 目录", DEFAULT_IPV6_XDB_PATH);
+            InputStream v4InputStream = ResourceUtil.getStreamSafe(DEFAULT_IPV4_XDB_PATH);
+            if (v4InputStream == null) {
+                // 仓库不携带 xdb 数据文件，缺库是常态：不能阻断应用启动与登录，查询降级为「未知」。
+                log.warn("未加载 IPv4 地址库：未在类路径下找到文件 {}。IP 归属地查询将降级为「{}」。如需启用，请将 ip2region_v4.xdb 放置到 resources 目录", DEFAULT_IPV4_XDB_PATH, UNKNOWN_ADDRESS);
+                RegionUtils.ip2Region = null;
             } else {
-                v6Config = Config.custom()
+                // IPv4配置
+                Config v4Config = Config.custom()
                     .setCachePolicy(Config.BufferCache)
-                    //.setXdbFile(v6TempXdb)
-                    .setXdbInputStream(v6XdbInputStream)
+                    //.setXdbFile(v4TempXdb)
+                    .setXdbInputStream(v4InputStream)
+                    //
                     .setCacheSliceBytes(DEFAULT_CACHE_SLICE_BYTES)
-                    .asV6();
-            }
+                    .asV4();
 
-            // 初始化Ip2Region实例
-            RegionUtils.ip2Region = Ip2Region.create(v4Config, v6Config);
-            log.debug("IP工具初始化成功，加载IP地址库数据成功！");
+                // IPv6配置
+                Config v6Config = null;
+                InputStream v6XdbInputStream = ResourceUtil.getStreamSafe(DEFAULT_IPV6_XDB_PATH);
+                if (v6XdbInputStream == null) {
+                    log.warn("未加载 IPv6 地址库：未在类路径下找到文件 {}。当前仅启用 IPv4 查询。如需启用 IPv6，请将 ip2region_v6.xdb 放置到 resources 目录", DEFAULT_IPV6_XDB_PATH);
+                } else {
+                    v6Config = Config.custom()
+                        .setCachePolicy(Config.BufferCache)
+                        //.setXdbFile(v6TempXdb)
+                        .setXdbInputStream(v6XdbInputStream)
+                        .setCacheSliceBytes(DEFAULT_CACHE_SLICE_BYTES)
+                        .asV6();
+                }
+
+                // 初始化Ip2Region实例
+                RegionUtils.ip2Region = Ip2Region.create(v4Config, v6Config);
+                log.debug("IP工具初始化成功，加载IP地址库数据成功！");
+            }
         } catch (Exception e) {
-            throw new ServiceException("RegionUtils初始化失败，原因：{}", e.getMessage());
+            // 地址库存在但损坏/格式异常时同样不能阻断启动与登录：降级为「未知」并保留完整现场日志。
+            log.warn("IP 地址库初始化失败，IP 归属地查询将降级为「{}」", UNKNOWN_ADDRESS, e);
+            RegionUtils.ip2Region = null;
         }
     }
 
@@ -90,6 +96,9 @@ public class RegionUtils {
      * @param ipString ip地址字符串
      */
     public static String getRegion(String ipString) {
+        if (ip2Region == null) {
+            return UNKNOWN_ADDRESS;
+        }
         try {
             String region = ip2Region.search(ipString);
             if (StringUtils.isBlank(region)) {
@@ -109,6 +118,9 @@ public class RegionUtils {
      * @param ipBytes ip地址字节数组
      */
     public static String getRegion(byte[] ipBytes) {
+        if (ip2Region == null) {
+            return UNKNOWN_ADDRESS;
+        }
         try {
             String region = ip2Region.search(ipBytes);
             if (StringUtils.isBlank(region)) {
