@@ -10,6 +10,7 @@
 - 底座自带的版权与作者声明（源码注释中的 `@author`、`pom.xml` 与 `package.json` 的许可字段、启动 banner 里的框架标识）一并保留，不做删除或改写。
 - Maven 与 pnpm 引入的传递依赖按各自的开源许可分发，清单由构建工具生成，不在本页逐一列举。
 - 底座基线 SQL：`code/back-end/script/sql/base/{postgres,mysql}/ruoyi-{vue,job,workflow}-base.sql` 六个文件是底座 6.0.0 自带脚本的双方言整理件（建 `sys_*` 真表与底座自带数据），随 MIT 许可分发，归入底座范围；文件内保留底座的建表语句与种子数据，不按本项目命名规范改写，`scripts/checks/naming-convention.mjs` 因此只把该目录列为免检。initdb 的挂载序号（`10`/`11`/`12`）与「先底座后 `ai_`」的顺序是本项目的编排设计，见 [部署与环境变量](configuration.md) 第 3 节。
+- IP 地址库数据文件：`code/back-end/ruoyi-common/ruoyi-common-core/src/main/resources/ip2region_v4.xdb`，来自 [ip2region](https://gitee.com/lionsoul/ip2region) 项目 data 目录的 v4 版地址库，Apache-2.0 License；是底座 `RegionUtils` 的运行期数据文件，随库分发。文件名为 `RegionUtils.DEFAULT_IPV4_XDB_PATH` 的类路径强制名（改名即查询失效），`scripts/checks/no-secrets-in-repo.mjs` 已将其登记为二进制免检（文件名免检、内容特征扫描本就不适用于二进制数据）。
 
 ## AgentHub 自有开发范围
 
@@ -25,3 +26,4 @@
 
 - 2026-11-20：底座整树入仓，首次登记第三方许可与原创范围边界。
 - 2026-11-20：底座基线 SQL 整理入仓到 `script/sql/base/`，initdb 链不再依赖仓库外的路径变量。
+- 2026-11-24：ip2region v4 地址库数据文件入仓（缺库曾致新部署登录 500），登记 Apache-2.0 出处与门禁免检口径。

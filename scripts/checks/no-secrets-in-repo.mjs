@@ -5,7 +5,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
-const BINARY_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.pdf', '.zip', '.gz', '.jar', '.woff', '.woff2', '.ttf', '.mp3', '.mp4']);
+// .xdb 为 ip2region 地址库数据文件（约 11MB 二进制，出处：docs/open-source-licenses.md 登记的 ip2region Apache-2.0 数据文件），
+// 文本扫描无意义；其余均为常规二进制资产扩展名。
+const BINARY_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.pdf', '.zip', '.gz', '.jar', '.woff', '.woff2', '.ttf', '.mp3', '.mp4', '.xdb']);
 // 特征串以拼接构造，避免本脚本扫描自身时误报。
 const SIGNATURES = [
   { name: 'GitHub token', re: new RegExp(`gh[pousr]${'_'}[0-9A-Za-z]{36,}`) },
