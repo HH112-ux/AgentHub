@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   AgentHub 产品介绍页 · 高保真交互演示稿（单文件 HTML）
-  STATUS: 设计稿 v1 · 文案为草案，待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
+  STATUS: 设计稿 v4 · 文案故事句化 + 区块 3 无边框 3D 星球轨道舞台（中心=你的目标，8 步=卫星，远近缩放+遮挡），待队长审定（设计稿 §2.3 第 7 项：介绍页文案与界面素材由队长提供并审定）
   SCOPE: 营销单页 7 区块 + 5 个 flow / 19 屏，hash 路由，无外部依赖，双击即开
   ROUTES:
     #/            L1 营销单页
@@ -84,16 +84,21 @@ code,.mono{font-family:var(--mono); font-size:.88em}
 .tag.info{color:var(--accent); border-color:rgba(76,141,255,.35); background:rgba(76,141,255,.08)}
 .tag.violet{color:var(--violet); border-color:rgba(155,108,255,.35); background:rgba(155,108,255,.08)}
 .tag.glow{color:var(--glow); border-color:var(--glow-line); background:var(--glow-dim)}
-.tag.draft{color:var(--warn); border-color:rgba(245,165,36,.3); background:rgba(245,165,36,.07); font-family:var(--mono); font-size:11px}
 .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 20px; border-radius:var(--r-md); font-size:15px; font-weight:600; border:1px solid transparent; transition:transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s; white-space:nowrap}
 .btn:active{transform:translateY(1px)}
 .btn-primary{background:linear-gradient(120deg,var(--glow),#26B6F0); color:#04121A; box-shadow:0 8px 28px rgba(49,225,196,.28)}
 .btn-primary:hover{box-shadow:0 10px 34px rgba(49,225,196,.42)}
+/* 营销 CTA（进入系统 / 开始问答）：全页唯一暖色，与青绿装饰色拉开对比 */
+.btn-cta{background:linear-gradient(120deg,#FFB25A,#F57C2E); color:#1A0F05; box-shadow:0 8px 28px rgba(245,124,46,.32)}
+.btn-cta:hover{transform:translateY(-1px); box-shadow:0 10px 34px rgba(245,124,46,.46)}
 .btn-ghost{border-color:var(--border); background:rgba(19,28,43,.6); color:var(--text)}
 .btn-ghost:hover{border-color:var(--glow-line); background:rgba(19,28,43,.9)}
 .btn-danger{border-color:rgba(255,92,108,.42); background:rgba(255,92,108,.08); color:#FFC7CD}
 .btn-danger:hover{border-color:var(--err); background:rgba(255,92,108,.14)}
 .btn-sm{padding:7px 13px; font-size:13px; border-radius:var(--r-sm)}
+/* 首屏次级动作：降为文字链，避免与唯一暖色主 CTA 抢焦点 */
+.cta-link{align-self:center; color:var(--text-2); font-size:14px; text-decoration:none; border-bottom:1px solid transparent; transition:color .2s, border-color .2s}
+.cta-link:hover{color:var(--glow); border-bottom-color:var(--glow-line)}
 .file-upload{position:relative;overflow:hidden}
 .file-upload input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .file-upload:focus-within{outline:2px solid var(--glow);outline-offset:3px}
@@ -241,22 +246,62 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .metric b,.stat b,.stat em,.mono,table.tbl td,table.tbl th,.node .dot,#playTime{font-variant-numeric:tabular-nums}
 
 /* ============================================================
-   4. 流程动画区 — 8 节点发光轨道 + 步骤详情面板（本次核心）
+   4. 流程动画区 — 星球轨道舞台（中心=你的目标，8 步=卫星）+ 步骤详情面板
    ============================================================ */
 .flowsec .wrap{display:grid; gap:var(--sp-5)}
-.track{position:relative; padding:var(--sp-6) 0 var(--sp-4)}
-.track .rail{position:absolute; left:0; right:0; top:calc(var(--sp-6) + 17px); height:2px; background:var(--border-2); border-radius:2px}
-.track .rail i{position:absolute; inset:0 auto 0 0; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); box-shadow:0 0 14px var(--glow-dim); transition:width .5s cubic-bezier(.4,0,.2,1)}
-.track ol{display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:6px; position:relative}
-.node{display:flex; flex-direction:column; align-items:center; gap:10px; padding:0; text-align:center; width:100%}
-.node .dot{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--bg-container); border:1px solid var(--border); font-size:13px; font-weight:700; color:var(--text-3); transition:.28s}
-.node .lbl{font-size:12px; color:var(--text-3); line-height:1.35; transition:.2s}
-.node .grp{font-size:10px; color:var(--text-4); font-family:var(--mono); letter-spacing:.08em}
-.node:hover .dot{border-color:var(--glow-line); color:var(--text)}
-.node:hover .lbl{color:var(--text-2)}
-.node.done .dot{background:rgba(49,225,196,.14); border-color:var(--glow-line); color:var(--glow)}
-.node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0); color:#04121A; border-color:transparent; box-shadow:0 0 0 4px var(--glow-dim),0 0 22px rgba(49,225,196,.5); transform:scale(1.1)}
-.node.active .lbl{color:var(--text); font-weight:600}
+.orbit-stage{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:14px}
+/* 无边框舞台：椭圆轨道 + 星球，不做盒状包裹；卫星坐标/深度/层级由 paintTrack 内联计算 */
+.orbit-field{--orbitR:min(31vh,clamp(240px,42vw,330px));--orbitK:.5;--nodeW:clamp(126px,12vw,168px);--planetD:min(17vh,clamp(150px,20vw,200px));--planetShift:clamp(26px,5.5vh,56px);position:relative;height:min(60vh,580px);min-height:430px}
+.orbit-field::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(1.6px 1.6px at 11% 22%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1.3px 1.3px at 26% 12%, rgba(255,255,255,.38), transparent 60%),
+    radial-gradient(1.7px 1.7px at 43% 18%, rgba(255,255,255,.46), transparent 60%),
+    radial-gradient(1.2px 1.2px at 61% 10%, rgba(255,255,255,.34), transparent 60%),
+    radial-gradient(1.6px 1.6px at 78% 22%, rgba(255,255,255,.48), transparent 60%),
+    radial-gradient(1.2px 1.2px at 90% 14%, rgba(255,255,255,.36), transparent 60%),
+    radial-gradient(1.4px 1.4px at 8% 74%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(1.3px 1.3px at 93% 66%, rgba(255,255,255,.38), transparent 60%),
+    radial-gradient(1.4px 1.4px at 15% 92%, rgba(255,255,255,.32), transparent 60%),
+    radial-gradient(1.3px 1.3px at 86% 90%, rgba(255,255,255,.34), transparent 60%);
+}
+/* 轨道平面光晕：随星球上移，椭圆比例与轨道一致，替代原来的盒状底色 */
+.orbit-halo{position:absolute;left:50%;top:calc(50% - var(--planetShift));width:calc(var(--orbitR) * 3.4);height:calc(var(--orbitR) * 3.4 * var(--orbitK));transform:translate(-50%,-50%);background:radial-gradient(ellipse at center,rgba(76,141,255,.15),rgba(49,225,196,.05) 48%,transparent 72%);pointer-events:none}
+.orbit-path{position:absolute;left:50%;top:calc(50% - var(--planetShift));width:calc(var(--orbitR) * 2);height:calc(var(--orbitR) * 2 * var(--orbitK));transform:translate(-50%,-50%);border:1px dashed rgba(140,180,235,.16);border-radius:50%;pointer-events:none}
+.orbit-planet{position:absolute;left:50%;top:calc(50% - var(--planetShift));z-index:2;width:var(--planetD);aspect-ratio:1;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;border-radius:50%;padding:clamp(12px,1.6vw,18px);overflow:hidden;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,.5), transparent 34%),
+    radial-gradient(circle at 66% 72%, rgba(8,26,58,.85), transparent 52%),
+    radial-gradient(circle at 50% 60%, #4A97EE 0%, #2B5BA8 44%, #16325F 72%, #0A1730 94%);
+  box-shadow:inset -24px -28px 54px rgba(0,0,0,.6),inset 12px 16px 36px rgba(255,255,255,.12),0 0 0 1px rgba(140,195,255,.32),0 0 90px rgba(76,141,255,.42),0 30px 64px rgba(0,0,0,.45)}
+.orbit-planet span{font-size:11px;letter-spacing:.14em;color:rgba(214,232,255,.75)}
+.orbit-planet strong{font-size:clamp(13px,1.3vw,16px);color:#EAF4FF;font-weight:650;line-height:1.4;max-width:13ch}
+/* 卫星仅由 JS 内联 transform/opacity/z-index 驱动；这里只保留基座与过渡 */
+#trackList{position:absolute;left:50%;top:50%;margin:0;padding:0;list-style:none}
+#trackList li{position:absolute;left:0;top:0;width:var(--nodeW);height:calc(var(--nodeW) * .78);margin:0;list-style:none;transition:transform .7s cubic-bezier(.2,.75,.2,1),opacity .35s ease;will-change:transform,opacity}
+#trackList .node{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;border:1px solid rgba(168,188,211,.18);border-radius:18px;background:linear-gradient(145deg,rgba(24,36,53,.96),rgba(8,13,22,.97));box-shadow:0 12px 28px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.05);filter:saturate(.8);transition:filter .25s,background .25s,box-shadow .25s}
+#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.08),transparent 34%);pointer-events:none}
+#trackList .node:hover{filter:none}
+#trackList .node .num{position:absolute;top:8px;left:10px;font-family:var(--mono);font-size:10px;color:var(--text-4);letter-spacing:.06em}
+#trackList .dot{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
+#trackList .dot svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#trackList .lbl{font-size:13px;max-width:calc(var(--nodeW) - 24px);color:var(--text-2);line-height:1.3}
+#trackList .grp{display:none}
+#trackList .node.done .dot{background:rgba(49,225,196,.16);border-color:var(--glow-line);color:var(--glow)}
+#trackList .node.active{filter:none;border-color:var(--glow-line);background:radial-gradient(circle at 50% 18%,rgba(49,225,196,.17),transparent 60%),linear-gradient(145deg,#142C37,#0A1720);box-shadow:0 0 0 4px var(--glow-dim),0 0 34px rgba(49,225,196,.3),0 20px 38px rgba(0,0,0,.45)}
+#trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
+#trackList .node.active .lbl{color:var(--text);font-weight:600}
+#trackList .node.active .num{color:var(--glow)}
+.ring-arrow{width:44px;height:56px;border:1px solid var(--border-2);border-radius:14px;background:var(--bg-container);color:var(--text-2);font-size:16px}
+.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
+.orbit-foot{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:14px;flex-wrap:wrap}
+.ring-caption{font-size:12px;color:var(--text-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ring-play{padding:6px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;color:var(--text-2);background:var(--bg-container)}
+.ring-mini{display:flex;gap:8px;padding:0}
+.ring-mini button{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-2);background:var(--bg-container)}
+.mini-mark{display:block;width:11px;height:3px;border-radius:3px;background:var(--text-4);transition:width .2s,background .2s,box-shadow .2s}
+.ring-mini button.active{border-color:var(--glow-line);background:rgba(49,225,196,.08);box-shadow:0 0 14px var(--glow-dim)}
+.ring-mini button.active .mini-mark{width:18px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
 .flow-panel{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:var(--sp-5); align-items:stretch}
 .flow-panel .detail{padding:var(--sp-5); display:flex; flex-direction:column; gap:14px}
 .flow-panel .detail .idx{font-family:var(--mono); font-size:12px; color:var(--glow)}
@@ -272,42 +317,6 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .playbar .prog{flex:1; height:3px; background:var(--border-2); border-radius:3px; overflow:hidden}
 .playbar .prog i{display:block; height:100%; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); transition:width .3s}
 .playbar .t{font-family:var(--mono); font-size:11.5px; color:var(--text-3); flex:none}
-.ring-dock{position:fixed;right:18px;top:50%;z-index:40;width:320px;padding:12px;border:1px solid var(--border);border-radius:24px;background:radial-gradient(circle at 50% 35%,rgba(49,225,196,.07),transparent 42%),rgba(8,13,22,.92);backdrop-filter:blur(18px) saturate(140%);box-shadow:var(--sh-3),var(--glow-ring);opacity:0;visibility:hidden;transform:translateY(-50%) translateX(28px);transition:opacity .25s,transform .25s,visibility 0s .25s,width .25s}
-.ring-dock.visible{opacity:1;visibility:visible;transform:translateY(-50%) translateX(0);transition-delay:0s}
-.ring-dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.ring-dock-head span{font-size:11px;letter-spacing:.08em;color:var(--text-3);font-family:var(--mono)}
-.ring-dock-toggle{width:26px;height:26px;border:1px solid var(--border);border-radius:8px;background:var(--bg-container);color:var(--text-2)}
-.ring-dock-body{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;gap:4px}
-.ring-arrow{width:28px;height:34px;border:1px solid var(--border-2);border-radius:9px;background:var(--bg-container);color:var(--text-2)}
-.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
-.ring-viewport{height:270px;display:grid;place-items:center;perspective:1000px;touch-action:pan-y;cursor:grab;overflow:hidden}
-.ring-viewport:active{cursor:grabbing}
-#trackList{--rotation:0deg;position:relative;display:block;width:244px;height:244px;margin:0;padding:0;list-style:none;transform-style:preserve-3d;transform:rotateX(-7deg) rotateY(var(--rotation));transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform}
-#trackList li{position:absolute;left:50%;top:50%;width:96px;height:96px;margin:-48px;list-style:none;transform-style:preserve-3d;transform:rotateY(var(--angle)) translateZ(118px);backface-visibility:visible;-webkit-backface-visibility:visible}
-#trackList .node{width:96px;height:96px;justify-content:center;gap:6px;padding:9px;border:1px solid rgba(168,188,211,.16);border-radius:20px;background:linear-gradient(145deg,rgba(24,36,53,.94),rgba(8,13,22,.96));box-shadow:0 12px 28px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.04);opacity:.58;filter:saturate(.65);transition:opacity .25s,filter .25s,background .25s,transform .35s,box-shadow .25s;backface-visibility:visible;-webkit-backface-visibility:visible}
-#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.07),transparent 34%);pointer-events:none}
-#trackList .node:hover,#trackList .node.active{opacity:1;filter:none}
-#trackList .node.active{transform:scale(1.14) translateZ(12px);background:radial-gradient(circle at 50% 20%,rgba(49,225,196,.16),transparent 58%),linear-gradient(145deg,#142C37,#0A1720);border:1px solid var(--glow-line);box-shadow:0 0 0 5px var(--glow-dim),0 0 34px rgba(49,225,196,.28),0 20px 38px rgba(0,0,0,.42)}
-#trackList .node.rear{opacity:.2;filter:saturate(.3) blur(.25px);transform:scale(.92)}
-#trackList .node.rear .dot,#trackList .node.rear .lbl{visibility:hidden}
-#trackList .node.rear::after{content:"";position:absolute;inset:19px 16px;border:1px solid rgba(49,225,196,.16);border-radius:11px;background:linear-gradient(145deg,rgba(49,225,196,.08),rgba(76,141,255,.05));box-shadow:0 0 20px rgba(49,225,196,.05)}
-#trackList .dot{width:38px;height:38px;border-radius:12px;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
-#trackList .dot svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-#trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
-#trackList .grp{display:none}
-#trackList .lbl{font-size:11px;max-width:78px;color:var(--text-2)}
-.ring-dock-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-.ring-caption{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.ring-play{padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:10.5px;color:var(--text-2);background:var(--bg-container)}
-.ring-mini{display:none;flex-direction:column;gap:6px;padding:4px 0}
-.ring-mini button{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-2);background:var(--bg-container)}
-.mini-mark{display:block;width:11px;height:3px;border-radius:3px;background:var(--text-4);transition:width .2s,background .2s,box-shadow .2s}
-.ring-mini button.active{border-color:var(--glow-line);background:rgba(49,225,196,.08);box-shadow:0 0 14px var(--glow-dim)}
-.ring-mini button.active .mini-mark{width:18px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
-.ring-dock.collapsed{width:58px;padding:8px}
-.ring-dock.collapsed .ring-dock-head{justify-content:center;margin:0}
-.ring-dock.collapsed .ring-dock-head span,.ring-dock.collapsed .ring-dock-body,.ring-dock.collapsed .ring-dock-foot{display:none}
-.ring-dock.collapsed .ring-mini{display:flex}
 
 /* ============================================================
    5. 能力清单（6 大能力域，口径=手册 §7.2 页面分组）
@@ -583,7 +592,6 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
 @media(max-width:1099px){
   :root{--sp-9:64px}
   .hero-grid,.arch,.qa-block,.flow-panel{grid-template-columns:minmax(0,1fr)}
-  .node .lbl{font-size:11px}
   .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .terminal{grid-template-columns:minmax(0,1fr)}
   table.tbl{font-size:12.5px}
@@ -594,12 +602,20 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   .metrics .container{grid-template-columns:repeat(2,minmax(0,1fr))}
   .domains{grid-template-columns:minmax(0,1fr)}
   footer .cols{grid-template-columns:1fr 1fr}
-  .ring-dock{left:12px;right:12px;top:auto;bottom:12px;width:auto;transform:translateY(24px);border-radius:18px}
-  .ring-dock.visible{transform:translateY(0)}
-  .ring-dock.collapsed{left:12px;right:12px;width:auto;padding:8px 10px;display:flex;align-items:center;gap:10px}
-  .ring-dock.collapsed .ring-mini{display:flex;flex:1;flex-direction:row;justify-content:space-between}
-  .ring-viewport{height:210px}
-  #trackList{transform:rotateX(-7deg) rotateY(var(--rotation)) scale(.88)}
+  /* 移动端星球舞台降级：星球变横幅，8 颗卫星变 2 列卡片，箭头/光晕/轨道隐藏 */
+  .orbit-stage{grid-template-columns:minmax(0,1fr);gap:10px}
+  .orbit-stage>.ring-arrow{display:none}
+  .orbit-field{height:auto;min-height:0;padding:22px 16px}
+  .orbit-field::before{display:none}
+  .orbit-halo,.orbit-path{display:none}
+  .orbit-planet{top:auto;position:static;transform:none;width:auto;max-width:520px;aspect-ratio:auto;border-radius:20px;padding:14px 18px;margin:0 auto;flex-direction:row;gap:8px;background:linear-gradient(120deg,rgba(30,58,110,.55),rgba(10,20,40,.6));box-shadow:none}
+  .orbit-planet strong{max-width:none}
+  #trackList{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #trackList li{position:static;width:auto;height:auto;transform:none;opacity:1 !important;transition:none}
+  #trackList .node{min-height:88px;flex-direction:row;gap:10px;padding:10px 12px}
+  #trackList .node .num{position:static;margin-left:auto}
+  #trackList .dot{width:38px;height:38px;flex:none}
+  #trackList .lbl{font-size:12.5px;max-width:none}
   .wb{grid-template-columns:minmax(0,1fr)}
   .wb-list{display:none}
   .sim-top{padding:10px 12px;gap:8px;height:auto;min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto}
@@ -647,7 +663,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
     </div>
     <div class="nav-cta">
       <button class="btn btn-ghost btn-sm" data-exit="doc">开发文档</button>
-      <button class="btn btn-primary btn-sm" data-exit="system">进入系统</button>
+      <button class="btn btn-cta btn-sm" data-exit="system">进入系统</button>
     </div>
   </div>
 </nav>
@@ -659,19 +675,18 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
     <div class="container hero-grid">
       <div>
         <span class="eyebrow">AgentHub · 2026</span>
-        <!-- 文案草案：仓库无正式 slogan，按设计稿 §1 定位句改写，待队长审定 -->
+        <!-- 文案 v2：故事句主导（可运营/可审计/可控/可评测 定位句降为标签行），待队长审定 -->
         <div class="title-lock">
-          <h1><span class="title-line"><span class="title-outline" aria-hidden="true">让每一次 AI 作业</span><span class="title-fill">让每一次 AI 作业</span></span><span class="title-line"><span class="title-outline" aria-hidden="true">可运营 · 可审计 · 可控 · 可评测</span><span class="title-fill hl">可运营 · 可审计 · 可控 · 可评测</span></span></h1>
+          <h1><span class="title-line"><span class="title-outline" aria-hidden="true">一句话提问</span><span class="title-fill">一句话提问</span></span><span class="title-line"><span class="title-outline" aria-hidden="true">一整轮活干完</span><span class="title-fill hl">一整轮活干完</span></span></h1>
           <div class="title-aim" aria-hidden="true"><span class="aim-frame"></span><i class="aim-corner tl"></i><i class="aim-corner tr"></i><i class="aim-corner bl"></i><i class="aim-corner br"></i><span class="aim-cross"></span><span class="title-warm"></span><span class="title-needle"></span></div>
         </div>
-        <p class="lead">用户用自然语言提问，入口智能体「小Z」判定意图并路由到领域专家；专家在受控权限内调用工具与知识库完成作业，写操作经人工确认后落地，每一环都留下可查的凭证。</p>
+        <p class="lead">用大白话提需求，系统自己找对人、干完活——写操作在你点头后才落地，每一步都有据可查。</p>
         <div class="four">
           <span class="tag glow">可运营</span><span class="tag glow">可审计</span><span class="tag glow">可控</span><span class="tag glow">可评测</span>
-          <span class="tag draft">文案草案 · 待队长审定</span>
         </div>
         <div class="ctas">
-          <button class="btn btn-primary" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
-          <a class="btn btn-ghost" href="#flow">观看运行流程</a>
+          <button class="btn btn-cta" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
+          <a class="cta-link" href="#flow">观看运行流程 →</a>
         </div>
         <p class="hero-note"><span aria-hidden="true">⌁</span> 真实系统部署在云服务器，前端与 API 同源；本页只承载介绍、公开问答与跳转链接，不承载真实系统页面、不接触业务数据。</p>
       </div>
@@ -689,12 +704,10 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   <!-- ==================== 区块 2 · 数字证明带 ==================== -->
   <section class="metrics" aria-label="平台规模与评测基线">
     <div class="container">
+      <div class="metric"><b>1 句</b><span>话就能开工</span></div>
+      <div class="metric"><b>8 步</b><span>跑完一轮</span></div>
       <div class="metric"><b>6</b><span>大能力域</span></div>
-      <div class="metric"><b>34</b><span>功能页</span></div>
-      <div class="metric"><b>98</b><span>按钮权限</span></div>
-      <div class="metric"><b>40</b><span>张 <em>ai_</em> 表 · 双方言</span></div>
-      <div class="metric"><b>75.0%</b><span>RAG hit@1 <em>基线</em></span></div>
-      <div class="metric"><b>0.829</b><span>MRR@5 <em>基线</em></span></div>
+      <div class="metric"><b>34</b><span>个功能页</span></div>
     </div>
   </section>
 
@@ -705,7 +718,8 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         <div>
           <span class="eyebrow">一轮对话的完整链路</span>
           <h2 style="margin-top:12px">8 步跑完：从提问到复盘</h2>
-          <p class="sub">口径取自《开发总览手册》§6.1 核心链路：能自己答就不路由、专家正文不被二次改写、写操作一律受控、每一环都留痕。点任意节点进入高保真走查。</p>
+          <!-- 口径：《开发总览手册》§6.1 核心链路（能自己答就不路由、专家正文不被二次改写、写操作一律受控、每一环留痕） -->
+          <p class="sub">能自己答就不绕路，专家回答不被改写，写操作一律受控——点任意节点看全程。</p>
         </div>
         <div class="playbar">
           <button class="btn btn-ghost btn-sm" id="playBtn" aria-pressed="false">▶ 播放</button>
@@ -713,15 +727,24 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         </div>
       </div>
 
-      <div class="ring-dock" id="ringDock" role="region" aria-label="八步运行流程 3D 圆环" data-state="idle">
-        <div class="ring-dock-head"><span>FLOW ORBIT</span><button class="ring-dock-toggle" id="ringDockToggle" type="button" aria-expanded="true" aria-label="收起八步圆环">−</button></div>
-        <div class="ring-dock-body">
-          <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
-          <div class="ring-viewport"><ol id="trackList" aria-label="8 步运行流程"></ol></div>
-          <button class="ring-arrow" id="ringNext" type="button" aria-label="下一步">→</button>
+      <!-- 星球轨道舞台：中心=你的目标，8 步=卫星；星球文案为示例，待队长审定 -->
+      <div class="orbit-stage" role="region" aria-label="八步运行流程星球轨道">
+        <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
+        <div class="orbit-field">
+          <i class="orbit-halo" aria-hidden="true"></i>
+          <i class="orbit-path" aria-hidden="true"></i>
+          <div class="orbit-planet">
+            <span>你的目标</span>
+            <strong>帮我把月度巡检报告做出来</strong>
+          </div>
+          <ol id="trackList" aria-label="8 步运行流程"></ol>
         </div>
-        <div class="ring-dock-foot"><span class="ring-caption" id="ringCaption">01 / 08 · 首登就绪</span><button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button></div>
+        <button class="ring-arrow" id="ringNext" type="button" aria-label="下一步">→</button>
+      </div>
+      <div class="orbit-foot">
+        <span class="ring-caption" id="ringCaption">01 / 08 · 首登就绪</span>
         <div class="ring-mini" id="ringMini" aria-label="八步紧凑导航"></div>
+        <button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button>
       </div>
 
       <div class="flow-panel" style="margin-top:var(--sp-5)">
@@ -738,7 +761,8 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         <div>
           <span class="eyebrow">能力域</span>
           <h2 style="margin-top:12px">6 大能力域，34 个功能页</h2>
-          <p class="sub">分组口径=《开发总览手册》§7.2 前端页面结构。每域标注它在 8 步链路里承担的环节。</p>
+          <!-- 分组口径：《开发总览手册》§7.2 前端页面结构；每域标注它在 8 步链路里承担的环节 -->
+          <p class="sub">六个域，各自在 8 步链路里管一段。</p>
         </div>
         <a class="btn btn-ghost btn-sm" href="#arch">看架构 ↓</a>
       </div>
@@ -753,7 +777,8 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         <div>
           <span class="eyebrow">部署形态</span>
           <h2 style="margin-top:12px">介绍页公开，业务跑在云上</h2>
-          <p class="sub">拓扑口径=设计稿 §2.2。浏览器只与本 Pages 层交互；「进入系统」是链接跳转，不在本页发起任何业务 API 调用。</p>
+          <!-- 拓扑口径：设计稿 §2.2（浏览器只与 Pages 层交互，「进入系统」为链接跳转，本页不发起业务 API 调用） -->
+          <p class="sub">数据跑在你自己的服务器上，介绍页只是门牌——「进入系统」是链接跳转，本页不碰业务数据。</p>
         </div>
       </div>
       <div class="arch">
@@ -762,19 +787,19 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
             <div class="boxes"><div class="box pub"><b>产品介绍页</b><span>Qoder Sites · 公开访问</span></div><div class="box"><b>在线体验问答</b><span>云端 Agent，仅公开内容</span></div></div>
           </div>
           <div class="arrow">「进入系统」「开发文档」= 仅链接跳转，不发起业务调用</div>
-          <div class="tier"><span class="cap">L2 · 云服务器（公网 IP + 域名 + 证书）</span>
-            <div class="boxes"><div class="box srv"><b>Nginx</b><span>前端静态产物 + /prod-api 反代 + SSE</span></div><div class="box srv"><b>Spring Boot</b><span>单 jar，内含 AgentScope Java 内核</span></div></div>
+          <div class="tier"><span class="cap">L2 · 你的服务器（公网 IP + 域名 + 证书）</span>
+            <div class="boxes"><div class="box srv"><b>Nginx</b><span>前端页面 + 接口转发</span></div><div class="box srv"><b>Spring Boot</b><span>业务服务，内含智能体内核</span></div></div>
           </div>
-          <div class="arrow">真实系统前端与 API 同源伺服 · 前后端同版本发布</div>
+          <div class="arrow">前端与 API 同源伺服 · 前后端同版本发布</div>
           <div class="tier"><span class="cap">L3 · 数据与中间件</span>
-            <div class="boxes"><div class="box"><b>PostgreSQL 14</b><span>PG 栈 :8080</span></div><div class="box"><b>MySQL 8.0</b><span>MySQL 栈 :8081</span></div><div class="box"><b>Redis</b><span>会话状态 / HITL / 锁 / 限流</span></div><div class="box"><b>Milvus + etcd</b><span>向量集合 + BM25 集合</span></div><div class="box"><b>对象存储</b><span>附件 / 文档原文 / 大结果</span></div></div>
+            <div class="boxes"><div class="box"><b>PostgreSQL</b><span>或 MySQL，二选一</span></div><div class="box"><b>MySQL</b><span>或 PostgreSQL，二选一</span></div><div class="box"><b>Redis</b><span>会话 / 锁 / 限流</span></div><div class="box"><b>Milvus</b><span>向量检索</span></div><div class="box"><b>对象存储</b><span>附件 / 文档 / 大结果</span></div></div>
           </div>
         </div>
         <div class="boundary">
           <h3 style="font-size:16px; margin-bottom:2px">数据边界与暴露收敛</h3>
-          <div class="item"><i aria-hidden="true"></i><div><b>密钥只在服务端</b><p>模型密钥、渠道凭据、MCP 请求头密文落库；介绍页侧不放任何密钥。</p></div></div>
-          <div class="item"><i aria-hidden="true"></i><div><b>云端 Agent 不接触业务数据</b><p>在线体验问答只用公开介绍内容与平台使用文档，不接入业务知识库正文、工具回参、会话数据或任何 PII。</p></div></div>
-          <div class="item"><i aria-hidden="true"></i><div><b>系统必须登录</b><p>演示期采用演示账号 + IP 白名单；写工具确认链路不无鉴权暴露公网；管理页深链需鉴权回跳。</p></div></div>
+          <div class="item"><i aria-hidden="true"></i><div><b>密钥只在服务端</b><p>模型密钥与渠道凭据只在服务端，介绍页不放任何密钥。</p></div></div>
+          <div class="item"><i aria-hidden="true"></i><div><b>云端 Agent 不接触业务数据</b><p>在线问答只基于公开介绍内容与使用文档，不碰知识库正文、工具回参、会话数据或任何个人信息。</p></div></div>
+          <div class="item"><i aria-hidden="true"></i><div><b>系统必须登录</b><p>写操作确认链路不裸奔在公网，管理页深链需鉴权回跳。</p></div></div>
           <div class="item"><i aria-hidden="true"></i><div><b>私有化可整体搬走</b><p>整套系统可私有化部署在云服务器，运行不依赖介绍页。</p></div></div>
         </div>
       </div>
@@ -787,22 +812,22 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
       <div>
         <span class="eyebrow">在线体验</span>
         <h2 style="margin-top:12px; font-size:clamp(24px,3vw,34px)">先问它，再决定</h2>
-        <p class="sub" style="color:var(--text-2); margin-top:12px">云端 Agent 回答平台使用问题：怎么配专家、写工具为什么要确认、审计在哪看。答案附开发文档出处。</p>
+        <p class="sub" style="color:var(--text-2); margin-top:12px">问它平台怎么用：专家怎么配、写操作为什么要确认、审计在哪看。</p>
         <div class="chips" style="margin-top:22px">
           <button class="chip" data-q="专家提示词怎么写才好？">专家提示词怎么写才好？</button>
           <button class="chip" data-q="写工具为什么要人工确认？">写工具为什么要人工确认？</button>
           <button class="chip" data-q="审计在哪里看？">审计在哪里看？</button>
         </div>
         <div class="terminal-cta">
-          <a class="btn btn-primary" href="#/qa">开始问答</a>
+          <a class="btn btn-cta" href="#/qa">开始问答</a>
           <span class="tag err">数据边界常驻</span>
         </div>
       </div>
       <div class="qa-demo">
         <div class="hd"><span class="tag glow">云端 Agent</span><span class="muted" style="font-size:12.5px">只答平台使用问题 · 不接触业务数据</span></div>
-        <div class="bubble"><span class="av z" aria-hidden="true">小Z</span><div class="body"><p class="txt">写操作命中「需确认」档位时本轮暂停，对话内弹确认卡片；你处置后同轮继续，决策写入权限决策审计。这是三层权限模型的第 ② 层。</p></div></div>
+        <div class="bubble"><span class="av z" aria-hidden="true">小Z</span><div class="body"><p class="txt">要动数据前，系统会先暂停，把确认卡递到你面前；你点头它才继续，这个决定也会被记下来。</p></div></div>
         <div class="states" style="margin-top:14px"><span class="tag">允许本次</span><span class="tag">记住该工具</span><span class="tag err">拒绝</span></div>
-        <div class="notice" style="margin-top:14px">来源：《开发总览手册》§6.3 三层权限模型（演示为模拟回答，非真实模型输出）</div>
+        <div class="notice" style="margin-top:14px">演示为模拟回答，非真实模型输出</div>
       </div>
     </div>
   </section>
@@ -811,9 +836,9 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   <section class="final">
     <div class="container">
       <h2>进入系统，跑一轮你自己的</h2>
-      <p>演示账号与 IP 白名单由管理员发放；登录后先到任务工作台首登检查清单，4 项配完即可提问。</p>
+      <p>登录后跟着首登检查清单，4 项配完即可提问。</p>
       <div class="ctas">
-        <button class="btn btn-primary" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
+        <button class="btn btn-cta" data-exit="system">进入系统 <span aria-hidden="true">→</span></button>
         <button class="btn btn-ghost" data-exit="doc">开发文档</button>
       </div>
     </div>
@@ -831,8 +856,8 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         <div><h4>出口</h4><ul><li><a href="#/exit">进入系统（跳转说明）</a></li><li><a href="#/exit">开发文档（跳转说明）</a></li><li><a href="#/qa">平台使用问答</a></li></ul></div>
       </div>
       <div class="legal">
-        <span>© 2026 AgentHub · 高保真设计稿，界面与数据均为智能模拟，不含真实功能与业务数据。</span>
-        <span class="mono">mockup v1 · 文案待队长审定</span>
+        <span>© 2026 AgentHub · 界面与数据均为智能模拟，不含真实功能与业务数据 · 文案待队长审定</span>
+        <span class="mono">mockup v4</span>
       </div>
     </div>
   </footer>
@@ -919,7 +944,8 @@ const FLOW_ICONS = [
 ];
 function renderTrack(){
   $("#trackList").innerHTML = STEPS.map(s=>`
-    <li style="--angle:${(s.id-1)*45}deg"><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
+    <li><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
+      <span class="num" aria-hidden="true">${String(s.id).padStart(2,"0")}</span>
       <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[s.id-1]}</svg></span><span class="lbl">${s.key}</span><span class="grp">FLOW ${s.flow}</span>
     </button></li>`).join("");
   $("#ringMini").innerHTML = STEPS.map(s=>`<button type="button" data-ring-step="${s.id}" aria-label="切换到第 ${s.id} 步 ${s.short}"><span class="mini-mark" aria-hidden="true"></span></button>`).join("");
@@ -945,13 +971,35 @@ function renderFlowDetail(idx){
 function paintTrack(idx){
   const nodes = $$("#trackList .node");
   const moveFocus = nodes.includes(document.activeElement);
+  const field = $("#trackList").parentElement;
+  const planet = $(".orbit-planet", field);
+  const mobile = matchMedia("(max-width:859px)").matches;
+  let R = 150, cy = 0, k = .5;
+  if(!mobile){
+    const fr = field.getBoundingClientRect();
+    const pr = planet.getBoundingClientRect();
+    cy = (pr.top + pr.height/2) - (fr.top + fr.height/2);
+    R = Math.max(90, $(".orbit-path", field).getBoundingClientRect().width/2);
+    k = parseFloat(getComputedStyle(field).getPropertyValue("--orbitK")) || .5;
+  }
   nodes.forEach((n,i)=>{
-    let relative = (i-idx+STEPS.length)%STEPS.length;
-    if(relative>STEPS.length/2) relative-=STEPS.length;
-    const angle = relative*(360/STEPS.length);
+    let rel = (i-idx+STEPS.length)%STEPS.length;
+    if(rel>STEPS.length/2) rel-=STEPS.length;
+    const th = rel*(360/STEPS.length)*Math.PI/180;
+    const d = Math.cos(th); // 1=正前(最下) … -1=正后(最上)
     n.classList.toggle("active", i===idx);
     n.classList.toggle("done", i<idx);
-    n.classList.toggle("rear", Math.abs(angle)>90);
+    const li = n.parentElement;
+    if(mobile){
+      li.style.transform=""; li.style.opacity=""; li.style.zIndex="";
+    }else{
+      const x = R*Math.sin(th);
+      const y = cy + R*k*d;
+      const s = .72 + .28*(d+1)/2;
+      li.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%,-50%) scale(${s.toFixed(3)})`;
+      li.style.opacity = String(.45 + .55*(d+1)/2);
+      li.style.zIndex = d >= -.03 ? "3" : "1";
+    }
     n.tabIndex = i===idx?0:-1;
     n.setAttribute("aria-hidden",String(i!==idx));
     n.setAttribute("aria-current",i===idx?"step":"false");
@@ -961,7 +1009,6 @@ function paintTrack(idx){
     n.classList.toggle("active",i===idx);
     n.setAttribute("aria-current",i===idx?"step":"false");
   });
-  $("#trackList").style.setProperty("--rotation",`${-idx*45}deg`);
   $("#ringCaption").textContent = `${String(idx+1).padStart(2,"0")} / 08 · ${STEPS[idx].key}`;
   const p = ((idx+1)/STEPS.length*100).toFixed(1)+"%";
   $("#playProg").style.setProperty("--p", p);
@@ -1213,17 +1260,10 @@ document.addEventListener("click", e=>{
   }
   if(e.target.id==="ringNext"){ setStep(cur+1,true); return; }
   if(e.target.id==="ringPrev"){ setStep(cur-1,true); return; }
-  if(e.target.id==="ringDockToggle"){
-    const dock = $("#ringDock"), collapsed = dock.classList.toggle("collapsed");
-    e.target.setAttribute("aria-expanded",String(!collapsed));
-    e.target.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
-    e.target.textContent = collapsed?"＋":"−";
-    return;
-  }
   const mini = e.target.closest("#ringMini [data-ring-step]");
   if(mini){ setStep(parseInt(mini.dataset.ringStep,10)-1,true); return; }
   const node = e.target.closest("#trackList .node");
-  if(node){ const n = parseInt(node.dataset.step,10); setStep(n-1, true); location.hash = "#/flow/"+n; return; }
+  if(node){ const n = parseInt(node.dataset.step,10); setStep(n-1, true); return; }
   const tab = e.target.closest("#simTrack button[data-goto]");
   if(tab){ gotoStep(parseInt(tab.dataset.goto,10)); return; }
   const nav = e.target.closest("[data-nav]");
@@ -1239,49 +1279,9 @@ document.addEventListener("click", e=>{
 $("#flow").addEventListener("mouseenter",()=>{ if(playing){ clearInterval(timer); } });
 $("#flow").addEventListener("mouseleave",()=>{ if(playing){ timer=setInterval(()=>setStep(cur+1),3800); } });
 
-function setRingDockCollapsed(collapsed){
-  const dock = $("#ringDock"), toggle = $("#ringDockToggle");
-  dock.classList.toggle("collapsed",collapsed);
-  toggle.setAttribute("aria-expanded",String(!collapsed));
-  toggle.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
-  toggle.textContent = collapsed?"＋":"−";
-}
-function bindRingDock(){
-  const dock = $("#ringDock"), plane = $("#trackList");
-  const mobile = matchMedia("(max-width:859px)");
-  setRingDockCollapsed(mobile.matches);
-  mobile.addEventListener("change",e=>setRingDockCollapsed(e.matches));
-  if("IntersectionObserver" in window){
-    new IntersectionObserver(entries=>{
-      const visible = entries[0].isIntersecting;
-      dock.classList.toggle("visible",visible); dock.dataset.state = visible?"docked":"idle";
-    },{threshold:.08}).observe($("#flow"));
-  }
-  let drag = null, dragged = false;
-  plane.addEventListener("pointerdown",e=>{
-    if(e.button!==0) return;
-    drag = {x:e.clientX}; dragged = false;
-  });
-  plane.addEventListener("pointermove",e=>{
-    if(drag && !dragged && Math.abs(e.clientX-drag.x)>8){
-      dragged = true;
-      plane.setPointerCapture(e.pointerId);
-    }
-  });
-  plane.addEventListener("pointerup",e=>{
-    if(!drag) return;
-    const dx = e.clientX-drag.x; drag = null;
-    if(!dragged) return;
-    const steps = Math.min(2,Math.max(1,Math.round(Math.abs(dx)/70)));
-    setStep(cur+(dx<0?steps:-steps),true);
-  });
-  plane.addEventListener("pointercancel",()=>{ drag = null; dragged = false; });
-  plane.addEventListener("click",e=>{
-    if(dragged){ e.preventDefault(); e.stopImmediatePropagation(); dragged = false; }
-  },true);
-}
-
-renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm(); bindRingDock();
+renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm();
+let rzT = null;
+addEventListener("resize", ()=>{ clearTimeout(rzT); rzT = setTimeout(()=>paintTrack(cur), 150); });
 $("#heroReplay").addEventListener("click",startSwarm);
 addEventListener("hashchange", route);
 
@@ -1582,7 +1582,7 @@ const SCREENS = {
           <pre id="diagLog" class="pre mono" hidden style="margin:10px 0 0;white-space:pre-wrap">[health.rerank] FAIL · 配置缺失或连通失败\n建议：检查服务地址与密钥 → 重跑连通自检 → 重新执行健康检查。本次未修改任何生产配置。</pre></div>`
         : `<div class="notice" style="margin-top:12px">触发时机：每日 08:00 日报后自动执行、发布流程「灰度 → 健康自检 → 冒烟 → 全量」、管理页手动刷新。门禁要求 0 FAIL。</div>`}
     </div>
-    <div class="banner"><span aria-hidden="true">✓</span> 8 个节点全部常亮 —— ✅ Success 终态：<a class="btn btn-primary btn-sm" href="#/exit">进入系统，跑一轮你自己的</a></div>
+    <div class="banner"><span aria-hidden="true">✓</span> 8 个节点全部常亮 —— ✅ Success 终态：<a class="btn btn-cta btn-sm" href="#/exit">进入系统，跑一轮你自己的</a></div>
   </div>` + screenNote("手册 §12 / 设计稿 §12.3-12.4", "权限标识 ai:health:query / ai:digest:query")
 };
 
@@ -1747,7 +1747,7 @@ function renderExit(){
     <section class="screen-block">
       <div class="sh"><span class="id">入口选择</span><h3>选择你的下一步</h3><span class="entry">鼠标悬停或键盘聚焦时显示说明</span></div>
       <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center">
-        <button class="btn btn-primary" data-out="system" ${EXIT_CFG?'':'disabled'}>进入系统 →</button>
+        <button class="btn btn-cta" data-out="system" ${EXIT_CFG?'':'disabled'}>进入系统 →</button>
         <button class="btn btn-ghost" data-out="doc" ${EXIT_CFG?'':'disabled'}>开发文档</button>
         <span class="muted" style="font-size:12.5px">${EXIT_CFG?'可点击：将在新标签打开目标，本页停留位置不变':'当前未注入域名，按钮置灰（见 C2）'}</span>
       </div>
@@ -1766,7 +1766,7 @@ function renderExit(){
         ${EXIT_CFG?'已注入域名，C2 当前不触发。切回「未注入」查看降级态。':'系统域名尚未注入本 Pages 工程，「进入系统」「开发文档」置灰并给出原因；<b>不出现死链、不出现 404、不假装能直连管理页</b>。'}
       </div>
       <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:6px">
-        <button class="btn btn-primary" disabled>进入系统 →</button>
+        <button class="btn btn-cta" disabled>进入系统 →</button>
         <button class="btn btn-ghost" disabled>开发文档</button>
         <p style="font-size:12.5px; color:var(--text-3); max-width:44ch">InlineNote：域名由队长在服务端配置后注入构建产物；介绍页侧不放任何密钥（设计稿 §2.3 第 6 项）。</p>
       </div>
