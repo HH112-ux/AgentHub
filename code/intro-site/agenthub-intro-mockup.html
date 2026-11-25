@@ -386,7 +386,11 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
    5. 能力清单（6 大能力域，口径=手册 §7.2 页面分组）
    ============================================================ */
 .domains{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--sp-4)}
+@property --beam-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes domainBeam{to{--beam-angle:360deg}}
 .domain{padding:0;position:relative;overflow:hidden;perspective:1200px;transition:border-color .2s,box-shadow .2s,transform .2s}
+.domain::after{content:"";position:absolute;inset:0;z-index:3;border-radius:inherit;padding:1px;background:conic-gradient(from var(--beam-angle),transparent 0deg 275deg,rgba(49,225,196,.18) 295deg,var(--glow) 320deg,#D9FFF8 330deg,var(--accent) 342deg,transparent 360deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.domain:hover::after,.domain:focus-within::after{opacity:1;animation:domainBeam 2.8s linear infinite}
 .domain:hover{border-color:var(--glow-line);transform:translateY(-2px);box-shadow:var(--sh-2)}
 .domain-flip{display:grid;transform-style:preserve-3d;transition:transform .68s cubic-bezier(.2,.75,.2,1);min-height:100%}
 .domain.flipped .domain-flip{transform:rotateY(180deg)}
@@ -755,6 +759,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   html{scroll-behavior:auto}
   .title-lit .hero h1 .title-fill{animation:none;clip-path:inset(0);filter:drop-shadow(0 0 8px rgba(49,225,196,.3));background-position:0 0}
   .swarm-cursor,.swarm-grid{animation:none}
+  .domain::after{animation:none!important;background:var(--glow-line);transition:none}
   .swarm-cursor{display:none}
   .swarm-build-target{opacity:1;visibility:visible;transform:none}
   .swarm-build-target::after{display:none}
