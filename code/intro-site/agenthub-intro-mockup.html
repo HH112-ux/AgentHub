@@ -153,13 +153,13 @@ body[data-title-phase="ignite"] .aim-frame,body[data-title-phase="ignite"] .aim-
 .title-lit .hero h1 .title-fill{animation:titleIgnite .55s cubic-bezier(.2,.75,.2,1) forwards}
 .title-lit .hero h1 .title-line:nth-child(2) .title-fill{animation-delay:.08s}
 body[data-title-phase="lit"] .title-aim{opacity:0}
-body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop-shadow(0 0 5px rgba(49,225,196,.18));background-position:0 0}
+body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop-shadow(0 0 8px rgba(49,225,196,.3));background-position:0 0}
 @keyframes aimContract{from{transform:scale(1.28);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes aimLock{from{transform:scale(1.3);opacity:.35}to{transform:scale(1);opacity:1}}
 @keyframes crossLock{0%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}45%{opacity:1;transform:translate(-50%,-50%) scale(.7)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
 @keyframes titleWarm{0%{transform:scaleX(0);opacity:.2}60%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:.25}}
 @keyframes needleSweep{0%{left:14px;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:calc(100% - 14px);opacity:0}}
-@keyframes titleIgnite{0%{clip-path:inset(0 100% 0 0);filter:drop-shadow(0 0 0 rgba(49,225,196,0));background-position:100% 0}55%{filter:drop-shadow(0 0 12px rgba(49,225,196,.55))}100%{clip-path:inset(0 0 0 0);filter:drop-shadow(0 0 5px rgba(49,225,196,.18));background-position:0 0}}
+@keyframes titleIgnite{0%{clip-path:inset(0 100% 0 0);filter:drop-shadow(0 0 0 rgba(49,225,196,0));background-position:100% 0}55%{filter:drop-shadow(0 0 12px rgba(49,225,196,.55))}100%{clip-path:inset(0 0 0 0);filter:drop-shadow(0 0 8px rgba(49,225,196,.3));background-position:0 0}}
 .hero .lead{color:var(--text-2); font-size:clamp(15px,1.5vw,18px); margin-top:20px; max-width:56ch}
 .hero .ctas{display:flex; gap:12px; margin-top:30px; flex-wrap:wrap}
 .four{display:flex; gap:8px; margin-top:26px; flex-wrap:wrap}
@@ -219,14 +219,78 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .swarm-stat span{margin-top:4px;font-size:6.5px;color:var(--text-3)}
 .swarm-stat em{font-size:5.5px;font-style:normal;color:var(--text-4)}
 .swarm-runcta{height:27px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--glow-line);border-radius:7px;background:linear-gradient(100deg,var(--glow),#26B6F0);color:#04121A;font-size:7px;font-weight:800;box-shadow:0 0 16px var(--glow-dim)}
-.swarm-piece{position:relative;opacity:0;animation:swarmAssemble .42s cubic-bezier(.2,.75,.2,1) forwards;animation-delay:calc(.35s + var(--i)*.34s);overflow:hidden}
-.swarm-piece::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,rgba(49,225,196,.2),transparent 80%);transform:translateX(-120%);animation:swarmScan .7s ease-out forwards;animation-delay:inherit;pointer-events:none}
-.swarm-cursor{position:absolute; left:var(--sx);top:var(--sy);z-index:6; opacity:0; animation:swarmCursor 1.8s cubic-bezier(.22,.8,.25,1) both; animation-delay:var(--d); filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
-.swarm-cursor .tip{display:block;width:13px;height:17px;background:var(--c);clip-path:polygon(0 0,100% 62%,58% 66%,40% 100%,25% 94%,41% 61%,0 61%);transform:rotate(-12deg)}
-.swarm-cursor .name{position:absolute;left:13px;top:12px;padding:2px 6px;border-radius:4px;background:var(--c);color:#04121A;font-size:8px;font-weight:800;white-space:nowrap}
-@keyframes swarmAssemble{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
-@keyframes swarmScan{to{transform:translateX(120%)}}
-@keyframes swarmCursor{0%{left:var(--sx);top:var(--sy);opacity:0;transform:scale(.65)}12%{opacity:1}58%{left:var(--tx);top:var(--ty);opacity:1;transform:scale(1)}74%{left:var(--tx);top:var(--ty);opacity:1;transform:scale(.9)}100%{left:calc(var(--tx) + 9%);top:calc(var(--ty) + 12%);opacity:0;transform:scale(.65)}}
+.swarm-workbench{height:100%;min-height:0}
+.swarm-workbench .swarm-ui{height:100%}
+.swarm-welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;margin:14px 12px 8px;padding:14px;text-align:center;border:1px dashed var(--border-2);border-radius:9px;background:rgba(8,13,22,.48)}
+.swarm-welcome b{font-size:10px;color:var(--text)}
+.swarm-welcome p{max-width:44ch;font-size:7px;line-height:1.55;color:var(--text-3)}
+.swarm-checklist{display:grid;gap:5px;margin:0 8px 8px}
+.swarm-check{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--border-3);border-radius:7px;background:var(--bg-elevated);font-size:7px;color:var(--text-2)}
+.swarm-check i{width:15px;height:15px;flex:none;display:grid;place-items:center;border:1px solid var(--border-2);border-radius:5px;font-style:normal;font-size:6px;color:var(--text-4)}
+.swarm-check.done i{border-color:var(--glow-line);background:var(--glow);color:#04121A}
+.swarm-check span{min-width:0;flex:1}
+.swarm-check small{display:block;margin-top:2px;font-size:5.8px;color:var(--text-4)}
+.swarm-check a{font-size:6px;color:var(--glow);white-space:nowrap}
+.swarm-input{margin:auto 8px 7px;padding:7px;border:1px solid var(--border-2);border-radius:7px;background:rgba(8,13,22,.8);font-size:6.5px;color:var(--text-4)}
+.swarm-input b{display:block;margin-bottom:5px;font-size:6.5px;font-weight:500;color:var(--text-2)}
+.swarm-workbench.full{min-height:540px;border:1px solid var(--border-2);border-radius:16px;overflow:hidden;background:linear-gradient(145deg,#0B1521,#060B13)}
+.swarm-workbench.full .swarm-windowbar{height:34px;padding:0 14px;gap:6px}
+.swarm-workbench.full .swarm-windowbar i{width:7px;height:7px}
+.swarm-workbench.full .swarm-windowbar span{font-size:9px}
+.swarm-workbench.full .swarm-appnav{height:60px;margin:0 18px;gap:10px}
+.swarm-workbench.full .swarm-brandmark{width:27px;height:27px;border-radius:8px}
+.swarm-workbench.full .swarm-appnav b{font-size:15px}
+.swarm-workbench.full .swarm-links{gap:16px;font-size:10.5px}
+.swarm-workbench.full .swarm-actions{gap:7px;margin-left:12px}
+.swarm-workbench.full .swarm-actions span{padding:7px 10px;border-radius:7px;font-size:9.5px}
+.swarm-workbench.full .swarm-workspace{gap:14px;padding:0 18px 18px;grid-template-columns:minmax(0,1.65fr) minmax(180px,.8fr)}
+.swarm-workbench.full .swarm-conversation{border-radius:13px}
+.swarm-workbench.full .swarm-chat-head{height:42px;padding:0 12px;gap:7px;font-size:10.5px}
+.swarm-workbench.full .swarm-chat-head i{width:6px;height:6px}
+.swarm-workbench.full .swarm-chat-head span{font-size:8px}
+.swarm-workbench.full .swarm-welcome{gap:8px;margin:16px 14px 10px;padding:22px 16px;border-radius:12px}
+.swarm-workbench.full .swarm-welcome b{font-size:15px}
+.swarm-workbench.full .swarm-welcome p{font-size:11px}
+.swarm-workbench.full .swarm-checklist{gap:8px;margin:0 12px 12px}
+.swarm-workbench.full .swarm-check{gap:10px;padding:10px 12px;border-radius:10px;font-size:11.5px}
+.swarm-workbench.full .swarm-check i{width:22px;height:22px;border-radius:7px;font-size:9px}
+.swarm-workbench.full .swarm-check small{margin-top:3px;font-size:9.5px}
+.swarm-workbench.full .swarm-check a{font-size:10px}
+.swarm-workbench.full .swarm-input{margin:auto 12px 12px;padding:11px 12px;border-radius:10px;font-size:10px}
+.swarm-workbench.full .swarm-input b{margin-bottom:7px;font-size:10.5px}
+.swarm-workbench.full .swarm-trace{margin:auto 12px 10px;padding-top:9px;font-size:8px}
+.swarm-workbench.full .swarm-side{gap:9px}
+.swarm-workbench.full .swarm-stat{gap:2px;padding:12px;border-radius:11px}
+.swarm-workbench.full .swarm-stat b{font-size:23px}
+.swarm-workbench.full .swarm-stat span{margin-top:6px;font-size:10px}
+.swarm-workbench.full .swarm-stat em{font-size:8px}
+.swarm-workbench.full .swarm-runcta{height:42px;border-radius:10px;font-size:10.5px}
+.sim-swarm-layer{position:absolute;inset:0;z-index:12;overflow:hidden;border-radius:inherit;background:rgba(5,9,18,.08);cursor:default}
+.sim-swarm-layer[data-state="complete"]{pointer-events:none}
+.sim-swarm-status{position:fixed;left:50%;bottom:16px;z-index:90;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border:1px solid var(--glow-line);border-radius:999px;background:rgba(6,12,20,.94);box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:11px;color:var(--text-2);white-space:nowrap}
+.sim-swarm-status button{padding:5px 9px;border:1px solid var(--border-2);border-radius:999px;background:var(--bg-container);color:var(--glow);font-size:10.5px}
+@media(max-width:859px){
+  .swarm-workbench.full{min-height:0}
+  .swarm-workbench.full .swarm-links{display:none}
+  .swarm-workbench.full .swarm-workspace{grid-template-columns:minmax(0,1fr);padding:0 12px 12px}
+  .swarm-workbench.full .swarm-side{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto}
+  .swarm-workbench.full .swarm-runcta{grid-column:1/-1}
+  .swarm-workbench.full .swarm-stat{padding:9px}
+  .swarm-workbench.full .swarm-stat b{font-size:18px}
+  .swarm-workbench.full .swarm-stat span{font-size:8.5px}
+  .swarm-workbench.full .swarm-stat em{display:none}
+}
+.swarm-build-status{position:absolute;right:10px;bottom:10px;z-index:30;padding:5px 8px;border:1px solid var(--glow-line);border-radius:999px;background:rgba(6,12,20,.9);color:var(--text-2);font-size:7px;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.swarm-build-target{opacity:0;visibility:hidden;transform:translateY(6px) scale(.985);transition:opacity .18s ease,transform .24s cubic-bezier(.2,.75,.2,1),visibility 0s .24s}
+.swarm-build-target.is-built{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.swarm-build-target.is-dragging{visibility:visible;transition:none}
+.swarm-cursor{position:absolute;left:0;top:0;z-index:35;width:0;height:0;opacity:1;pointer-events:none;will-change:transform;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6))}
+.swarm-cursor .tip{display:block;width:15px;height:20px;background:#E9FBFF;clip-path:polygon(0 0,100% 62%,58% 66%,40% 100%,25% 94%,41% 61%,0 61%);transform:rotate(-8deg);transform-origin:0 0;transition:transform .12s ease}
+.swarm-cursor .name{position:absolute;left:15px;top:14px;padding:3px 7px;border:1px solid rgba(49,225,196,.5);border-radius:5px;background:rgba(6,12,20,.94);color:var(--glow);font-size:8px;font-weight:800;white-space:nowrap;letter-spacing:.02em}
+.swarm-cursor.is-clicking .tip{transform:rotate(-8deg) scale(.78)}
+.swarm-click-ring{position:absolute;z-index:34;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid var(--glow);border-radius:50%;pointer-events:none;animation:swarmClick .46s ease-out forwards}
+.swarm-type-caret{display:inline-block;width:1px;height:1em;margin-left:2px;background:var(--glow);vertical-align:-2px;animation:blink .7s steps(2) infinite}
+@keyframes swarmClick{from{opacity:.9;transform:scale(.4)}to{opacity:0;transform:scale(2.8)}}
 
 /* ============================================================
    3. 数字证明带（顶替 Logo Wall — 可信度锚定；企业内部平台无公开客户标识）
@@ -272,42 +336,51 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .playbar .prog{flex:1; height:3px; background:var(--border-2); border-radius:3px; overflow:hidden}
 .playbar .prog i{display:block; height:100%; width:var(--p,0%); background:linear-gradient(90deg,var(--glow),var(--accent)); transition:width .3s}
 .playbar .t{font-family:var(--mono); font-size:11.5px; color:var(--text-3); flex:none}
-.ring-dock{position:fixed;right:18px;top:50%;z-index:40;width:320px;padding:12px;border:1px solid var(--border);border-radius:24px;background:radial-gradient(circle at 50% 35%,rgba(49,225,196,.07),transparent 42%),rgba(8,13,22,.92);backdrop-filter:blur(18px) saturate(140%);box-shadow:var(--sh-3),var(--glow-ring);opacity:0;visibility:hidden;transform:translateY(-50%) translateX(28px);transition:opacity .25s,transform .25s,visibility 0s .25s,width .25s}
-.ring-dock.visible{opacity:1;visibility:visible;transform:translateY(-50%) translateX(0);transition-delay:0s}
-.ring-dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.ring-dock-head span{font-size:11px;letter-spacing:.08em;color:var(--text-3);font-family:var(--mono)}
-.ring-dock-toggle{width:26px;height:26px;border:1px solid var(--border);border-radius:8px;background:var(--bg-container);color:var(--text-2)}
-.ring-dock-body{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;gap:4px}
-.ring-arrow{width:28px;height:34px;border:1px solid var(--border-2);border-radius:9px;background:var(--bg-container);color:var(--text-2)}
-.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow)}
-.ring-viewport{height:270px;display:grid;place-items:center;perspective:1000px;touch-action:pan-y;cursor:grab;overflow:hidden}
-.ring-viewport:active{cursor:grabbing}
-#trackList{--rotation:0deg;position:relative;display:block;width:244px;height:244px;margin:0;padding:0;list-style:none;transform-style:preserve-3d;transform:rotateX(-7deg) rotateY(var(--rotation));transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform}
-#trackList li{position:absolute;left:50%;top:50%;width:96px;height:96px;margin:-48px;list-style:none;transform-style:preserve-3d;transform:rotateY(var(--angle)) translateZ(118px);backface-visibility:visible;-webkit-backface-visibility:visible}
-#trackList .node{width:96px;height:96px;justify-content:center;gap:6px;padding:9px;border:1px solid rgba(168,188,211,.16);border-radius:20px;background:linear-gradient(145deg,rgba(24,36,53,.94),rgba(8,13,22,.96));box-shadow:0 12px 28px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.04);opacity:.58;filter:saturate(.65);transition:opacity .25s,filter .25s,background .25s,transform .35s,box-shadow .25s;backface-visibility:visible;-webkit-backface-visibility:visible}
-#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.07),transparent 34%);pointer-events:none}
-#trackList .node:hover,#trackList .node.active{opacity:1;filter:none}
-#trackList .node.active{transform:scale(1.14) translateZ(12px);background:radial-gradient(circle at 50% 20%,rgba(49,225,196,.16),transparent 58%),linear-gradient(145deg,#142C37,#0A1720);border:1px solid var(--glow-line);box-shadow:0 0 0 5px var(--glow-dim),0 0 34px rgba(49,225,196,.28),0 20px 38px rgba(0,0,0,.42)}
-#trackList .node.rear{opacity:.2;filter:saturate(.3) blur(.25px);transform:scale(.92)}
-#trackList .node.rear .dot,#trackList .node.rear .lbl{visibility:hidden}
-#trackList .node.rear::after{content:"";position:absolute;inset:19px 16px;border:1px solid rgba(49,225,196,.16);border-radius:11px;background:linear-gradient(145deg,rgba(49,225,196,.08),rgba(76,141,255,.05));box-shadow:0 0 20px rgba(49,225,196,.05)}
-#trackList .dot{width:38px;height:38px;border-radius:12px;background:rgba(4,12,19,.58);border:1px solid var(--border-2);color:var(--text-2)}
-#trackList .dot svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-#trackList .node.active .dot{background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 16px var(--glow-dim)}
-#trackList .grp{display:none}
-#trackList .lbl{font-size:11px;max-width:78px;color:var(--text-2)}
-.ring-dock-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-.ring-caption{font-size:10.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.ring-play{padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-size:10.5px;color:var(--text-2);background:var(--bg-container)}
-.ring-mini{display:none;flex-direction:column;gap:6px;padding:4px 0}
-.ring-mini button{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-2);background:var(--bg-container)}
-.mini-mark{display:block;width:11px;height:3px;border-radius:3px;background:var(--text-4);transition:width .2s,background .2s,box-shadow .2s}
-.ring-mini button.active{border-color:var(--glow-line);background:rgba(49,225,196,.08);box-shadow:0 0 14px var(--glow-dim)}
-.ring-mini button.active .mini-mark{width:18px;background:var(--glow);box-shadow:0 0 8px var(--glow)}
-.ring-dock.collapsed{width:58px;padding:8px}
-.ring-dock.collapsed .ring-dock-head{justify-content:center;margin:0}
-.ring-dock.collapsed .ring-dock-head span,.ring-dock.collapsed .ring-dock-body,.ring-dock.collapsed .ring-dock-foot{display:none}
-.ring-dock.collapsed .ring-mini{display:flex}
+.ring-stage{--orbit-card-w:340px;--orbit-card-h:370px;--orbit-node-w:156px;--orbit-node-h:104px;position:relative;padding:18px 20px 14px;border:1px solid var(--border-2);border-radius:var(--r-xl);background:radial-gradient(circle at 50% 46%,rgba(49,225,196,.1),transparent 38%),linear-gradient(180deg,rgba(13,22,34,.94),rgba(6,10,18,.96));box-shadow:var(--sh-2),inset 0 1px rgba(255,255,255,.035);overflow:hidden}
+.ring-stage-head,.ring-stage-foot{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ring-stage-head span{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text-3)}
+.ring-stage-head small{font-size:11.5px;color:var(--text-4)}
+.ring-viewport{--orbit-rx:420px;--orbit-ry:220px;position:relative;height:690px;touch-action:pan-y;cursor:grab;overflow:hidden}
+.ring-viewport::before{content:"";position:absolute;left:50%;top:50%;width:calc(var(--orbit-rx)*2);height:calc(var(--orbit-ry)*2);border:1px solid rgba(49,225,196,.1);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 34px rgba(49,225,196,.018),inset 0 0 70px rgba(49,225,196,.025);pointer-events:none}
+.ring-viewport.dragging{cursor:grabbing}
+.ring-arrow{position:absolute;left:14px;top:50%;z-index:8;width:40px;height:44px;transform:translateY(-50%);border:1px solid var(--border-2);border-radius:12px;background:rgba(12,21,33,.9);color:var(--text-2);font-size:18px;box-shadow:var(--sh-1)}
+.ring-arrow.next{left:auto;right:14px}
+.ring-arrow:hover{border-color:var(--glow-line);color:var(--glow);background:rgba(19,36,46,.96)}
+#trackList{--drag-x:0px;position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;list-style:none;transform:translateX(var(--drag-x));transition:transform .7s cubic-bezier(.2,.75,.2,1);will-change:transform;pointer-events:none}
+#trackList.dragging{transition:none}
+#trackList li{position:absolute;left:50%;top:50%;width:var(--orbit-node-w);height:var(--orbit-node-h);margin:0;list-style:none;pointer-events:none;transition:transform .7s cubic-bezier(.2,.75,.2,1),opacity .35s ease,filter .35s ease}
+#trackList .node{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:12px;text-align:center;border:1px solid rgba(168,188,211,.2);border-radius:18px;background:linear-gradient(145deg,rgba(24,36,53,.97),rgba(8,13,22,.98));box-shadow:0 16px 34px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05);color:var(--text);font:inherit;opacity:1;filter:saturate(.72);pointer-events:auto;cursor:pointer}
+#trackList .node::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.06),transparent 34%);pointer-events:none}
+#trackList .node:hover{border-color:var(--glow-line);filter:saturate(1)}
+#trackList .node:focus-visible{outline:2px solid var(--glow);outline-offset:4px}
+#trackList .orbit-shell.active{border-color:var(--glow-line);box-shadow:0 0 0 3px var(--glow-dim),0 18px 38px rgba(0,0,0,.4);filter:saturate(1)}
+#trackList .orbit-shell.done .dot{background:rgba(49,225,196,.14);border-color:var(--glow-line);color:var(--glow)}
+#trackList .dot{width:34px;height:34px;flex:none;border-radius:11px;background:rgba(4,12,19,.62);border:1px solid var(--border-2);color:var(--text-2)}
+#trackList .dot svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#trackList .lbl{display:block;max-width:none;font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.orbit-active{--drag-x:0px;position:absolute;left:50%;top:50%;z-index:6;width:var(--orbit-card-w);height:auto;min-height:var(--orbit-card-h);transform:translate(calc(-50% + var(--drag-x)),-50%);display:flex;flex-direction:column;gap:9px;padding:22px;text-align:left;border:1px solid var(--glow-line);border-radius:22px;background:radial-gradient(circle at 88% 4%,rgba(49,225,196,.14),transparent 34%),linear-gradient(145deg,#142C37,#0A1720);box-shadow:0 0 0 5px var(--glow-dim),0 0 44px rgba(49,225,196,.2),0 30px 65px rgba(0,0,0,.5);transition:transform .7s cubic-bezier(.2,.75,.2,1),opacity .25s;cursor:grab;user-select:none;overflow:hidden}
+.orbit-active:focus-visible{outline:2px solid var(--glow);outline-offset:5px}
+.ring-viewport.dragging .orbit-active{transition:none}
+.orbit-active a,.orbit-active button{user-select:auto}
+.orbit-top{display:flex;align-items:center;gap:12px}
+.orbit-active .dot{width:40px;height:40px;flex:none;border-radius:12px;background:linear-gradient(140deg,var(--glow),#26B6F0);color:#04121A;border-color:transparent;box-shadow:0 0 18px var(--glow-dim)}
+.orbit-active .dot svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.orbit-id{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text-4)}
+.orbit-active .lbl{display:block;font-size:23px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.orbit-heading{display:flex;flex-direction:column;gap:3px;margin-top:-2px}
+.orbit-heading b{font-size:14px;color:var(--glow)}
+.orbit-heading span{font-size:10.5px;color:var(--text-4)}
+.orbit-desc{color:var(--text-2);font-size:13px;line-height:1.58}
+.orbit-tags{display:flex;flex-wrap:wrap;gap:6px}
+.orbit-tags .tag{font-size:10.5px;padding:3px 8px}
+.orbit-source{display:flex;align-items:center;gap:7px;padding-top:9px;border-top:1px solid var(--border-3);font-size:10.5px;line-height:1.45;color:var(--text-4)}
+.orbit-source::before{content:"";width:5px;height:5px;flex:none;border-radius:50%;background:var(--glow)}
+.orbit-actions{display:flex;gap:8px;margin-top:auto;padding-top:2px}
+.orbit-actions .btn{font-size:12px;padding:8px 12px}
+.ring-stage-foot{margin-top:10px;padding-top:12px;border-top:1px solid var(--border-3)}
+.ring-caption{font-size:11.5px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.ring-play{padding:7px 11px;border:1px solid var(--border);border-radius:9px;font-size:11.5px;color:var(--text-2);background:var(--bg-container)}
+.ring-play:hover{border-color:var(--glow-line);color:var(--glow)}
 
 /* ============================================================
    5. 能力清单（6 大能力域，口径=手册 §7.2 页面分组）
@@ -376,6 +449,49 @@ body[data-title-phase="lit"] .hero h1 .title-fill{clip-path:inset(0);filter:drop
 .boundary .item i{width:7px; height:7px; border-radius:50%; background:var(--glow); margin-top:8px; flex:none; box-shadow:0 0 10px var(--glow)}
 .boundary .item b{display:block; font-size:14px; font-weight:600; margin-bottom:3px}
 .boundary .item p{font-size:13px; color:var(--text-3)}
+.diagram-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;padding:14px 16px;border:1px solid var(--border-2);border-radius:var(--r-lg);background:var(--bg-container)}
+.diagram-toolbar .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text-4)}
+.diagram-toolbar p{margin-top:5px;font-size:12.5px;color:var(--text-3)}
+.diagram-switch{position:relative;display:grid;grid-template-columns:1fr 1fr;flex:none;width:230px;padding:4px;border:1px solid var(--border-2);border-radius:12px;background:var(--bg-elevated)}
+.diagram-switch .switch-thumb{position:absolute;left:4px;top:4px;bottom:4px;width:calc(50% - 4px);border:1px solid var(--glow-line);border-radius:9px;background:linear-gradient(110deg,rgba(49,225,196,.2),rgba(76,141,255,.16));box-shadow:0 0 18px var(--glow-dim);transition:transform .55s cubic-bezier(.2,.75,.2,1)}
+.diagram-switch[data-view="flow"] .switch-thumb{transform:translateX(100%)}
+.diagram-switch button{position:relative;z-index:1;min-height:38px;border:0;background:transparent;color:var(--text-3);font-size:12px}
+.diagram-switch button[aria-selected="true"]{color:var(--glow);font-weight:700}
+.diagram-viewport{position:relative;overflow:hidden;border-radius:var(--r-lg)}
+.diagram-track{display:flex;width:200%;transition:transform .65s cubic-bezier(.2,.75,.2,1);will-change:transform}
+.diagram-track[data-view="flow"]{transform:translateX(-50%)}
+.diagram-panel{position:relative;width:50%;flex:none;min-height:470px}
+.diagram-panel.topo{width:50%}
+.flowdiagram{padding:var(--sp-5);background:var(--bg-container);border:1px solid var(--border-2);border-radius:var(--r-lg)}
+.diagram-pointer{--pointer-x:50%;--pointer-y:50%;position:absolute;left:var(--pointer-x);top:var(--pointer-y);z-index:9;display:flex;align-items:center;gap:7px;opacity:0;transform:translate(-12px,-14px);transition:left .65s cubic-bezier(.2,.75,.2,1),top .65s cubic-bezier(.2,.75,.2,1),opacity .2s;pointer-events:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.diagram-pointer.visible{opacity:1}
+.diagram-pointer svg{width:25px;height:31px;fill:var(--glow);stroke:#04121A;stroke-width:1.2}
+.diagram-pointer span{padding:5px 8px;border:1px solid var(--glow-line);border-radius:7px;background:#07131B;color:var(--glow);font-family:var(--mono);font-size:9px;white-space:nowrap}
+.diagram-node.target{border-color:var(--glow)!important;box-shadow:0 0 0 4px var(--glow-dim),0 0 26px rgba(49,225,196,.22)!important}
+.flow-map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 28px;padding:10px 4px}
+.flow-node{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);gap:11px;align-items:center;min-height:82px;padding:13px 14px;text-align:left;border:1px solid var(--border-2);border-radius:13px;background:linear-gradient(145deg,var(--bg-elevated),var(--bg-container));color:var(--text);transition:border-color .25s,box-shadow .25s,transform .25s}
+.flow-node:hover{transform:translateY(-2px);border-color:var(--glow-line)}
+.flow-node .n{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--border-2);border-radius:11px;background:rgba(4,12,19,.5);font-family:var(--mono);font-size:12px;color:var(--glow)}
+.flow-node b{display:block;font-size:13.5px}
+.flow-node small{display:block;margin-top:5px;font-size:11px;line-height:1.45;color:var(--text-3)}
+.flow-node::after{position:absolute;color:var(--glow);font-family:var(--mono);font-size:17px;opacity:.65}
+.flow-node:nth-child(odd)::after{content:"→";right:-23px;top:50%;transform:translateY(-50%)}
+.flow-node:nth-child(even)::after{content:"↓";left:50%;bottom:-19px;transform:translateX(-50%)}
+.flow-node:nth-child(7)::after{content:"→"}
+.flow-node:nth-child(8)::after{content:"✓";color:var(--glow)}
+@media(max-width:1099px){
+  .diagram-toolbar{align-items:flex-start;flex-direction:column}
+  .diagram-switch{width:100%}
+  .diagram-panel{min-height:500px}
+}
+@media(max-width:600px){
+  .diagram-toolbar{padding:12px}
+  .diagram-panel{min-height:640px}
+  .flow-map{grid-template-columns:minmax(0,1fr);gap:14px}
+  .flow-node:nth-child(odd)::after,.flow-node:nth-child(even)::after{content:"↓";left:50%;right:auto;top:auto;bottom:-17px;transform:translateX(-50%)}
+  .flow-node:nth-child(8)::after{content:"✓"}
+  .diagram-pointer span{display:none}
+}
 
 /* ============================================================
    7. 在线体验问答（区块 6）
@@ -428,7 +544,7 @@ footer .legal{margin-top:var(--sp-6); padding-top:var(--sp-4); border-top:1px so
 .spec-rail dd{margin:2px 0 0; color:var(--text-2); line-height:1.5}
 .spec-rail .branch{display:grid; gap:7px}
 .spec-rail .branch .btn[aria-pressed="true"]{border-color:var(--glow-line); color:var(--glow); background:var(--glow-dim); font-weight:600}
-.screen{padding:var(--sp-5); border-radius:var(--r-lg); background:var(--bg-container); border:1px solid var(--border-2); box-shadow:var(--sh-2)}
+.screen{position:relative;padding:var(--sp-5); border-radius:var(--r-lg); background:var(--bg-container); border:1px solid var(--border-2); box-shadow:var(--sh-2)}
 
 /* ---------- 工作台外壳（模拟真实系统前端） ---------- */
 .wb{border:1px solid var(--border-2); border-radius:var(--r-md); overflow:hidden; background:var(--bg-layout); display:grid; grid-template-columns:236px minmax(0,1fr); min-height:520px}
@@ -583,6 +699,8 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
 @media(max-width:1099px){
   :root{--sp-9:64px}
   .hero-grid,.arch,.qa-block,.flow-panel{grid-template-columns:minmax(0,1fr)}
+  .ring-stage{--orbit-card-w:310px;--orbit-card-h:360px;--orbit-node-w:142px;--orbit-node-h:96px}
+  .ring-viewport{height:690px}
   .node .lbl{font-size:11px}
   .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .terminal{grid-template-columns:minmax(0,1fr)}
@@ -594,12 +712,22 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
   .metrics .container{grid-template-columns:repeat(2,minmax(0,1fr))}
   .domains{grid-template-columns:minmax(0,1fr)}
   footer .cols{grid-template-columns:1fr 1fr}
-  .ring-dock{left:12px;right:12px;top:auto;bottom:12px;width:auto;transform:translateY(24px);border-radius:18px}
-  .ring-dock.visible{transform:translateY(0)}
-  .ring-dock.collapsed{left:12px;right:12px;width:auto;padding:8px 10px;display:flex;align-items:center;gap:10px}
-  .ring-dock.collapsed .ring-mini{display:flex;flex:1;flex-direction:row;justify-content:space-between}
-  .ring-viewport{height:210px}
-  #trackList{transform:rotateX(-7deg) rotateY(var(--rotation)) scale(.88)}
+  .ring-stage{--orbit-card-w:100%;--orbit-card-h:auto;--orbit-node-w:100%;--orbit-node-h:96px;padding:14px 12px 12px;border-radius:20px}
+  .ring-stage-head small{display:none}
+  .ring-viewport{height:auto;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:visible;cursor:default}
+  .ring-viewport::before,.ring-arrow{display:none}
+  #trackList{position:relative;inset:auto;width:100%;height:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;transform:none!important;pointer-events:auto}
+  #trackList.dragging{transition:none}
+  #trackList li{position:relative;left:auto;top:auto;width:auto;height:auto;margin:0;transform:none!important;pointer-events:auto}
+  #trackList .node{height:var(--orbit-node-h);padding:10px 8px;gap:7px;border-radius:15px}
+  #trackList .dot{width:30px;height:30px;border-radius:9px}
+  #trackList .dot svg{width:16px;height:16px}
+  #trackList .lbl{font-size:12.5px}
+  .orbit-active{position:relative;left:auto;top:auto;width:100%;height:auto;min-height:350px;transform:none!important;overflow:visible;cursor:default}
+  .orbit-active .lbl{font-size:22px}
+  .orbit-desc{font-size:13px;line-height:1.58}
+  .orbit-actions{flex-wrap:wrap}
+  .ring-play{min-height:44px}
   .wb{grid-template-columns:minmax(0,1fr)}
   .wb-list{display:none}
   .sim-top{padding:10px 12px;gap:8px;height:auto;min-height:64px;display:grid;grid-template-columns:minmax(0,1fr) auto}
@@ -625,8 +753,11 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-iteration-count:1!important;transition-duration:.01ms !important}
   html{scroll-behavior:auto}
-  .title-lit .hero h1 .title-fill{animation:none;clip-path:inset(0);filter:drop-shadow(0 0 5px rgba(49,225,196,.18));background-position:0 0}
-  .swarm-cursor,.swarm-piece,.swarm-grid{animation:none}
+  .title-lit .hero h1 .title-fill{animation:none;clip-path:inset(0);filter:drop-shadow(0 0 8px rgba(49,225,196,.3));background-position:0 0}
+  .swarm-cursor,.swarm-grid{animation:none}
+  .swarm-cursor{display:none}
+  .swarm-build-target{opacity:1;visibility:visible;transform:none}
+  .swarm-build-target::after{display:none}
 }
 </style>
 </head>
@@ -705,7 +836,7 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         <div>
           <span class="eyebrow">一轮对话的完整链路</span>
           <h2 style="margin-top:12px">8 步跑完：从提问到复盘</h2>
-          <p class="sub">口径取自《开发总览手册》§6.1 核心链路：能自己答就不路由、专家正文不被二次改写、写操作一律受控、每一环都留痕。点任意节点进入高保真走查。</p>
+          <p class="sub">口径取自《开发总览手册》§6.1 核心链路：能自己答就不路由、专家正文不被二次改写、写操作一律受控、每一环都留痕。点击卡片切换步骤，卡片内可进入高保真走查。</p>
         </div>
         <div class="playbar">
           <button class="btn btn-ghost btn-sm" id="playBtn" aria-pressed="false">▶ 播放</button>
@@ -713,20 +844,15 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
         </div>
       </div>
 
-      <div class="ring-dock" id="ringDock" role="region" aria-label="八步运行流程 3D 圆环" data-state="idle">
-        <div class="ring-dock-head"><span>FLOW ORBIT</span><button class="ring-dock-toggle" id="ringDockToggle" type="button" aria-expanded="true" aria-label="收起八步圆环">−</button></div>
-        <div class="ring-dock-body">
+      <div class="ring-stage" id="flowOrbit" role="region" aria-label="八步运行流程交互轨道">
+        <div class="ring-stage-head"><span>FLOW ORBIT · 8 STEPS</span><small>八步全览 · 点击或拖动切换 · 当前步骤在中央展开</small></div>
+        <div class="ring-viewport">
           <button class="ring-arrow" id="ringPrev" type="button" aria-label="上一步">←</button>
-          <div class="ring-viewport"><ol id="trackList" aria-label="8 步运行流程"></ol></div>
-          <button class="ring-arrow" id="ringNext" type="button" aria-label="下一步">→</button>
+          <ol id="trackList" aria-label="8 步运行流程预览"></ol>
+          <article class="orbit-active" id="orbitActive" role="group" tabindex="0" aria-label="当前运行步骤"></article>
+          <button class="ring-arrow next" id="ringNext" type="button" aria-label="下一步">→</button>
         </div>
-        <div class="ring-dock-foot"><span class="ring-caption" id="ringCaption">01 / 08 · 首登就绪</span><button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button></div>
-        <div class="ring-mini" id="ringMini" aria-label="八步紧凑导航"></div>
-      </div>
-
-      <div class="flow-panel" style="margin-top:var(--sp-5)">
-        <div class="card detail" id="flowDetail"></div>
-        <div class="card preview" id="flowPreview" aria-live="polite"></div>
+        <div class="ring-stage-foot"><span class="ring-caption" id="ringCaption" aria-live="polite">01 / 08 · 首登就绪</span><button class="ring-play" id="ringPlay" type="button" aria-pressed="false">▶ 播放</button></div>
       </div>
     </div>
   </section>
@@ -756,18 +882,34 @@ table.tbl td.m{font-family:var(--mono); font-size:12px; color:var(--text)}
           <p class="sub">拓扑口径=设计稿 §2.2。浏览器只与本 Pages 层交互；「进入系统」是链接跳转，不在本页发起任何业务 API 调用。</p>
         </div>
       </div>
+      <div class="diagram-toolbar">
+        <div><span class="eyebrow">SYSTEM VIEW · 双图联动</span><p id="diagramCaption">部署架构：公开介绍与真实业务系统分层隔离。</p></div>
+        <div class="diagram-switch" id="diagramSwitch" data-view="arch" role="tablist" aria-label="切换部署架构与八步流程">
+          <span class="switch-thumb" aria-hidden="true"></span>
+          <button id="diagramArchTab" type="button" role="tab" aria-selected="true" aria-controls="diagramArchPanel" tabindex="0" data-diagram="arch">部署架构</button>
+          <button id="diagramFlowTab" type="button" role="tab" aria-selected="false" aria-controls="diagramFlowPanel" tabindex="-1" data-diagram="flow">8 步流程</button>
+        </div>
+      </div>
       <div class="arch">
-        <div class="topo">
+        <div class="diagram-viewport" id="diagramViewport">
+          <div class="diagram-pointer" id="diagramPointer" aria-hidden="true"><svg viewBox="0 0 24 30"><path d="M2 1l18 16-9 1-4 8z"/></svg><span id="diagramPointerLabel">业务内核</span></div>
+          <div class="diagram-track" id="diagramTrack" data-view="arch">
+        <section class="diagram-panel topo" id="diagramArchPanel" role="tabpanel" aria-labelledby="diagramArchTab">
           <div class="tier"><span class="cap">L1 · 浏览器</span>
             <div class="boxes"><div class="box pub"><b>产品介绍页</b><span>Qoder Sites · 公开访问</span></div><div class="box"><b>在线体验问答</b><span>云端 Agent，仅公开内容</span></div></div>
           </div>
           <div class="arrow">「进入系统」「开发文档」= 仅链接跳转，不发起业务调用</div>
           <div class="tier"><span class="cap">L2 · 云服务器（公网 IP + 域名 + 证书）</span>
-            <div class="boxes"><div class="box srv"><b>Nginx</b><span>前端静态产物 + /prod-api 反代 + SSE</span></div><div class="box srv"><b>Spring Boot</b><span>单 jar，内含 AgentScope Java 内核</span></div></div>
+            <div class="boxes"><div class="box srv" data-diagram-target="nginx"><b>Nginx</b><span>前端静态产物 + /prod-api 反代 + SSE</span></div><div class="box srv" id="archKernel" data-diagram-target="kernel"><b>Spring Boot</b><span>单 jar，内含 AgentScope Java 内核</span></div></div>
           </div>
           <div class="arrow">真实系统前端与 API 同源伺服 · 前后端同版本发布</div>
           <div class="tier"><span class="cap">L3 · 数据与中间件</span>
             <div class="boxes"><div class="box"><b>PostgreSQL 14</b><span>PG 栈 :8080</span></div><div class="box"><b>MySQL 8.0</b><span>MySQL 栈 :8081</span></div><div class="box"><b>Redis</b><span>会话状态 / HITL / 锁 / 限流</span></div><div class="box"><b>Milvus + etcd</b><span>向量集合 + BM25 集合</span></div><div class="box"><b>对象存储</b><span>附件 / 文档原文 / 大结果</span></div></div>
+          </div>
+        </section>
+        <section class="diagram-panel flowdiagram" id="diagramFlowPanel" role="tabpanel" aria-labelledby="diagramFlowTab" aria-hidden="true" inert>
+          <div class="flow-map" id="flowMap" aria-label="八步运行流程节点"></div>
+        </section>
           </div>
         </div>
         <div class="boundary">
@@ -919,49 +1061,74 @@ const FLOW_ICONS = [
 ];
 function renderTrack(){
   $("#trackList").innerHTML = STEPS.map(s=>`
-    <li style="--angle:${(s.id-1)*45}deg"><button class="node ring-node" data-step="${s.id}" aria-label="第 ${s.id} 步 ${s.short}">
-      <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[s.id-1]}</svg></span><span class="lbl">${s.key}</span><span class="grp">FLOW ${s.flow}</span>
+    <li><button type="button" class="node orbit-shell" data-orbit-step="${s.id}" aria-label="选择第 ${s.id} 步：${esc(s.key)}">
+      <span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[s.id-1]}</svg></span>
+      <span class="lbl">${esc(s.key)}</span>
     </button></li>`).join("");
-  $("#ringMini").innerHTML = STEPS.map(s=>`<button type="button" data-ring-step="${s.id}" aria-label="切换到第 ${s.id} 步 ${s.short}"><span class="mini-mark" aria-hidden="true"></span></button>`).join("");
 }
-function renderFlowDetail(idx){
-  const s = STEPS[idx];
-  $("#flowDetail").innerHTML = `
-    <div class="idx">FLOW ${s.flow} · ${s.src}</div>
-    <h3>${esc(s.title)}</h3>
-    <p class="desc">${esc(s.desc)}</p>
-    <div class="chips">${s.chips.map(c=>`<span class="tag">${esc(c)}</span>`).join("")}</div>
-    <div class="acts">
-      <a class="btn btn-primary btn-sm" href="#/flow/${s.id}">查看运行过程</a>
-      <a class="btn btn-ghost btn-sm" href="#domains">了解${esc(s.anchor)}能力</a>
-    </div>`;
-  const map = {1:["会话列表","空态 + 4 项检查","服务端实时推导"],2:["分组：专家/场景/技能/MCP","chip 可移除","附件 512KB / 5MB 上限"],3:["route_decision","action=route｜self","提示条：自答 / 路由 / 已指定"],4:["思考→调用→咨询→汇总","工具调用卡片默认收起","专家正文直答"],5:["内联确认卡片","允许本次｜记住该工具｜拒绝","刷新后可还原"],6:["来源卡片抽屉","相似度 + 命中片段","查看全文需对应权限"],7:["六类审计表","trace_id 贯穿","保留 180 天 · 03:30 清理"],8:["08:00 日报五块","Token/费用/配额","健康自检 FAIL/WARN/INFO"]}[s.id];
-  $("#flowPreview").innerHTML =
-    `<div class="row"><span class="k">界面要素</span><span class="v">${map.map(m=>`<span class="tag">${esc(m)}</span>`).join(" ")}</span></div>`+
-    `<div class="row"><span class="k">口径来源</span><span class="v">${esc(s.src)}</span></div>`+
-    `<div class="row"><span class="k">设计取向</span><span class="v">${["首登即可跑通","装配按选择生效","能自己答就不路由","专家正文不被二次改写","写操作一律受控","每一环都留痕","每一环都留痕","可评测可复盘"][s.id-1]}</span></div>`+
-    `<div class="row"><span class="k">终态</span><span class="v">✅ 轨道推进到下一步 · ❌ 见分支说明 · ↩ 关层后原位续播</span></div>`;
+function renderOrbitActive(idx){
+  const s = STEPS[idx], active = $("#orbitActive");
+  active.dataset.step = String(idx+1);
+  active.setAttribute("aria-label",`第 ${idx+1} 步，共 8 步：${s.key}。${s.desc}`);
+  active.innerHTML = `
+    <span class="orbit-top"><span class="dot"><svg viewBox="0 0 24 24" aria-hidden="true">${FLOW_ICONS[idx]}</svg></span><span class="orbit-id">FLOW ${s.flow} · CORE LOOP</span></span>
+    <span class="orbit-heading"><span class="lbl">${esc(s.key)}</span><b>${esc(s.title)}</b><span>当前步骤 · 可进入高保真走查</span></span>
+    <span class="orbit-desc">${esc(s.desc)}</span>
+    <span class="orbit-tags">${s.chips.slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join("")}</span>
+    <span class="orbit-source">${esc(s.src)}</span>
+    <span class="orbit-actions"><a class="btn btn-primary btn-sm" href="#/flow/${s.id}">查看运行过程</a><a class="btn btn-ghost btn-sm" href="#domains">了解${esc(s.anchor)}能力</a></span>`;
 }
 function paintTrack(idx){
-  const nodes = $$("#trackList .node");
-  const moveFocus = nodes.includes(document.activeElement);
+  const active = $("#orbitActive"), focused = document.activeElement;
+  const actionLinks = $$(".orbit-actions a",active);
+  const focusIndex = actionLinks.indexOf(focused);
+  const savedFocusIndex = actionLinks.indexOf(lastLandingFocus);
+  const focusedOrbitStep = focused?.dataset?.orbitStep ? Number(focused.dataset.orbitStep) : null;
+  const moveFocus = focused===active;
+  const viewport = $(".ring-viewport"), mobile = matchMedia("(max-width:859px)").matches;
+  const nodes = $$("#trackList .orbit-shell");
+  renderOrbitActive(idx);
+  let rx = 0, ry = 0;
+  if(!mobile){
+    const nodeWidth = nodes[0]?.offsetWidth||156, nodeHeight = nodes[0]?.offsetHeight||104, gap = 12;
+    rx = Math.max(180,Math.min(viewport.clientWidth/2-nodeWidth/2-64,430));
+    ry = Math.min(viewport.clientHeight/2-nodeHeight/2-gap,Math.max(220,active.offsetHeight/2+nodeHeight/2+gap));
+    viewport.style.setProperty("--orbit-rx",`${rx}px`);
+    viewport.style.setProperty("--orbit-ry",`${ry}px`);
+  }
   nodes.forEach((n,i)=>{
     let relative = (i-idx+STEPS.length)%STEPS.length;
     if(relative>STEPS.length/2) relative-=STEPS.length;
-    const angle = relative*(360/STEPS.length);
-    n.classList.toggle("active", i===idx);
-    n.classList.toggle("done", i<idx);
-    n.classList.toggle("rear", Math.abs(angle)>90);
-    n.tabIndex = i===idx?0:-1;
-    n.setAttribute("aria-hidden",String(i!==idx));
-    n.setAttribute("aria-current",i===idx?"step":"false");
-  });
-  if(moveFocus) nodes[idx].focus({preventScroll:true});
-  $$("#ringMini button").forEach((n,i)=>{
     n.classList.toggle("active",i===idx);
+    n.classList.toggle("done",i<idx);
+    n.tabIndex = i===idx?0:-1;
     n.setAttribute("aria-current",i===idx?"step":"false");
+    const li = n.parentElement;
+    if(mobile){
+      li.style.transform = ""; li.style.opacity = ""; li.style.zIndex = "";
+    }else{
+      const theta = relative*(360/STEPS.length)*Math.PI/180;
+      const depth = Math.cos(theta), scale = .72+.28*(depth+1)/2, gap = 12;
+      let x = rx*Math.sin(theta), y = ry*depth;
+      const halfWidth = n.offsetWidth*scale/2, halfHeight = n.offsetHeight*scale/2;
+      const overlapX = active.offsetWidth/2+halfWidth+gap-Math.abs(x);
+      const overlapY = active.offsetHeight/2+halfHeight+gap-Math.abs(y);
+      if(overlapX>0 && overlapY>0){
+        const maxX = viewport.clientWidth/2-halfWidth-gap, maxY = viewport.clientHeight/2-halfHeight-gap;
+        const canMoveX = overlapX<=maxX-Math.abs(x), canMoveY = overlapY<=maxY-Math.abs(y);
+        if(canMoveX && (!canMoveY || overlapX<=overlapY)) x = Math.sign(x||1)*(Math.abs(x)+overlapX);
+        else if(canMoveY) y = Math.sign(y||1)*(Math.abs(y)+overlapY);
+      }
+      li.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%) scale(${scale.toFixed(3)})`;
+      li.style.opacity = String(.42+.58*(depth+1)/2);
+      li.style.zIndex = depth>=-.03?"3":"1";
+    }
   });
-  $("#trackList").style.setProperty("--rotation",`${-idx*45}deg`);
+  const nextLinks = $$(".orbit-actions a",active);
+  if(savedFocusIndex>=0) lastLandingFocus = nextLinks[savedFocusIndex];
+  if(focusedOrbitStep) nodes[focusedOrbitStep-1]?.focus({preventScroll:true});
+  else if(moveFocus) active.focus({preventScroll:true});
+  else if(focusIndex>=0) nextLinks[focusIndex]?.focus({preventScroll:true});
   $("#ringCaption").textContent = `${String(idx+1).padStart(2,"0")} / 08 · ${STEPS[idx].key}`;
   const p = ((idx+1)/STEPS.length*100).toFixed(1)+"%";
   $("#playProg").style.setProperty("--p", p);
@@ -969,7 +1136,7 @@ function paintTrack(idx){
 let cur = 0, playing = false, timer = null;
 function setStep(i, stopPlay){
   cur = (i+STEPS.length)%STEPS.length;
-  renderFlowDetail(cur); paintTrack(cur);
+  paintTrack(cur);
   if(stopPlay) setPlaying(false);
 }
 function setPlaying(on){
@@ -1023,16 +1190,264 @@ function renderHeroMini(){
   $("#heroMiniLabel").textContent = ["提问已送达","小Z 判定完成","专家作业中","等待人工确认"][heroIdx];
 }
 function heroTick(){ heroIdx = (heroIdx+1)%HERO_FRAMES.length; renderHeroMini(); }
-const SWARM_CURSORS = [
-  ["产品",8,12,12,18,"#31E1C4"],["前端",72,6,84,18,"#4C8DFF"],["设计",92,30,18,31,"#9B6CFF"],
-  ["架构",4,48,86,42,"#31E1C4"],["内容",24,86,28,50,"#4C8DFF"],["QA",58,94,36,64,"#F5A524"],
-  ["智能体",84,72,32,78,"#31E1C4"],["安全",12,76,84,88,"#9B6CFF"],["模型",38,8,86,58,"#4C8DFF"],
-  ["工具",66,18,70,18,"#31E1C4"],["知识",94,58,86,34,"#4C8DFF"],["审计",2,22,55,90,"#F5A524"]
-];
-let heroTimer = null, swarmTimer = null, titleTimers = [], swarmObserver = null;
+let swarmToken = 0, swarmCancelWait = null, swarmCursorAnimation = null, swarmTargetAnimation = null, swarmVisibilityHandler = null;
+function cancelSwarmMotion(){
+  swarmToken++;
+  swarmCancelWait?.(); swarmCancelWait = null;
+  swarmCursorAnimation?.cancel(); swarmCursorAnimation = null;
+  swarmTargetAnimation?.cancel(); swarmTargetAnimation = null;
+  swarmVisibilityHandler = null;
+  $$(".swarm-cursor,.swarm-click-ring").forEach(el=>el.remove());
+}
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden) swarmVisibilityHandler?.();
+});
+function waitSwarm(ms, token){
+  return new Promise(resolve=>{
+    let done = false;
+    const finish = ()=>{
+      if(done) return;
+      done = true; clearTimeout(id);
+      if(swarmCancelWait===cancel) swarmCancelWait = null;
+      resolve(swarmToken===token);
+    };
+    const id = setTimeout(finish,ms);
+    const cancel = finish;
+    swarmCancelWait = cancel;
+  });
+}
+function setSwarmStatus(layer, text){
+  const status = $(".sim-swarm-status span,.swarm-build-status span",layer);
+  if(status) status.textContent = text;
+}
+function createSwarmCursor(layer){
+  const cursor = document.createElement("div");
+  cursor.className = "swarm-cursor";
+  cursor.innerHTML = '<span class="tip"></span><span class="name">AgentHub Builder</span>';
+  const point = {x:Math.max(16,layer.clientWidth*.12),y:Math.max(18,layer.clientHeight*.18)};
+  cursor.style.transform = `translate(${point.x}px,${point.y}px)`;
+  cursor._swarmPoint = point;
+  layer.append(cursor);
+  return cursor;
+}
+function animateSwarmCursor(cursor,x,y,duration,token){
+  const from = cursor._swarmPoint;
+  const animation = cursor.animate([
+    {transform:`translate(${from.x}px,${from.y}px)`},
+    {transform:`translate(${x}px,${y}px)`}
+  ],{duration,easing:"cubic-bezier(.22,.8,.25,1)",fill:"forwards"});
+  swarmCursorAnimation = animation;
+  return animation.finished.catch(()=>{}).then(()=>{
+    if(swarmCursorAnimation===animation) swarmCursorAnimation = null;
+    if(swarmToken!==token) return false;
+    cursor._swarmPoint = {x,y};
+    cursor.style.transform = `translate(${x}px,${y}px)`;
+    animation.cancel();
+    return true;
+  });
+}
+function swarmLayoutRect(target){
+  const rect = target.getBoundingClientRect();
+  const transform = getComputedStyle(target).transform;
+  const matrix = transform==="none" ? null : new DOMMatrixReadOnly(transform);
+  const left = rect.left-(matrix?.m41||0), top = rect.top-(matrix?.m42||0);
+  return {left,top,right:left+target.offsetWidth,bottom:top+target.offsetHeight,width:target.offsetWidth,height:target.offsetHeight};
+}
+function scrollSwarmTargetIntoView(target){
+  const viewport = target.closest(".sim")?.querySelector(".sim-body");
+  if(!viewport) return;
+  const scrollers = [];
+  for(let el=target.parentElement;el && el!==viewport.parentElement;el=el.parentElement){
+    const style = getComputedStyle(el);
+    if(/(auto|scroll|hidden|clip)/.test(style.overflowY)) scrollers.push(el);
+    if(el===viewport) break;
+  }
+  if(!scrollers.includes(viewport)) scrollers.push(viewport);
+  for(const scroller of scrollers){
+    const rect = swarmLayoutRect(target), box = scroller.getBoundingClientRect();
+    const vertical = scroller.scrollHeight>scroller.clientHeight;
+    const horizontal = scroller.scrollWidth>scroller.clientWidth;
+    if(vertical) scroller.scrollTop += rect.height<scroller.clientHeight-48
+      ? rect.top-box.top-(scroller.clientHeight-rect.height)/2
+      : rect.top-box.top-24;
+    if(horizontal) scroller.scrollLeft += rect.width<scroller.clientWidth-48
+      ? rect.left-box.left-(scroller.clientWidth-rect.width)/2
+      : rect.left-box.left-24;
+  }
+}
+function swarmTargetPoint(layer,target){
+  scrollSwarmTargetIntoView(target);
+  const box = layer.getBoundingClientRect(), rect = swarmLayoutRect(target);
+  return {
+    x:Math.max(12,Math.min(box.width-72,rect.left-box.left+rect.width/2)),
+    y:Math.max(16,Math.min(box.height-34,rect.top-box.top+rect.height/2))
+  };
+}
+function markSwarmTarget(target,action,label){
+  target.classList.add("swarm-build-target");
+  target.dataset.swarmTarget = "true";
+  target.dataset.swarmAction = action;
+  target.dataset.swarmLabel = label;
+}
+function completeSwarmTargets(root){
+  $$(".swarm-build-target",root).forEach(target=>{
+    target.getAnimations().forEach(animation=>animation.cancel());
+    const line = target.querySelector(":scope > .swarm-type-line");
+    if(line && target.dataset.swarmTypeText) line.replaceWith(document.createTextNode(target.dataset.swarmTypeText));
+    target.querySelector(".swarm-type-caret")?.remove();
+    target.style.transition = "none";
+    target.style.removeProperty("opacity");
+    target.style.removeProperty("transform");
+    target.classList.remove("is-dragging");
+    target.classList.add("is-built");
+    if(target.dataset.swarmBuilt!=="true") target.dataset.swarmBuilt = "true";
+    void target.offsetWidth;
+    target.style.removeProperty("transition");
+  });
+}
+function resetSwarmTargets(root){
+  $$(".swarm-build-target",root).forEach(target=>{
+    target.getAnimations().forEach(animation=>animation.cancel());
+    const line = target.querySelector(":scope > .swarm-type-line");
+    if(line && target.dataset.swarmTypeText) line.replaceWith(document.createTextNode(target.dataset.swarmTypeText));
+    target.querySelector(".swarm-type-caret")?.remove();
+    target.style.transition = "none";
+    target.classList.remove("is-built","is-dragging","swarm-build-target");
+    target.style.removeProperty("opacity");
+    target.style.removeProperty("transform");
+    void target.offsetWidth;
+    target.style.removeProperty("transition");
+    delete target.dataset.swarmBuilt;
+    delete target.dataset.swarmTarget;
+    delete target.dataset.swarmAction;
+    delete target.dataset.swarmLabel;
+    delete target.dataset.swarmTypeText;
+  });
+}
+function prepareSwarmType(target){
+  let line = target.querySelector(":scope > .swarm-type-line");
+  if(!line){
+    const heading = target.querySelector(":scope > b");
+    const text = target.dataset.swarmTypeText || [...target.childNodes]
+      .filter(node=>node.nodeType===Node.TEXT_NODE)
+      .map(node=>node.textContent).join("").trim() || target.textContent.trim();
+    target.dataset.swarmTypeText = text;
+    target.innerHTML = "";
+    if(heading) target.append(heading);
+    line = document.createElement("span");
+    line.className = "swarm-type-line";
+    target.append(line);
+  }
+  line.textContent = "";
+  return line;
+}
+async function typeSwarmText(target,token){
+  const line = prepareSwarmType(target), text = target.dataset.swarmTypeText || "";
+  const caret = document.createElement("i");
+  caret.className = "swarm-type-caret";
+  line.append(caret);
+  for(const char of text){
+    if(!await waitSwarm(24,token)) return false;
+    line.textContent += char;
+    line.append(caret);
+  }
+  caret.remove();
+  return true;
+}
+function clickSwarm(layer,point){
+  const ring = document.createElement("span");
+  ring.className = "swarm-click-ring";
+  ring.style.left = `${point.x}px`;
+  ring.style.top = `${point.y}px`;
+  layer.append(ring);
+  setTimeout(()=>ring.remove(),480);
+}
+async function runSwarmTarget(cursor,layer,target,action,label,token){
+  const point = swarmTargetPoint(layer,target);
+  setSwarmStatus(layer,label);
+  let start = point, offset = null;
+  if(action==="drag"){
+    offset = {
+      x:(point.x+Math.min(72,layer.clientWidth*.12)<layer.clientWidth-12?1:-1)*Math.min(72,layer.clientWidth*.12),
+      y:(point.y+Math.min(46,layer.clientHeight*.12)<layer.clientHeight-34?1:-1)*Math.min(46,layer.clientHeight*.12)
+    };
+    start = {x:point.x+offset.x,y:point.y+offset.y};
+  }
+  const duration = Math.max(260,Math.min(620,Math.hypot(start.x-cursor._swarmPoint.x,start.y-cursor._swarmPoint.y)*1.25));
+  if(!await animateSwarmCursor(cursor,start.x,start.y,duration,token)) return false;
+  cursor.classList.add("is-clicking");
+  clickSwarm(layer,start);
+  if(action==="drag"){
+    target.classList.add("is-dragging");
+    target.style.opacity = ".42";
+    target.style.transform = `translate(${offset.x}px,${offset.y}px)`;
+    swarmTargetAnimation = target.animate([
+      {transform:target.style.transform,opacity:".42"},
+      {transform:"none",opacity:"1"}
+    ],{duration:560,easing:"cubic-bezier(.2,.75,.2,1)",fill:"forwards"});
+    const cursorMove = animateSwarmCursor(cursor,point.x,point.y,560,token);
+    await Promise.all([swarmTargetAnimation.finished.catch(()=>{}),cursorMove]);
+    swarmTargetAnimation = null;
+    if(swarmToken!==token) return false;
+    target.getAnimations().forEach(animation=>animation.cancel());
+    target.style.removeProperty("opacity");
+    target.style.removeProperty("transform");
+    target.classList.remove("is-dragging");
+    target.classList.add("is-built");
+    target.dataset.swarmBuilt = "true";
+  }else{
+    target.classList.add("is-built");
+    target.dataset.swarmBuilt = "true";
+    if(action==="type" && !await typeSwarmText(target,token)) return false;
+  }
+  cursor.classList.remove("is-clicking");
+  return waitSwarm(action==="type"?80:120,token);
+}
+async function runSwarmSequence(layer,plan,token,onComplete,minDuration=0){
+  if(swarmToken!==token) return;
+  const onHidden = ()=>{
+    if(swarmToken!==token) return;
+    cancelSwarmMotion();
+    onComplete?.();
+  };
+  swarmVisibilityHandler = onHidden;
+  try {
+    const started = performance.now();
+    const cursor = createSwarmCursor(layer);
+    setSwarmStatus(layer,"定位真实组件");
+    const targets = plan.filter(item=>item.target.isConnected && item.target.getBoundingClientRect().width>0);
+    for(const item of targets){
+      if(swarmToken!==token) return;
+      const action = item.action || "click";
+      if(!await runSwarmTarget(cursor,layer,item.target,action,item.label,token)) return;
+    }
+    if(swarmToken!==token) return;
+    let remaining = minDuration-(performance.now()-started);
+    if(remaining>0){
+      setSwarmStatus(layer,"核对构建结果");
+      const last = targets.at(-1)?.target;
+      if(remaining>450 && last){
+        const point = swarmTargetPoint(layer,last);
+        if(!await animateSwarmCursor(cursor,point.x,point.y,420,token)) return;
+        remaining = minDuration-(performance.now()-started);
+      }
+      if(remaining>0 && !await waitSwarm(remaining,token)) return;
+    }
+    if(swarmToken!==token) return;
+    setSwarmStatus(layer,"构建完成");
+    await waitSwarm(160,token);
+    if(swarmToken!==token) return;
+    cursor.remove();
+    onComplete?.();
+  } finally {
+    if(swarmVisibilityHandler===onHidden) swarmVisibilityHandler = null;
+  }
+}
+let heroTimer = null, titleTimers = [], swarmObserver = null;
 function setTitlePhase(phase){
   document.body.dataset.titlePhase = phase;
   if(phase==="ignite") document.body.classList.add("title-lit");
+  if(phase==="lit") document.body.classList.remove("title-lit");
 }
 function playTitle(){
   titleTimers.forEach(clearTimeout); titleTimers = [];
@@ -1050,40 +1465,67 @@ function startHeroTimer(){
   clearInterval(heroTimer);
   if(!matchMedia("(prefers-reduced-motion: reduce)").matches) heroTimer = setInterval(heroTick,2100);
 }
-function startSwarm(){
-  swarmObserver?.disconnect(); swarmObserver = null;
-  clearTimeout(swarmTimer); clearInterval(heroTimer); playTitle();
-  heroIdx = 2; renderHeroMini();
-  const layer = $("#swarmLayer");
-  const ui = `<div class="swarm-ui">
+function swarmShell(conversation, side){
+  return `<div class="swarm-ui swarm-workbench">
     <div class="swarm-windowbar"><i></i><i></i><i></i><span>AgentHub · product preview</span></div>
-    <div class="swarm-piece swarm-appnav" style="--i:0"><span class="swarm-brandmark"></span><b>AgentHub</b><span class="swarm-links">运行流程 能力 架构 在线体验</span><span class="swarm-actions"><span>开发文档</span><span>进入系统</span></span></div>
+    <div class="swarm-appnav"><span class="swarm-brandmark"></span><b>AgentHub</b><span class="swarm-links">运行流程 能力 架构 在线体验</span><span class="swarm-actions"><span>开发文档</span><span>进入系统</span></span></div>
     <div class="swarm-workspace">
-      <div class="swarm-conversation">
-        <div class="swarm-piece swarm-chat-head" style="--i:1"><i></i>AgentHub · 任务工作站（模拟）<span>LIVE</span></div>
-        <div class="swarm-piece swarm-message user" style="--i:2"><span class="swarm-avatar">你</span><div class="swarm-copy"><div class="swarm-who">你 · 正在流式</div><div class="swarm-bubble">帮我把上个月华东区的对账单核对一下，有差异的写回备注。</div></div></div>
-        <div class="swarm-piece swarm-message router" style="--i:3"><span class="swarm-avatar">小Z</span><div class="swarm-copy"><div class="swarm-who">小Z · 判定完成</div><div class="swarm-bubble">需要领域能力 → <code>route_decision(action=route, expert=财务专家)</code></div></div></div>
-        <div class="swarm-piece swarm-message expert" style="--i:4"><span class="swarm-avatar">财务</span><div class="swarm-copy"><div class="swarm-who">财务专家 · 作业中</div><div class="swarm-bubble">思考 → 调用工具 3 次 → 汇总中</div></div></div>
-        <div class="swarm-piece swarm-trace" style="--i:5">trace_id: tr_8f2a · ai:message:send · HITL pending</div>
-      </div>
-      <div class="swarm-side">
-        <div class="swarm-piece swarm-stat" style="--i:6"><b>34</b><span>功能页</span><em>6 大能力域</em></div>
-        <div class="swarm-piece swarm-stat" style="--i:7"><b>75.0%</b><span>RAG hit@1</span><em>评测基线</em></div>
-        <div class="swarm-piece swarm-stat" style="--i:8"><b>98</b><span>按钮权限</span><em>逐项受控</em></div>
-        <div class="swarm-piece swarm-runcta" style="--i:9">进入系统 →</div>
-      </div>
+      <div class="swarm-conversation">${conversation}</div>
+      <div class="swarm-side">${side}</div>
     </div>
   </div>`;
-  const cursors = SWARM_CURSORS.map((c,i)=>`<div class="swarm-cursor" style="--sx:${c[1]}%;--sy:${c[2]}%;--tx:${c[3]}%;--ty:${c[4]}%;--d:${(i*.22).toFixed(2)}s;--c:${c[5]}"><span class="tip"></span><span class="name">${c[0]}</span></div>`).join("");
-  layer.innerHTML = `<div class="swarm-grid"></div>${ui}${cursors}`;
-  layer.classList.remove("done"); layer.dataset.state = "building";
-  if(matchMedia("(prefers-reduced-motion: reduce)").matches){
-    layer.classList.add("done"); layer.dataset.state = "complete"; startHeroTimer(); return;
-  }
-  swarmTimer = setTimeout(()=>{ layer.classList.add("done"); layer.dataset.state = "complete"; startHeroTimer(); },5000);
+}
+function finishHeroSwarm(){
+  const layer = $("#swarmLayer");
+  if(!layer || layer.dataset.state!=="building") return;
+  cancelSwarmMotion();
+  completeSwarmTargets(layer);
+  layer.dataset.state = "complete";
+  layer.setAttribute("aria-hidden","false");
+  $(".swarm-grid",layer)?.remove();
+  $(".swarm-build-status",layer)?.remove();
+  $("#heroMiniLabel").textContent = "构建完成 · 工作台、专家作业与运行留痕已就绪";
+}
+function startSwarm(){
+  swarmObserver?.disconnect(); swarmObserver = null;
+  clearInterval(heroTimer);
+  cancelSwarmMotion();
+  const layer = $("#swarmLayer");
+  const conversation = `
+    <div class="swarm-chat-head"><i></i>AgentHub · 任务工作站（模拟）<span>LIVE</span></div>
+    <div class="swarm-message user"><span class="swarm-avatar">你</span><div class="swarm-copy"><div class="swarm-who">你 · 正在流式</div><div class="swarm-bubble">帮我把上个月华东区的对账单核对一下，有差异的写回备注。</div></div></div>
+    <div class="swarm-message router"><span class="swarm-avatar">小Z</span><div class="swarm-copy"><div class="swarm-who">小Z · 判定完成</div><div class="swarm-bubble">需要领域能力 → <code>route_decision(action=route, expert=财务专家)</code></div></div></div>
+    <div class="swarm-message expert"><span class="swarm-avatar">财务</span><div class="swarm-copy"><div class="swarm-who">财务专家 · 作业中</div><div class="swarm-bubble">思考 → 调用工具 3 次 → 汇总中</div></div></div>
+    <div class="swarm-trace">trace_id: tr_8f2a · ai:message:send · HITL pending</div>`;
+  const side = `
+    <div class="swarm-stat"><b>34</b><span>功能页</span><em>6 大能力域</em></div>
+    <div class="swarm-stat"><b>75.0%</b><span>RAG hit@1</span><em>评测基线</em></div>
+    <div class="swarm-stat"><b>98</b><span>按钮权限</span><em>逐项受控</em></div>
+    <div class="swarm-runcta">进入系统 →</div>`;
+  layer.innerHTML = `<div class="swarm-grid"></div>${swarmShell(conversation,side)}<div class="swarm-build-status" role="status"><span>定位真实组件</span></div>`;
+  layer.classList.remove("done"); layer.dataset.state = "building"; layer.setAttribute("aria-hidden","true");
+  const specs = [
+    [".swarm-appnav","click","创建应用导航"],
+    [".swarm-chat-head","click","打开任务工作站"],
+    [".swarm-message.user","click","提交核对任务"],
+    [".swarm-message.user .swarm-bubble","type","输入任务内容"],
+    [".swarm-message.router","click","判定并路由专家"],
+    [".swarm-message.router code","type","写入路由决策"],
+    [".swarm-message.expert","drag","拖入专家作业卡"],
+    [".swarm-side","drag","装配运行指标"],
+    [".swarm-trace","click","写入运行留痕"]
+  ];
+  const plan = specs.map(([selector,action,label])=>{
+    const target = $(selector,layer);
+    if(target) markSwarmTarget(target,action,label);
+    return {target,action,label};
+  }).filter(item=>item.target);
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){ finishHeroSwarm(); return; }
+  const token = swarmToken;
+  setTimeout(()=>runSwarmSequence(layer,plan,token,finishHeroSwarm),0);
 }
 function armSwarm(){
-  clearTimeout(swarmTimer); clearInterval(heroTimer);
+  clearInterval(heroTimer);
   const layer = $("#swarmLayer");
   if(matchMedia("(prefers-reduced-motion: reduce)").matches){ startSwarm(); return; }
   layer.classList.add("done"); layer.dataset.state = "armed";
@@ -1122,6 +1564,7 @@ function nameOfRoute(h){
 }
 function openSim(n){
   if(!SIM_OPEN()) lastLandingFocus = document.activeElement;
+  lastSwarmStep = null;
   cur = Math.min(Math.max(n,1),8)-1;
   renderSim(); showView("sim"); $("#sim").setAttribute("aria-hidden","false");
   paintSim(cur);
@@ -1130,9 +1573,11 @@ function openSim(n){
 }
 function closeSim(keepScroll){
   const wasOpen = SIM_OPEN();
-  $("#sim").setAttribute("aria-hidden","true");
+  stopSimSwarm(wasOpen);
+  if(wasOpen && $("#sim").contains(document.activeElement)) document.activeElement.blur();
   showView("landing");
-  if(wasOpen && lastLandingFocus?.isConnected) requestAnimationFrame(()=>lastLandingFocus.focus({preventScroll:true}));
+  if(wasOpen && lastLandingFocus?.isConnected) lastLandingFocus.focus({preventScroll:true});
+  $("#sim").setAttribute("aria-hidden","true");
   if(!keepScroll) return;
   const t = $("#flow"); if(t && lastLandingY) window.scrollTo(0,lastLandingY);
 }
@@ -1142,8 +1587,71 @@ addEventListener("scroll",()=>{ if(!SIM_OPEN() && !document.hidden) lastLandingY
 /* ============================================================
    模拟层渲染（8 屏，屏幕模板见 SCREENS）
    ============================================================ */
+let simSwarmTimer = null, lastSwarmStep = null, simSwarmInert = [];
+function restoreSimSwarmFocusability(){
+  simSwarmInert.forEach(el=>{ el.inert = false; }); simSwarmInert = [];
+}
+function stopSimSwarm(cancelMotion=true){
+  clearTimeout(simSwarmTimer); simSwarmTimer = null;
+  if(cancelMotion) cancelSwarmMotion();
+  const box = $("#screenBox");
+  if(box) resetSwarmTargets(box);
+  $(".sim-swarm-layer")?.remove();
+  $(".sim-swarm-status")?.remove();
+  restoreSimSwarmFocusability();
+}
+function finishSimSwarm(){
+  clearTimeout(simSwarmTimer); simSwarmTimer = null;
+  const layer = $(".sim-swarm-layer"); if(!layer) return;
+  cancelSwarmMotion();
+  const box = $("#screenBox");
+  if(box) resetSwarmTargets(box);
+  layer.dataset.state = "complete";
+  restoreSimSwarmFocusability();
+  if(layer.contains(document.activeElement)) $("#simTitle")?.focus({preventScroll:true});
+  layer.remove();
+}
+function simSwarmSpecs(id){
+  const plans = {
+    1:[[".swarm-appnav","click","创建应用导航"],[".swarm-chat-head","click","打开首登工作台"],[".swarm-welcome","click","载入首登清单"],[".swarm-welcome b","type","输入首登提示"],[".swarm-checklist","click","装配四项检查"],[".swarm-input","click","生成提问入口"],[".swarm-side","drag","拖入首登指标"],[".swarm-trace","click","写入首登留痕"]],
+    2:[[".wb-list","click","创建会话列表"],[".wb-hd","click","打开任务工作台"],[".wb-hd .tag","type","写入任务标签"],[".wb-stream","click","载入本轮问题"],[".wb-input","click","装配资源输入栏"],[".drawer","drag","拖入资源选择器"]],
+    3:[[".wb-list","click","创建会话列表"],[".wb-list > .t","type","输入列表标题"],[".wb-hd","click","打开路由任务"],[".wb-stream","click","载入问题与回答"],[".route-bar","click","执行路由判定"],[".route-bar .tag","type","写入路由协议"],[".wb-input","click","保留本轮资源"]],
+    4:[[".wb-list","click","创建会话列表"],[".wb-hd","click","打开专家作业"],[".route-bar","click","下发专家任务"],[".progress-steps","click","生成作业进度"],[".tool-card","click","调用台账工具"],[".tool-card .nm","type","写入工具名称"],[".agent-card","click","装配专家状态"],[".wb-input","click","保留输入上下文"]],
+    5:[[".wb-list","click","创建会话列表"],[".wb-hd","click","打开待确认任务"],[".confirm-card","click","生成写操作确认卡"],[".confirm-card .meta span","type","写入授权口径"],[".wb-input","click","锁定流式输入栏"]],
+    6:[[".wb-list","click","创建会话列表"],[".wb-hd","click","打开交付结果"],[".wb-stream","click","生成专家结论"],[".drawer","drag","拖入参考来源"],[".drawer .dh b","type","输入来源标题"],[".wb-input","click","保留交付上下文"]],
+    7:[[".card > div:first-child","click","创建审计页头"],[".tabs","click","生成审计分类"],[".tabs .tab","type","写入分类名称"],["[role=tabpanel]","click","载入工具调用明细"],[".notice","click","补充审计口径"]],
+    8:[[".stat-grid","click","生成运行指标"],[".stat-grid .stat span","type","写入指标名称"],[".bar-chart","click","绘制运行日报"],[".health-grid","click","装配健康自检"],[".banner","click","生成完成入口"]]
+  };
+  return plans[id] || [];
+}
+function startSimSwarm(){
+  stopSimSwarm();
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const box = $("#screenBox"); if(!box) return;
+  const layer = document.createElement("div");
+  layer.className = "sim-swarm-layer"; layer.dataset.state = "building";
+  layer.setAttribute("aria-label",`${STEPS[cur].key}正在构建`);
+  layer.innerHTML = `<div class="swarm-grid"></div><div class="sim-swarm-status" role="status"><span>Swarm Rebuild · ${esc(STEPS[cur].key)}</span><button type="button" data-skip-swarm>跳过构建</button></div>`;
+  $("[data-skip-swarm]",layer).addEventListener("click",finishSimSwarm);
+  box.append(layer);
+  simSwarmInert = $$(":scope > *",box).filter(el=>el!==layer);
+  simSwarmInert.forEach(el=>{ el.inert = true; });
+  const plan = simSwarmSpecs(cur+1).map(([selector,action,label])=>{
+    const target = $(selector,box);
+    if(target) markSwarmTarget(target,action,label);
+    return {target,action,label};
+  }).filter(item=>item.target);
+  const token = swarmToken;
+  simSwarmTimer = setTimeout(()=>{
+    simSwarmTimer = null;
+    runSwarmSequence(layer,plan,token,finishSimSwarm,4000);
+  },0);
+}
 function renderSim(){
-  const step = STEPS[cur];
+  finishHeroSwarm();
+  stopSimSwarm();
+  const step = STEPS[cur], replaySwarm = lastSwarmStep!==step.id;
+  lastSwarmStep = step.id;
   $("#simTrack").innerHTML = STEPS.map(s=>`<button id="simTab-${s.id}" role="tab" aria-controls="simPanel" aria-selected="${s.id===step.id}" tabindex="${s.id===step.id?0:-1}" data-goto="${s.id}" aria-label="步 ${s.id} ${s.key}">${s.id}</button>`).join("");
   paintSim(cur);
   $("#simInner").innerHTML = `
@@ -1163,6 +1671,7 @@ function renderSim(){
   $("#screenBox").innerHTML = SCREENS[step.id](simState);
   $("#specRail").innerHTML = SPEC[step.id]();
   bindScreenEvents();
+  if(replaySwarm) startSimSwarm();
 }
 function paintSim(i){
   const tabs = $$("#simTrack button");
@@ -1213,17 +1722,6 @@ document.addEventListener("click", e=>{
   }
   if(e.target.id==="ringNext"){ setStep(cur+1,true); return; }
   if(e.target.id==="ringPrev"){ setStep(cur-1,true); return; }
-  if(e.target.id==="ringDockToggle"){
-    const dock = $("#ringDock"), collapsed = dock.classList.toggle("collapsed");
-    e.target.setAttribute("aria-expanded",String(!collapsed));
-    e.target.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
-    e.target.textContent = collapsed?"＋":"−";
-    return;
-  }
-  const mini = e.target.closest("#ringMini [data-ring-step]");
-  if(mini){ setStep(parseInt(mini.dataset.ringStep,10)-1,true); return; }
-  const node = e.target.closest("#trackList .node");
-  if(node){ const n = parseInt(node.dataset.step,10); setStep(n-1, true); location.hash = "#/flow/"+n; return; }
   const tab = e.target.closest("#simTrack button[data-goto]");
   if(tab){ gotoStep(parseInt(tab.dataset.goto,10)); return; }
   const nav = e.target.closest("[data-nav]");
@@ -1239,49 +1737,138 @@ document.addEventListener("click", e=>{
 $("#flow").addEventListener("mouseenter",()=>{ if(playing){ clearInterval(timer); } });
 $("#flow").addEventListener("mouseleave",()=>{ if(playing){ timer=setInterval(()=>setStep(cur+1),3800); } });
 
-function setRingDockCollapsed(collapsed){
-  const dock = $("#ringDock"), toggle = $("#ringDockToggle");
-  dock.classList.toggle("collapsed",collapsed);
-  toggle.setAttribute("aria-expanded",String(!collapsed));
-  toggle.setAttribute("aria-label",collapsed?"展开八步圆环":"收起八步圆环");
-  toggle.textContent = collapsed?"＋":"−";
+let diagramView = "arch", diagramFlowStep = 1;
+function renderFlowDiagram(){
+  $("#flowMap").innerHTML = STEPS.map(s=>`<button class="flow-node" id="flowNode-${s.id}" type="button" data-flow-node="${s.id}" aria-pressed="${s.id===1}" aria-label="查看流程第 ${s.id} 步 ${esc(s.key)}"><span class="n">${String(s.id).padStart(2,"0")}</span><span><b>${esc(s.key)}</b><small>${esc(s.title)}</small></span></button>`).join("");
 }
-function bindRingDock(){
-  const dock = $("#ringDock"), plane = $("#trackList");
-  const mobile = matchMedia("(max-width:859px)");
-  setRingDockCollapsed(mobile.matches);
-  mobile.addEventListener("change",e=>setRingDockCollapsed(e.matches));
-  if("IntersectionObserver" in window){
-    new IntersectionObserver(entries=>{
-      const visible = entries[0].isIntersecting;
-      dock.classList.toggle("visible",visible); dock.dataset.state = visible?"docked":"idle";
-    },{threshold:.08}).observe($("#flow"));
-  }
-  let drag = null, dragged = false;
-  plane.addEventListener("pointerdown",e=>{
-    if(e.button!==0) return;
-    drag = {x:e.clientX}; dragged = false;
+function moveDiagramPointer(){
+  const viewport = $("#diagramViewport"), track = $("#diagramTrack"), pointer = $("#diagramPointer");
+  const node = diagramView==="arch" ? $("#archKernel") : $(`#flowNode-${diagramFlowStep}`);
+  if(!viewport || !track || !pointer || !node) return;
+  const vp = viewport.getBoundingClientRect(), rect = node.getBoundingClientRect();
+  const transform = getComputedStyle(track).transform;
+  const currentTrackX = transform==="none" ? 0 : new DOMMatrixReadOnly(transform).m41;
+  const targetTrackX = diagramView==="flow" ? -vp.width : 0;
+  const finalLeft = rect.left + targetTrackX - currentTrackX;
+  const x = Math.max(18,Math.min(vp.width-18,finalLeft-vp.left+rect.width/2));
+  const y = Math.max(18,Math.min(vp.height-18,rect.top-vp.top+rect.height/2));
+  pointer.style.setProperty("--pointer-x",`${x}px`);
+  pointer.style.setProperty("--pointer-y",`${y}px`);
+  pointer.classList.add("visible");
+  $("#diagramPointerLabel").textContent = diagramView==="arch" ? "业务内核" : `${String(diagramFlowStep).padStart(2,"0")} · ${STEPS[diagramFlowStep-1].key}`;
+}
+function setDiagram(view, focusTab=false){
+  diagramView = view;
+  $("#diagramTrack").dataset.view = view;
+  $("#diagramSwitch").dataset.view = view;
+  $$("[data-diagram]",$("#diagramSwitch")).forEach(b=>{
+    const on = b.dataset.diagram===view;
+    b.setAttribute("aria-selected",String(on)); b.tabIndex = on?0:-1;
+    if(on && focusTab) b.focus({preventScroll:true});
   });
-  plane.addEventListener("pointermove",e=>{
-    if(drag && !dragged && Math.abs(e.clientX-drag.x)>8){
-      dragged = true;
-      plane.setPointerCapture(e.pointerId);
+  const arch = $("#diagramArchPanel"), flow = $("#diagramFlowPanel");
+  arch.setAttribute("aria-hidden",String(view!=="arch")); arch.inert = view!=="arch";
+  flow.setAttribute("aria-hidden",String(view!=="flow")); flow.inert = view!=="flow";
+  $("#diagramCaption").textContent = view==="arch"
+    ? "部署架构：公开介绍与真实业务系统分层隔离。"
+    : "八步流程：从首登就绪到审计复盘，点击节点查看指针定位。";
+  $$("[data-diagram-target]").forEach(el=>el.classList.toggle("target",view==="arch" && el.id==="archKernel"));
+  $$("[data-flow-node]").forEach(el=>{
+    const on = Number(el.dataset.flowNode)===diagramFlowStep;
+    el.classList.toggle("target",view==="flow" && on); el.setAttribute("aria-pressed",String(on));
+  });
+  moveDiagramPointer();
+}
+function bindDiagram(){
+  $$("[data-diagram]",$("#diagramSwitch")).forEach(b=>b.addEventListener("click",()=>setDiagram(b.dataset.diagram)));
+  $("#diagramSwitch").addEventListener("keydown",e=>{
+    if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+    e.preventDefault();
+    setDiagram(e.key==="Home"?"arch":e.key==="End"?"flow":diagramView==="arch"?"flow":"arch",true);
+  });
+  $$("[data-flow-node]").forEach(b=>b.addEventListener("click",()=>{
+    diagramFlowStep = Number(b.dataset.flowNode); setDiagram("flow"); moveDiagramPointer();
+  }));
+  addEventListener("resize",()=>requestAnimationFrame(moveDiagramPointer));
+}
+function bindOrbit(){
+  const viewport = $(".ring-viewport"), plane = $("#trackList"), active = $("#orbitActive");
+  const resetDrag = ()=>{
+    if(!drag) return;
+    viewport.classList.remove("dragging"); plane.classList.remove("dragging");
+    plane.style.setProperty("--drag-x","0px"); active.style.setProperty("--drag-x","0px");
+    drag = null;
+  };
+  active.addEventListener("keydown",e=>{
+    if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+    e.preventDefault();
+    const next = e.key==="Home"?1:e.key==="End"?8:e.key==="ArrowRight"?(cur===7?1:cur+2):(cur===0?8:cur);
+    setStep(next-1,true);
+  });
+  plane.addEventListener("click",e=>{
+    const node = e.target.closest("[data-orbit-step]");
+    if(node) setStep(Number(node.dataset.orbitStep)-1,true);
+  });
+  plane.addEventListener("keydown",e=>{
+    const node = e.target.closest("[data-orbit-step]");
+    if(!node || !["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return;
+    e.preventDefault();
+    const from = Number(node.dataset.orbitStep)-1;
+    const next = e.key==="Home"?1:e.key==="End"?8:e.key==="ArrowRight"?(from===7?1:from+2):(from===0?8:from);
+    setStep(next-1,true);
+    $(`[data-orbit-step="${next}"]`,plane)?.focus({preventScroll:true});
+  });
+  let drag = null, suppressClick = false, resizeTimer = 0;
+  const scheduleTrackPaint = ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>paintTrack(cur),0);
+  };
+  const orbitResizeObserver = new ResizeObserver(scheduleTrackPaint);
+  const orbitMedia = matchMedia("(max-width:859px)");
+  orbitResizeObserver.observe(viewport);
+  orbitMedia.addEventListener("change",scheduleTrackPaint);
+  addEventListener("resize",scheduleTrackPaint);
+  viewport.addEventListener("pointerdown",e=>{
+    if(matchMedia("(max-width:859px)").matches || drag || !e.isPrimary || e.button!==0 || e.target.closest("a,button,input,select,textarea,[role='button']")) return;
+    drag = {id:e.pointerId,x:e.clientX,moved:false};
+  });
+  viewport.addEventListener("pointermove",e=>{
+    if(!drag || e.pointerId!==drag.id) return;
+    const dx = e.clientX-drag.x;
+    if(!drag.moved && Math.abs(dx)>8){
+      drag.moved = true; viewport.setPointerCapture(e.pointerId);
+      viewport.classList.add("dragging"); plane.classList.add("dragging");
+      setPlaying(false);
+    }
+    if(drag.moved){
+      const offset = Math.max(-110,Math.min(110,dx));
+      plane.style.setProperty("--drag-x",`${offset}px`);
+      active.style.setProperty("--drag-x",`${offset}px`);
+      e.preventDefault();
     }
   });
-  plane.addEventListener("pointerup",e=>{
-    if(!drag) return;
-    const dx = e.clientX-drag.x; drag = null;
-    if(!dragged) return;
-    const steps = Math.min(2,Math.max(1,Math.round(Math.abs(dx)/70)));
+  viewport.addEventListener("pointerup",e=>{
+    if(!drag || e.pointerId!==drag.id) return;
+    const dx = e.clientX-drag.x, moved = drag.moved;
+    resetDrag();
+    if(!moved) return;
+    suppressClick = true;
+    setTimeout(()=>{ suppressClick = false; },0);
+    const steps = Math.min(2,Math.max(1,Math.round(Math.abs(dx)/80)));
     setStep(cur+(dx<0?steps:-steps),true);
   });
-  plane.addEventListener("pointercancel",()=>{ drag = null; dragged = false; });
-  plane.addEventListener("click",e=>{
-    if(dragged){ e.preventDefault(); e.stopImmediatePropagation(); dragged = false; }
+  viewport.addEventListener("pointercancel",resetDrag);
+  viewport.addEventListener("click",e=>{
+    if(suppressClick){ e.preventDefault(); e.stopImmediatePropagation(); suppressClick = false; return; }
+    if(e.target.closest("a,button,input,select,textarea,[role='button']")) return;
+    const box = active.getBoundingClientRect(), inside = e.clientX>=box.left-18 && e.clientX<=box.right+18;
+    if(inside) return;
+    setStep(cur+(e.clientX<viewport.getBoundingClientRect().left+viewport.clientWidth/2?-1:1),true);
   },true);
+  scheduleTrackPaint();
 }
 
-renderTrack(); setStep(0, true); renderDomains(); renderHeroMini(); armSwarm(); bindRingDock();
+renderTrack(); setStep(0, true); renderDomains(); renderFlowDiagram(); bindDiagram(); setDiagram("arch"); renderHeroMini(); armSwarm(); bindOrbit(); playTitle();
 $("#heroReplay").addEventListener("click",startSwarm);
 addEventListener("hashchange", route);
 
@@ -1326,30 +1913,25 @@ const screenNote = (src, extra) => `<div class="notice" style="margin-top:14px">
 const SCREENS = {
   /* FLOW: A · SCREEN 1 of 8 · ENTRY: 演示账号首次登录工作台 · EXIT: 4 项检查完成 → S2 */
   1: (st = "default") => {
-    if (st === "loading") return `<div class="wb"><div class="wb-main" style="grid-column:1/-1">
-      <div class="wb-hd">任务工作台 <span class="tag">已登录 · 演示账号</span></div>
-      <div class="wb-stream"><div class="shim" style="width:38%"></div><div class="shim" style="height:74px"></div><div class="shim" style="width:64%"></div></div>
-    </div></div>` + screenNote("手册 §4.1.1", "清单状态服务端实时推导，加载期不闪现假完成");
+    if(st==="loading"){
+      const conversation = `<div class="swarm-chat-head"><i></i>AgentHub · 任务工作站（模拟）<span>加载中</span></div><div style="display:grid;gap:10px;padding:18px"><div class="shim" style="width:38%"></div><div class="shim" style="height:86px"></div><div class="shim" style="width:64%"></div></div>`;
+      const side = `<div class="swarm-stat"><b>—</b><span>首登检查</span><em>服务端推导中</em></div><div class="swarm-stat"><b>—</b><span>模型状态</span><em>不展示假完成</em></div><div class="swarm-stat"><b>—</b><span>知识库</span><em>等待向量化</em></div><div class="swarm-runcta">正在读取工作台…</div>`;
+      return `<div class="swarm-workbench full">${swarmShell(conversation,side)}</div>` + screenNote("手册 §4.1.1", "清单状态服务端实时推导，加载期不闪现假完成");
+    }
     const done = st === "done";
-    const CK = done
+    const checks = done
       ? [["对话模型密钥","已连通 · 自检 820 ms"],["向量模型密钥","已连通 · 集合维度一致"],["文档解析与向量化","412 片写入集合 · BM25 就绪"],["发送首条消息","已收到回答 · 端到端跑通"]]
       : [["对话模型密钥","未配置 · 缺失则小Z 与专家均无法输出"],["向量模型密钥","未配置 · 影响知识库检索"],["文档解析与向量化","未执行 · 知识库尚无向量集合"],["发送首条消息","未发送"]];
-    return `<div class="wb"><div class="wb-list">${sessions()}</div><div class="wb-main">
-      <div class="wb-hd">任务工作台 <span class="tag">管理员 · 首次登录</span><span class="tag ${done?'ok':'warn'}">首登检查 ${done?'4 / 4':'0 / 4'}</span></div>
-      <div class="wb-stream">
-        ${done
-          ? `<div class="banner"><span aria-hidden="true">✓</span> 4 项全部完成，清单收起至侧边栏，工作台已可用 → <a href="#/flow/2" style="color:var(--glow); font-weight:600">组建资源发起提问（S2）</a></div>`
-          : `<div class="empty"><div class="ic">⌁</div><b style="font-size:15px">还没有会话</b>
-        <p style="margin-top:8px; font-size:13.5px">跑通 4 项首登检查，就能开始提问。状态由服务端实时推导，可随时暂时隐藏。</p></div>`}
-        <div class="checklist">
-          ${CK.map((x,i)=>`
-            <div class="cl-item ${done?'done':'now'}"><span class="n">${done?'✓':i+1}</span><div class="tt">${x[0]}<small>${x[1]}</small></div>
-              ${done?'':`<a class="btn btn-ghost btn-sm" href="${i<3?'#/onboard':'#/flow/2'}">${['去配置','去配置','去执行','去提问'][i]} →</a>`}</div>`).join("")}
-        </div>
-        ${done?'':`<div class="banner"><span aria-hidden="true">🧭</span> 想先看效果？<a href="#/onboard" style="color:var(--glow); font-weight:600">进入首登引导深化（Flow E）</a>，4 屏演完从密钥校验到发出首条消息。</div>`}
-      </div>
-      <div class="wb-input">${inputBar()}</div>
-    </div></div>` + screenNote("手册 §4.1.1 首登检查清单", done?"4/4 后清单收起，不再遮挡首条提问":"点击直达对应页");
+    const conversation = `<div class="swarm-chat-head"><i></i>AgentHub · 任务工作站（模拟）<span>${done?'READY':'首登 0 / 4'}</span></div>
+      ${done?`<div class="swarm-welcome"><b>首登清单已完成</b><p>工作台已可用，下一步组建本轮资源并发出第一条消息。</p><a href="#/flow/2" style="font-size:11px;color:var(--glow)">组建资源发起提问（S2）→</a></div>`:`<div class="swarm-welcome"><b>还没有会话</b><p>跑通 4 项首登检查，就能开始提问。状态由服务端实时推导，可随时暂时隐藏。</p></div>`}
+      <div class="swarm-checklist">${checks.map((x,i)=>`<div class="swarm-check ${done?'done':''}"><i aria-hidden="true">${done?'✓':i+1}</i><span>${esc(x[0])}<small>${esc(x[1])}</small></span>${done?'':`<a href="${i<3?'#/onboard':'#/flow/2'}">${['去配置','去配置','去执行','去提问'][i]} →</a>`}</div>`).join("")}</div>
+      <div class="swarm-input"><b>向 AgentHub 提问</b>${done?'工作台已就绪，可以开始本轮任务。':'先完成首登检查，再发送第一条消息。'}</div>
+      <div class="swarm-trace">trace_id: pending · 首登状态由服务端实时推导</div>`;
+    const side = `<div class="swarm-stat"><b>${done?'4 / 4':'0 / 4'}</b><span>首登检查</span><em>${done?'全部完成':'等待配置'}</em></div>
+      <div class="swarm-stat"><b>${done?'820 ms':'—'}</b><span>对话模型</span><em>${done?'连通自检通过':'尚未配置'}</em></div>
+      <div class="swarm-stat"><b>${done?'412':'—'}</b><span>文档切片</span><em>${done?'BM25 就绪':'尚未向量化'}</em></div>
+      <a class="swarm-runcta" href="${done?'#/flow/2':'#/onboard'}">${done?'开始提问 →':'进入首登引导 →'}</a>`;
+    return `<div class="swarm-workbench full">${swarmShell(conversation,side)}</div>` + screenNote("手册 §4.1.1 首登检查清单", done?"4/4 后清单收起，不再遮挡首条提问":"点击直达对应页");
   },
 
   /* FLOW: A · SCREEN 2 of 8 · ENTRY: 输入栏「＋资源」 · EXIT: 发送问题 → S3 */
