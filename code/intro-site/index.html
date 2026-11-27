@@ -10,7 +10,7 @@
     #/qa          Flow D 在线体验问答 · 4 屏
     #/onboard     Flow E 首登引导 · 4 屏
   SOURCE: 流程口径=《开发总览手册》§6.1/§4.1.1/§6.3-6.6/§7.2；数字口径=设计稿 §1 与 §12.3
-  NOTE: 本页全部为智能模拟数据与模拟交互，不接入真实系统、不含业务数据（设计稿 D5/D9 数据边界）
+  NOTE: 页面流程与配置演示为智能模拟；公开问答由云端 Agent 实时生成，仅接触公开介绍内容，不含业务数据（设计稿 D5/D9 数据边界）
 -->
 <html lang="zh-CN" data-theme="dark">
 <head>
@@ -1161,7 +1161,7 @@ html[data-theme="light"] .cite{color:#245CB7}
       <div>
         <span class="eyebrow">在线体验</span>
         <h2 style="margin-top:12px; font-size:clamp(24px,3vw,34px)">先问它，再决定</h2>
-        <p class="sub" style="color:var(--text-2); margin-top:12px">云端 Agent 回答平台使用问题：怎么配专家、写工具为什么要确认、审计在哪看。答案附开发文档出处。</p>
+        <p class="sub" style="color:var(--text-2); margin-top:12px">云端 Agent 回答平台使用问题：怎么配专家、写工具为什么要确认、审计在哪看。回答仅基于公开介绍内容与平台使用文档。</p>
         <div class="chips" style="margin-top:22px">
           <button class="chip" data-q="专家提示词怎么写才好？">专家提示词怎么写才好？</button>
           <button class="chip" data-q="写工具为什么要人工确认？">写工具为什么要人工确认？</button>
@@ -1176,7 +1176,7 @@ html[data-theme="light"] .cite{color:#245CB7}
         <div class="hd"><span class="tag glow">云端 Agent</span><span class="muted" style="font-size:12.5px">只答平台使用问题 · 不接触业务数据</span></div>
         <div class="bubble"><span class="av z" aria-hidden="true">小Z</span><div class="body"><p class="txt">写操作命中「需确认」档位时本轮暂停，对话内弹确认卡片；你处置后同轮继续，决策写入权限决策审计。这是三层权限模型的第 ② 层。</p></div></div>
         <div class="states" style="margin-top:14px"><span class="tag">允许本次</span><span class="tag">记住该工具</span><span class="tag err">拒绝</span></div>
-        <div class="notice" style="margin-top:14px">来源：《开发总览手册》§6.3 三层权限模型（演示为模拟回答，非真实模型输出）</div>
+        <div class="notice" style="margin-top:14px">来源：《开发总览手册》§6.3 三层权限模型（示例回答；实际问答由云端 Agent 实时生成）</div>
       </div>
     </div>
   </section>
@@ -1230,8 +1230,8 @@ html[data-theme="light"] .cite{color:#245CB7}
         <div><h4>出口</h4><ul><li><a href="#/exit/system">进入系统（跳转说明）</a></li><li><a href="#/exit/doc">开发文档（跳转说明）</a></li><li><a href="#/qa">平台使用问答</a></li></ul></div>
       </div>
       <div class="legal">
-        <span>© 2026 AgentHub · 公开体验版，界面与数据均为模拟，不包含真实业务功能或业务数据。</span>
-        <span class="mono">公开体验版 · 模拟数据</span>
+        <span>© 2026 AgentHub · 公开体验版，流程与配置演示为模拟，问答由云端 Agent 实时生成，不包含真实业务数据。</span>
+        <span class="mono">公开体验版 · 实时问答</span>
       </div>
     </div>
   </footer>
@@ -1302,6 +1302,65 @@ const DOMAINS = [
 const $ = (s,r)=>(r||document).querySelector(s);
 const $$ = (s,r)=>Array.from((r||document).querySelectorAll(s));
 const esc = t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- SSE 客户端（公开问答，不落库） ---------- */
+async function* readSSE(body, { maxFrameChars = 262144, signal } = {}) {
+  const reader = body.getReader();
+  const abort = () => { void reader.cancel().catch(() => {}); };
+  signal?.addEventListener('abort', abort, { once: true });
+  const decoder = new TextDecoder();
+  let buffer = '', data = [], event = '', id = '', size = 0;
+  try {
+    while (true) {
+      if (signal?.aborted) throw new Error('sse_aborted');
+      const chunk = await reader.read();
+      if (signal?.aborted) throw new Error('sse_aborted');
+      buffer += chunk.done ? decoder.decode() : decoder.decode(chunk.value, { stream: true });
+      while (true) {
+        if (signal?.aborted) throw new Error('sse_aborted');
+        const match = /[\r\n]/.exec(buffer);
+        if (!match || (!chunk.done && buffer[match.index] === '\r' && match.index === buffer.length - 1)) break;
+        const line = buffer.slice(0, match.index);
+        buffer = buffer.slice(match.index + (buffer[match.index] === '\r' && buffer[match.index + 1] === '\n' ? 2 : 1));
+        if (line === '') {
+          if (data.length) {
+            const frame = { event: event || 'message', data: data.join('\n'), id };
+            if (frame.data.length > maxFrameChars) throw new Error('sse_frame_too_large');
+            yield frame;
+          }
+          data = []; event = ''; id = ''; size = 0;
+          continue;
+        }
+        size += line.length + 1;
+        if (size > maxFrameChars) throw new Error('sse_frame_too_large');
+        if (line.startsWith(':')) continue;
+        const colon = line.indexOf(':');
+        const field = colon < 0 ? line : line.slice(0, colon);
+        let value = colon < 0 ? '' : line.slice(colon + 1);
+        if (value.startsWith(' ')) value = value.slice(1);
+        if (field === 'data') data.push(value);
+        else if (field === 'event') event = value;
+        else if (field === 'id') id = value;
+      }
+    }
+  } finally {
+    signal?.removeEventListener('abort', abort);
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
+async function consumeSSE(response, onFrame, options = {}) {
+  if (!response.ok || !response.body
+    || response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'text/event-stream') {
+    await response.body?.cancel().catch(() => {});
+    throw new Error('sse_response_invalid');
+  }
+  for await (const frame of readSSE(response.body, options)) {
+    if (await onFrame(frame) === true) return;
+  }
+  throw new Error('sse_incomplete');
+}
 
 const themeToggle = $("#themeToggle");
 const themeTrack = $(".theme-track",themeToggle);
@@ -3042,9 +3101,10 @@ function bindScreenEvents(){
    口径：设计稿 §2.3 第 8 项「介绍页 → 工作台、开发文档；管理页深链需鉴权回跳」
    ============================================================ */
 let EXIT_KIND = "system", QA_SEED = null;
+const SYSTEM_URL = "https://47.238.161.7";
 const OUT = {
-  system:{ label:"进入系统", tgt:"系统入口（等待管理员登记）", desc:"跳转到云服务器上的任务工作台，需登录后使用" },
-  doc:{ label:"开发文档", tgt:"文档入口（等待管理员登记）", desc:"跳转到平台使用与开发文档，公开可读" },
+  system:{ label:"进入系统", tgt:SYSTEM_URL, desc:"跳转到云服务器上的任务工作台，需登录后使用" },
+  doc:{ label:"开发文档", tgt:"", desc:"跳转到平台使用与开发文档，公开可读" },
 };
 function viewHead(kicker, title, sub, tags){
   return `<div class="view-hd"><span class="eyebrow">${esc(kicker)}</span>
@@ -3057,19 +3117,24 @@ function viewHead(kicker, title, sub, tags){
 }
 function renderExit(){
   const k = OUT[EXIT_KIND] ? EXIT_KIND : "system", o = OUT[k];
+  const configured = !!o.tgt;
   $("#view-exit").innerHTML = viewHead("继续使用 AgentHub",
-    o.label === "进入系统" ? "系统入口正在准备中" : "开发文档入口正在准备中",
-    "入口地址登记后才会开放跳转。在地址可用前，本页不会展示无效链接，也不会要求你提交账号或业务信息。",
+    configured ? o.label : `${o.label}入口正在准备中`,
+    configured ? "入口将在新标签打开，当前页面与浏览位置保持不变。" : "入口地址登记后才会开放跳转。在地址可用前，本页不会展示无效链接，也不会要求你提交账号或业务信息。",
     ["入口状态透明","不展示无效链接","不收集业务数据"])+
   `<div class="flow-cards">
     <section class="screen-block">
-      <div class="sh"><span class="id">入口状态</span><h3>${esc(o.label)}暂未开放</h3><span class="entry">地址登记后自动开放</span></div>
-      <div class="banner err"><span aria-hidden="true">⛔</span> 管理员尚未登记可用地址，因此入口暂时关闭。你可以先返回介绍页，或使用下面的公开体验。</div>
+      <div class="sh"><span class="id">入口状态</span><h3>${esc(o.label)}${configured?'已就绪':'暂未开放'}</h3><span class="entry">${configured?'新标签打开':'地址登记后自动开放'}</span></div>
+      ${configured
+        ? `<div class="banner"><span aria-hidden="true">✓</span> 入口已配置，点击后将在新标签打开云服务器上的任务工作台。</div>`
+        : `<div class="banner err"><span aria-hidden="true">⛔</span> 管理员尚未登记可用地址，因此入口暂时关闭。你可以先返回介绍页，或使用下面的公开体验。</div>`}
       <div class="terminal-cta" style="margin-top:14px">
-        <button class="btn btn-ghost" disabled>${esc(o.label)}</button>
+        ${configured
+          ? `<a class="btn btn-primary" href="${esc(o.tgt)}" target="_blank" rel="noopener">${esc(o.label)}</a>`
+          : `<button class="btn btn-ghost" disabled>${esc(o.label)}</button>`}
         <a class="btn btn-ghost" href="#/">返回介绍页</a>
       </div>
-      <p class="muted" style="font-size:12.5px;margin-top:10px">不可用原因：${esc(o.tgt)}。${esc(o.desc)}。</p>
+      <p class="muted" style="font-size:12.5px;margin-top:10px">${configured?'入口地址已由部署方登记。':`不可用原因：${esc(o.tgt || '地址待登记')}。`}${esc(o.desc)}。</p>
     </section>
     <section class="screen-block">
       <div class="sh"><span class="id">公开体验</span><h3>先了解平台如何工作</h3><span class="entry">无需登录</span></div>
@@ -3078,7 +3143,7 @@ function renderExit(){
         <a class="btn btn-ghost btn-sm" href="#faq">常见问题</a>
         <a class="btn btn-ghost btn-sm" href="#/">浏览产品介绍</a>
       </div>
-      <div class="notice" style="margin-top:14px">本页为公开体验入口，所有问答与配置演示均使用模拟数据，不连接真实业务系统。</div>
+      <div class="notice" style="margin-top:14px">公开问答由云端 Agent 实时生成；配置与流程演示仍为模拟数据，不连接真实业务系统。</div>
     </section>
   </div>`;
 }
@@ -3088,116 +3153,153 @@ function renderExit(){
    口径：设计稿 D5 / D9 —— 云端 Agent 不接触业务知识库正文、工具回参、会话数据与 PII
    ============================================================ */
 const QA_KB = [
-  { q:"专家提示词怎么写才好？", a:"专家的「描述」参与路由提示词，写清擅长什么最影响命中；「系统提示词」承载领域知识与口径，行为纪律由平台强制注入，不必自己重复写。配 AI 辅助生成（一次调用补全描述 + 提示词建议，可继续编辑）、9 类领域模板一键套用、保存前体检（提示词长度、能力边界与拒答口径、知识库与写操作一致性，只建议不硬拦）。", src:"《开发总览手册》§4.1.3 专家配置 · 填写辅助" },
-  { q:"写工具为什么要人工确认？", a:"写操作命中决策档「1 需确认」时本轮暂停，对话内弹确认卡片，你处置后同轮继续 —— 这是三层权限模型的第 ② 层。第 ① 层在装配期就把「禁止」档工具不注册，模型根本看不见；第 ③ 层在执行期按提问用户复核业务权限。三选一：允许本次 / 记住该工具 / 拒绝。", src:"《开发总览手册》§6.3 三层权限模型" },
-  { q:"审计在哪里看？", a:"审计观测域共六类：消息、工具调用、权限决策、链路追踪、编排运行、日报，一个 trace_id 贯穿一轮。默认保留 180 天，每日 03:30 清理，清理范围不含会话正文。主会话只汇总「工具调用 N 次」，明细在审计页。", src:"《开发总览手册》§7.2 · 设计稿 §12.4 审计保留管理" },
-  { q:"怎么接 MCP？", a:"工具是两段式：表元数据（编码 / 描述 / 参数 Schema / 类型 / 实现标识 / 启停）+ 代码侧工厂登记，页面登记本身不产生可执行能力，杜绝裸 SQL / Shell 万能工具。MCP 支持双向：既接外部工具，也对外暴露；MCP 出口口令未设时 fail-closed，功能不可用而不是裸奔。", src:"《开发总览手册》§6.4 工具两段式" },
+  { q:"专家提示词怎么写才好？" },
+  { q:"写工具为什么要人工确认？" },
+  { q:"审计在哪里看？" },
+  { q:"怎么接 MCP？" },
 ];
-const QA_BIZ = /对账|发票|工资|薪酬|报销|台账|客户|订单|合同全文|合同正文|手机号|身份证|个人信息|知识库正文|这个人的|我部门的/;
-let QA_MSGS = [], QA_TIMER = null, QA_ERR = false, QA_ARMED = false;
-/* D2 流式：只更新文本节点，不整屏重绘 */
-function qaType(el, done){
-  const full = el.dataset.full || ""; let i = 0;
-  clearInterval(QA_TIMER);
-  el.textContent = "";
-  QA_TIMER = setInterval(()=>{
-    i += 11;
-    el.textContent = full.slice(0, i);
-    if(i >= full.length){ clearInterval(QA_TIMER); QA_TIMER = null; if(done) done(); }
-  }, 26);
+const CHAT_ENDPOINT = "/functions/v1/app/api/chat";
+const MAX_HISTORY_ITEMS = 8;
+const HISTORY_ANSWER_CHARS = 600;
+const ERROR_TEXT = {
+  invalid_input: "这个问题超出了问答的长度限制，请缩短后再问。",
+  rate_limited: "同时提问的人有点多，请等几秒再试。",
+  timeout: "这次回答超时了，请重新提问。",
+  no_answer: "这次回答没有完成，请重新提问。",
+  answer_too_long: "回答过长被截断了，请把问题拆小一点再问。",
+  service_not_configured: "体验助手还没有就绪，请稍后再来。",
+  service_unavailable: "体验助手暂时不可用，请稍后再试。",
+};
+let QA_MSGS = [], transcript = [], QA_BUSY = false;
+
+function clip(value, chars) {
+  const all = Array.from(value);
+  return all.length > chars ? `${all.slice(0, chars).join('')}…` : value;
 }
-function qaAsk(text){
-  const q = (text||"").trim(); if(!q || QA_MSGS.some(m=>m.live)) return;
-  QA_ARMED = false;
+
+async function qaAsk(text) {
+  const q = (text||"").trim();
+  if(!q || QA_BUSY) return;
   QA_MSGS.push({role:"u", text:q});
-  const hit = QA_KB.find(k=>k.q===q || q.includes(k.q.slice(0,6)));
-  if(QA_BIZ.test(q)){
-    QA_MSGS.push({role:"blocked", text:q});
-  } else if(QA_ERR){
-    QA_MSGS.push({role:"err", text:q});
-  } else {
-    const a = hit ? hit.a : "这个问题超出我的范围：我只回答 AgentHub 平台使用与部署口径，依据是公开介绍内容与平台使用文档。业务口径请在登录后的工作台提问。想看具体配置页怎么填，可以先跑一遍 8 步运行走查。";
-    QA_MSGS.push({role:"a", text:a, src: hit ? hit.src : "设计稿 §2.3 第 7 项 · 云端 Agent 数据边界", cite:true, live:true});
-  }
+  QA_MSGS.push({role:"a", text:"", live:true});
+  QA_BUSY = true;
   renderQA();
+
+  const msgIdx = QA_MSGS.length - 1;
+  let draft = "";
+  let settled = false;
+
+  const showFailure = code => {
+    if(settled) return;
+    settled = true;
+    if(draft) QA_MSGS[msgIdx] = {role:"a", text:`${draft}…（回答中断）`, live:false};
+    else QA_MSGS[msgIdx] = {role:"err", text: ERROR_TEXT[code] ?? ERROR_TEXT.service_unavailable};
+    QA_BUSY = false;
+    renderQA();
+  };
+
+  try {
+    const response = await fetch(CHAT_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ text: q, history: transcript.slice(-MAX_HISTORY_ITEMS) }),
+    });
+    if(!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      showFailure(body.error);
+      return;
+    }
+    await consumeSSE(response, frame => {
+      let payload;
+      try {
+        payload = JSON.parse(frame.data);
+      } catch {
+        return false;
+      }
+      if(frame.event === "delta") {
+        draft += typeof payload.text === "string" ? payload.text : "";
+        QA_MSGS[msgIdx] = {role:"a", text:draft, live:true};
+        renderQA();
+        return false;
+      }
+      if(frame.event === "done") {
+        settled = true;
+        const finalText = typeof payload.text === "string" && payload.text ? payload.text : draft;
+        QA_MSGS[msgIdx] = {role:"a", text:finalText, live:false};
+        transcript.push({role:"user", text:q}, {role:"assistant", text:clip(finalText, HISTORY_ANSWER_CHARS)});
+        QA_BUSY = false;
+        renderQA();
+        return true;
+      }
+      if(frame.event === "error") {
+        showFailure(payload.code);
+        return true;
+      }
+      return false;
+    });
+    if(!settled) showFailure("no_answer");
+  } catch {
+    showFailure("service_unavailable");
+  }
 }
-function renderQA(){
-  const busy = QA_MSGS.some(m=>m.live);
-  const chips = QA_KB.map(k=>`<button class="chip" data-q="${esc(k.q)}" ${busy?'disabled':''}>${esc(k.q)}</button>`).join("")
-    + `<button class="chip" data-q="帮我把上个月华东区的对账差异列出来" style="border-color:rgba(255,92,108,.4)" ${busy?'disabled':''}>⚠ 业务数据问题（演示拦截）</button>`;
+
+function renderQA() {
+  const chips = QA_KB.map(k=>`<button class="chip" data-q="${esc(k.q)}" ${QA_BUSY?'disabled':''}>${esc(k.q)}</button>`).join("")
+    + `<button class="chip" data-q="帮我把上个月华东区的对账差异列出来" style="border-color:rgba(255,92,108,.4)" ${QA_BUSY?'disabled':''}>⚠ 业务数据问题（边界演示）</button>`;
   const body = QA_MSGS.length===0
     ? `<div class="empty"><div class="ic">💬</div><b style="font-size:15px">问我平台怎么用</b>
        <p style="font-size:13.5px; margin-top:8px">点上方推荐问题，或直接输入。会话历史仅在本次浏览内存在，关闭即清、不持久化。</p></div>`
-    : QA_MSGS.map((m,i)=>{
+    : QA_MSGS.map(m=>{
         if(m.role==="u") return bubble("你","me",esc(m.text),"你的问题");
         if(m.role==="a") return bubble("云端 Agent","z",
-            (m.live ? `<span id="qaTyped" data-full="${esc(m.text)}"></span><span class="cursor" id="qaCursor"></span>` : esc(m.text))
-            + (m.cite?`<div style="margin-top:10px"><span class="tag info">出处</span><span class="muted" style="font-size:12px"> ${esc(m.src)}</span></div>`:''),
+            (m.live ? `<span>${esc(m.text)}</span><span class="cursor"></span>` : esc(m.text)),
             m.live ? "正在回答" : "回答");
-        if(m.role==="blocked") return `<div class="banner err" style="align-items:flex-start">
-            <span aria-hidden="true" style="font-size:16px">🚫</span>
-            <div><b>D4 · 边界拦截：这个问题我不能答</b>
-              <p style="font-size:13px; margin-top:6px; color:var(--text-2)">你问的属业务数据。按设计稿 D5 / D9，云端 Agent <b>仅</b>接触介绍页公开内容与平台使用文档，
-              不接入业务知识库正文、工具回参、会话数据或任何 PII；业务主链路内核跑在云服务器，不在本页。</p>
-              <div style="margin-top:10px; display:flex; gap:9px; flex-wrap:wrap">
-                <a class="btn btn-ghost btn-sm" href="#/exit">进入系统后提问 →</a>
-                <button class="btn btn-ghost btn-sm" data-reset>换个平台使用问题</button>
-              </div></div></div>`;
         if(m.role==="err") return `<div class="banner err"><span aria-hidden="true">⚠</span>
-          <div><b>问答服务当前不可用</b><p style="font-size:13px; margin-top:5px">未静默转圈：明确报错并保留你的提问。
-          <button class="btn btn-ghost btn-sm" data-retry>重试</button> <button class="btn btn-ghost btn-sm" data-ok>模拟服务恢复</button></p></div></div>`;
+          <div><b>${esc(m.text)}</b>
+          <button class="btn btn-ghost btn-sm" data-retry style="margin-top:8px">重试</button></div></div>`;
         return "";
       }).join("");
   $("#view-qa").innerHTML = viewHead("在线体验问答",
     "先了解平台怎么用",
-    "直接询问配置、权限、审计或工具接入。回答会标注公开出处；涉及业务数据的问题会被拦截，并引导你到登录后的工作台。",
-    ["公开内容问答","回答附出处","业务数据不进入","历史仅本次浏览"])+
+    "直接询问配置、权限、审计或工具接入。回答由云端 Agent 实时生成，仅基于公开介绍内容与平台使用文档；涉及业务数据的问题会被拒绝。",
+    ["公开内容问答","实时生成","业务数据不进入","历史仅本次浏览"])+
   `<div class="flow-cards">
     <div class="card" style="overflow:hidden">
       <div class="hd" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px 16px; border-bottom:1px solid var(--border-3)">
         <span class="tag glow">云端 Agent</span>
         <b style="font-size:14.5px">平台使用问答</b>
         <span class="tag err" style="margin-left:auto">边界声明常驻</span>
-        <label class="muted" style="font-size:12px; display:flex; gap:6px; align-items:center">
-          <input type="checkbox" style="width:auto" ${QA_ERR?'checked':''} ${busy?'disabled':''} data-toggle-err aria-label="模拟服务不可用"/> 模拟服务不可用</label>
       </div>
       <div style="padding:16px">
         <div class="chips" id="qaChips">${chips}</div>
-        <div class="wb-stream" style="border:1px solid var(--border-3); border-radius:var(--r-md); background:var(--bg-sunken); padding:16px; max-height:460px">${body}</div>
+        <div class="wb-stream" id="qaStream" style="border:1px solid var(--border-3); border-radius:var(--r-md); background:var(--bg-sunken); padding:16px; max-height:460px; overflow-y:auto">${body}</div>
         <div style="display:flex; gap:9px; align-items:flex-end; margin-top:14px">
-          <input id="qaInput" aria-label="向 AgentHub 提问" placeholder="例如：审计在哪里看？" ${busy?'disabled':''} style="flex:1; padding:11px 13px; border-radius:10px; border:1px solid var(--border-2); background:var(--bg-container); color:var(--text); font:inherit" />
-          <button class="btn btn-primary btn-sm" data-send ${busy?'disabled':''}>${busy?'回答中…':'发送'}</button>
-          <button class="btn btn-ghost btn-sm" data-clear ${busy?'disabled':''}>${QA_ARMED?'再点一次确认清空':'清空'}</button>
+          <input id="qaInput" aria-label="向 AgentHub 提问" placeholder="例如：审计在哪里看？" ${QA_BUSY?'disabled':''} style="flex:1; padding:11px 13px; border-radius:10px; border:1px solid var(--border-2); background:var(--bg-container); color:var(--text); font:inherit" />
+          <button class="btn btn-primary btn-sm" data-send ${QA_BUSY?'disabled':''}>${QA_BUSY?'回答中…':'发送'}</button>
+          <button class="btn btn-ghost btn-sm" data-clear ${QA_BUSY?'disabled':''}>清空</button>
         </div>
-        <div class="notice" style="margin-top:12px">本问答为智能模拟回答，非真实模型输出。真实部署时云端 Agent 只索引公开介绍内容与平台使用文档；密钥只在服务端，介绍页侧不放任何密钥。</div>
+        <div class="notice" style="margin-top:12px">本问答由云端 Agent 实时生成，仅基于公开介绍内容与平台使用文档；不接入业务知识库、工具回参、会话数据或任何 PII。</div>
       </div>
     </div>
     <div class="terminal">
-      <div class="term ok"><b>✅ Success</b>拿到平台使用答案，D3 出处指向开发文档</div>
-      <div class="term err"><b>❌ Error</b>服务不可用 → 全区块错误态 + 重试；问到业务数据 → D4 拒答卡</div>
-      <div class="term ab"><b>↩ Abandon</b>关闭浮层即清上下文，会话内历史不持久化</div>
+      <div class="term ok"><b>✅ Success</b>拿到平台使用答案，回答由云端 Agent 实时生成</div>
+      <div class="term err"><b>❌ Error</b>服务不可用 → 明确报错并保留你的提问；问到业务数据 → Agent 拒绝回答</div>
+      <div class="term ab"><b>↩ Abandon</b>关闭页面即清上下文，会话内历史不持久化</div>
     </div>
   </div>`;
   $$("[data-q]").forEach(b=>b.addEventListener("click",()=>qaAsk(b.dataset.q)));
   const send=()=>qaAsk($("#qaInput").value);
   $$("[data-send]").forEach(b=>b.addEventListener("click",send));
-  $("#qaInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();send();} });
-  $$("[data-reset]").forEach(b=>b.addEventListener("click",()=>{ QA_ARMED=false; QA_MSGS=[]; clearInterval(QA_TIMER); QA_TIMER=null; renderQA(); }));
-  $$("[data-clear]").forEach(b=>b.addEventListener("click",()=>{
-    if(!QA_ARMED){ QA_ARMED=true; renderQA(); return; }
-    QA_ARMED=false; QA_MSGS=[]; clearInterval(QA_TIMER); QA_TIMER=null; renderQA();
-  }));
+  $("#qaInput").addEventListener("keydown",e=>{ if(e.key==="Enter" && !e.isComposing){e.preventDefault();send();} });
+  $$("[data-clear]").forEach(b=>b.addEventListener("click",()=>{ QA_MSGS=[]; transcript=[]; renderQA(); }));
   $$("[data-retry]").forEach(b=>b.addEventListener("click",()=>{
     const q=[...QA_MSGS].reverse().find(m=>m.role==="u")?.text;
     QA_MSGS.pop();
-    const userIndex=QA_MSGS.findLastIndex(m=>m.role==="u");
-    if(userIndex>=0) QA_MSGS.splice(userIndex,1);
     if(q) qaAsk(q); else renderQA();
   }));
-  $$("[data-ok]").forEach(b=>b.addEventListener("click",()=>{ QA_ERR=false; QA_MSGS.pop(); renderQA(); }));
-  const te=$("[data-toggle-err]"); if(te) te.addEventListener("change",()=>{ QA_ERR=te.checked; renderQA(); });
-  const tv=$("#qaTyped");
-  if(tv) qaType(tv, ()=>{ QA_MSGS.forEach(m=>{ m.live=false; }); renderQA(); });
+  const stream = $("#qaStream");
+  if(stream) stream.scrollTop = stream.scrollHeight;
   if(QA_SEED){ const s=QA_SEED; QA_SEED=null; qaAsk(s); }
 }
 

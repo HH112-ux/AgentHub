@@ -9,3 +9,7 @@ vendor/
 /spark-output/
 .env
 deploy/*/cert/
+
+# Qoder Sites 本地工作台条目（机器/账号相关；发布数据不入公开仓库）
+*.qoder.site
+.qoder/
