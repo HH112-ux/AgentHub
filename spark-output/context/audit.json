@@ -1,0 +1,285 @@
+{
+  "skill": "audit",
+  "generated_at": "2026-11-25T02:40:01Z",
+  "project_name": "AgentHub 产品介绍页",
+  "target": {
+    "type": "code",
+    "reference": "code/intro-site/agenthub-intro-mockup.html",
+    "pages_audited": [
+      "首页营销层",
+      "八步运行流程",
+      "六大能力域",
+      "部署架构与数据边界",
+      "在线体验问答",
+      "退出说明与高保真走查路由"
+    ]
+  },
+  "audit_framework": [
+    "Nielsen-10",
+    "responsive",
+    "performance"
+  ],
+  "findings": [
+    {
+      "id": "audit-1",
+      "heuristic": "aesthetic",
+      "severity": "major",
+      "description": "首屏主操作层级被多个同权重按钮和内部草案标记稀释。",
+      "evidence": "首页首屏出现 5 个 .btn-primary，导航、Hero、模拟器与最终 CTA 同时争夺注意力；Hero 中仍显示“文案草案 · 待队长审定”。",
+      "suggestion": "每个视口只保留一个主 CTA；开发文档、观看流程和模拟器操作降为次级；删除公开展示的草案标记。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-2",
+      "heuristic": "aesthetic",
+      "severity": "major",
+      "description": "移动端页面过长，用户需要连续滚动才能理解核心价值并采取行动。",
+      "evidence": "390×844 实测文档高度约 9442px，其中能力域约 3007px、八步流程约 1362px、部署架构约 1800px。",
+      "suggestion": "移动端改为分层摘要、手风琴或横向卡片轨道；每屏只展开一个详情，并保留直达核心内容的锚点。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-3",
+      "heuristic": "real-world-match",
+      "severity": "major",
+      "description": "公开营销文案直接暴露工程术语，增加非技术决策者的理解成本。",
+      "evidence": "首屏指标与卡片中出现 route_decision、ai_、RAG hit@1、MRR@5、HITL、BM25、SSE、Nginx、Spring Boot、Milvus + etcd。",
+      "suggestion": "采用“业务价值 → 用户结果 → 技术证据”的文案顺序；术语放入可展开的技术详情或工具提示。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-4",
+      "heuristic": "consistency",
+      "severity": "minor",
+      "description": "公开展示页仍保留内部评审状态，和正式产品口吻不一致。",
+      "evidence": "Hero 的“文案草案 · 待队长审定”以及页脚“mockup v1 · 文案待队长审定”。",
+      "suggestion": "正式公开版本移除评审标记；如仍在内部评审，使用明确的预览环境提示而非营销正文。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-5",
+      "heuristic": "aesthetic",
+      "severity": "major",
+      "description": "六张能力域卡片视觉权重和内容密度接近，缺少推荐路径与角色指引。",
+      "evidence": "智能体、模型、知识库、工具集成、审计观测、安全均采用相同的三行说明、页数和翻转入口。",
+      "suggestion": "按用户角色或任务入口重组；突出 1–2 个高频能力，其余卡片保留摘要并允许按需展开。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-6",
+      "heuristic": "aesthetic",
+      "severity": "minor",
+      "description": "平台规模数据与技术评测基线混排，数字的含义和证据强度不一致。",
+      "evidence": "6、34、98、40 与 75.0%、0.829 在同一指标带中以相同字号展示。",
+      "suggestion": "将规模指标与评测证据分组；评测数据补充样本口径，并降低其首屏视觉权重。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-7",
+      "heuristic": "responsive",
+      "severity": "major",
+      "description": "部分移动端可点击区域低于 44px，容易误触。",
+      "evidence": "390px 实测“看运行 → 步 N”约 85×21px，问答 chips 约 37px，架构 tabs 约 38px，页脚链接约 19px。",
+      "suggestion": "所有可点击目标最小高度 44px，并增加间距；必要时扩大点击热区而不是只放大文字。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-8",
+      "heuristic": "responsive",
+      "severity": "major",
+      "description": "移动端八步流程同时展示全部节点与完整详情，重复信息较多。",
+      "evidence": "390px 下八个轨道节点以两列网格排列，下方再显示大尺寸当前步骤卡片，流程区高度约 1362px。",
+      "suggestion": "移动端改为“当前步骤 + 上一步/下一步 + 可展开步骤列表”；桌面保留轨道，窄屏降级为线性向导。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-9",
+      "heuristic": "user-control",
+      "severity": "major",
+      "description": "流程自动播放只响应鼠标悬停，键盘用户和触屏用户缺少稳定的暂停控制。",
+      "evidence": "播放逻辑由 setPlaying 与 setInterval 驱动；#flow 仅在 mouseenter/mouseleave 暂停和恢复。",
+      "suggestion": "统一播放状态；hover、focus-within、触屏点击和可见性变化均可暂停，并始终提供明确的播放/暂停按钮。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-10",
+      "heuristic": "performance",
+      "severity": "major",
+      "description": "首屏轮播与流程自动播放没有在离开视口或标签页隐藏时完整暂停。",
+      "evidence": "Hero 每 2.1s 更新，流程每 3.8s 切换；visibilitychange 当前只处理 Swarm 构建，不覆盖 heroTimer 与流程 timer。",
+      "suggestion": "建立统一 motion controller，由 IntersectionObserver 与 Page Visibility API 集中暂停、恢复和销毁计时器。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-11",
+      "heuristic": "performance",
+      "severity": "minor",
+      "description": "页面同时存在多层持续动效，视觉噪声和渲染负担偏高。",
+      "evidence": "标题点亮、Swarm 重建、Hero 轮播、3D 轨道、边框流光、线条扫动和光标闪烁同时存在。",
+      "suggestion": "设置动效预算：同一视口最多一个主叙事动效；其余动效改为交互触发或一次性入场。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-12",
+      "heuristic": "flexibility",
+      "severity": "minor",
+      "description": "长页面缺少跳到正文的快捷入口，键盘用户需要穿过导航才能到达主要内容。",
+      "evidence": "body 起始为营销层导航，未发现 skip-to-content 链接。",
+      "suggestion": "增加首次 Tab 可见的“跳到主要内容”链接；路由切换后保持焦点连续，补充当前区块状态。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-13",
+      "heuristic": "consistency",
+      "severity": "minor",
+      "description": "小型控件缺少统一的 hover、pressed、selected 与 disabled 状态规范。",
+      "evidence": ".chip 只有 hover 边框变化；架构 tab 主要通过 aria-selected 和滑块位置表达状态；部分控件没有显式 active 反馈。",
+      "suggestion": "建立统一交互态 token：默认、hover、focus-visible、active、selected、disabled，并应用到 chips、tabs、卡片页脚链接和页脚链接。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-14",
+      "heuristic": "visibility",
+      "severity": "minor",
+      "description": "模拟器中的按钮与输入框外观接近真实可操作控件，操作结果反馈不够显式。",
+      "evidence": "首屏工作台包含“进入系统”“开发文档”“写入路由决策”“重播构建”等按钮，部分操作只更新局部状态。",
+      "suggestion": "在模拟器标题与关键操作旁持续显示“演示”标识；点击后给出短时状态反馈，并明确说明不会连接真实业务系统。",
+      "effort": "quick-win"
+    },
+    {
+      "id": "audit-15",
+      "heuristic": "error-prevention",
+      "severity": "major",
+      "description": "公开页把真实出口与高保真演示出口混在一起，用户可能误以为所有按钮都能进入正式系统。",
+      "evidence": "导航与 Hero 的“进入系统”先跳转到 #/exit 演示页；该页还提供“未注入/已注入系统域名”配置切换。",
+      "suggestion": "公开版将真实出口与演示走查分离；未配置时显示简洁的 availability 状态，配置切换仅保留在内部预览。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-16",
+      "heuristic": "recognition",
+      "severity": "minor",
+      "description": "能力域卡片需要翻转或跳转后才能确认适用场景，首次访问时识别成本偏高。",
+      "evidence": "卡片正面主要是页数、技术摘要和“看运行”，输出物与使用边界隐藏在背面。",
+      "suggestion": "正面直接展示“适合谁、解决什么、得到什么”三条结果型信息；技术细节与边界保留在展开层。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-17",
+      "heuristic": "error-recovery",
+      "severity": "minor",
+      "description": "出口未配置状态解释完整，但公开访客可能进入以工程配置为中心的终态。",
+      "evidence": "#/exit 的 C2 页面展示 system_origin=null、未注入原因及配置切换按钮。",
+      "suggestion": "将工程诊断留在内部走查；公开页面提供“暂未开放、联系管理员、查看公开文档”等可行动替代路径。",
+      "effort": "medium"
+    },
+    {
+      "id": "audit-18",
+      "heuristic": "help-docs",
+      "severity": "minor",
+      "description": "现有出处标注严谨，但帮助内容仍偏内部手册，缺少面向公众的术语解释和问题导航。",
+      "evidence": "流程和能力域频繁引用《开发总览手册》章节、ai_、HITL、RAG 等术语。",
+      "suggestion": "增加面向使用者的 FAQ、术语解释与文档搜索入口；内部章节出处保留在技术详情中。",
+      "effort": "medium"
+    }
+  ],
+  "opportunities": [
+    {
+      "title": "重做首屏价值主张与主行动层级",
+      "addresses_findings": [
+        "audit-1",
+        "audit-3",
+        "audit-4",
+        "audit-6",
+        "audit-15"
+      ],
+      "priority": "high",
+      "rationale": "首屏是转化和信任建立的核心，当前却有多个主 CTA、内部术语和演示配置信息同时出现，直接削弱公开页的专业度。"
+    },
+    {
+      "title": "压缩移动端信息密度并修复触控目标",
+      "addresses_findings": [
+        "audit-2",
+        "audit-7",
+        "audit-8"
+      ],
+      "priority": "high",
+      "rationale": "390px 下页面接近 1 万像素，多个触控目标不足 44px，是影响移动可用性的最高优先级问题。"
+    },
+    {
+      "title": "建立统一动效预算与生命周期控制",
+      "addresses_findings": [
+        "audit-9",
+        "audit-10",
+        "audit-11"
+      ],
+      "priority": "high",
+      "rationale": "多层持续动画同时运行，且计时器未完整响应焦点、视口和标签页状态，会影响控制感、可访问性与性能。"
+    },
+    {
+      "title": "按用户任务重组能力域与证据内容",
+      "addresses_findings": [
+        "audit-5",
+        "audit-6",
+        "audit-16"
+      ],
+      "priority": "medium",
+      "rationale": "六张等权卡片不能帮助访客快速判断“我该从哪里开始”，技术证据也缺少业务语境。"
+    },
+    {
+      "title": "统一控件交互态与键盘可达性",
+      "addresses_findings": [
+        "audit-12",
+        "audit-13"
+      ],
+      "priority": "medium",
+      "rationale": "现有焦点样式基础良好，但长页导航、小控件状态和路由焦点连续性仍可形成低成本体验提升。"
+    },
+    {
+      "title": "分离公开展示与内部高保真走查",
+      "addresses_findings": [
+        "audit-14",
+        "audit-15",
+        "audit-17"
+      ],
+      "priority": "medium",
+      "rationale": "公开展示需要清晰说明产品边界，而工程配置与原型调试信息应保留在内部评审链路中。"
+    },
+    {
+      "title": "补足公众帮助与渐进式解释",
+      "addresses_findings": [
+        "audit-3",
+        "audit-18"
+      ],
+      "priority": "low",
+      "rationale": "现有内容准确且可追溯，下一步重点是降低术语门槛，让非技术用户也能完成自助理解。"
+    }
+  ],
+  "summary": {
+    "total_findings": 18,
+    "by_severity": {
+      "blocker": 0,
+      "major": 9,
+      "minor": 9
+    },
+    "by_heuristic": {
+      "visibility": 1,
+      "real-world-match": 1,
+      "user-control": 1,
+      "consistency": 2,
+      "error-prevention": 1,
+      "recognition": 1,
+      "flexibility": 1,
+      "aesthetic": 4,
+      "error-recovery": 1,
+      "help-docs": 1,
+      "responsive": 2,
+      "performance": 2
+    },
+    "top_opportunities": [
+      "重做首屏价值主张与主行动层级",
+      "压缩移动端信息密度并修复触控目标",
+      "建立统一动效预算与生命周期控制"
+    ]
+  }
+}
