@@ -40,6 +40,9 @@
   --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 8px 24px rgba(0,0,0,.45); --sh-3:0 24px 64px rgba(0,0,0,.55);
   --glow-ring:0 0 0 1px var(--glow-line), 0 0 24px var(--glow-dim);
   --nav-bg:rgba(6,9,16,.72);
+  --thumb-bg:rgba(6,9,16,.72);
+  --thumb-border:rgba(255,255,255,.22);
+  --toggle-track-bg:rgba(255,255,255,.07);
   --ghost-bg:rgba(19,28,43,.6); --ghost-hover:rgba(19,28,43,.9);
   --hero-stage-bg:linear-gradient(160deg,rgba(19,28,43,.9),rgba(8,13,22,.9));
   --metrics-bg:linear-gradient(180deg,rgba(13,20,32,.72),rgba(6,9,16,.4));
@@ -65,6 +68,9 @@ html[data-theme="light"]{
   --sh-1:0 1px 2px rgba(30,50,75,.08); --sh-2:0 8px 24px rgba(30,50,75,.1); --sh-3:0 24px 64px rgba(30,50,75,.14);
   --glow-ring:0 0 0 1px var(--glow-line),0 0 24px var(--glow-dim);
   --nav-bg:rgba(245,247,251,.84);
+  --thumb-bg:rgba(245,247,251,.72);
+  --thumb-border:rgba(23,38,59,.18);
+  --toggle-track-bg:rgba(23,38,59,.07);
   --ghost-bg:rgba(255,255,255,.72); --ghost-hover:rgba(255,255,255,.96);
   --hero-stage-bg:linear-gradient(160deg,rgba(255,255,255,.96),rgba(233,239,248,.94));
   --metrics-bg:linear-gradient(180deg,rgba(255,255,255,.82),rgba(238,242,248,.58));
@@ -157,54 +163,33 @@ html[data-theme="light"] .btn-danger{color:#B42336}
 .nav-links a:hover,.nav-links a[aria-current="true"],.nav-links a:focus-visible{color:var(--text); border-bottom-color:var(--glow-line);animation:navSpring .52s cubic-bezier(.2,.8,.25,1) both}
 @keyframes navSpring{0%{transform:translateY(0)}28%{transform:translateY(-5px)}52%{transform:translateY(1px)}74%{transform:translateY(-2px)}100%{transform:translateY(0)}}
 .nav-cta{margin-left:auto; display:flex; align-items:center; gap:10px}
-.theme-toggle{position:relative;width:44px;height:44px;flex:none;display:grid;place-items:center;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--bg-container);color:var(--text-2);overflow:hidden;transition:border-color .2s,box-shadow .2s,background .2s,color .2s;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
-.theme-toggle:hover,.theme-toggle:focus-visible{border-color:var(--glow-line);color:var(--glow);box-shadow:var(--glow-ring)}
-.theme-toggle.dragging{cursor:grabbing}
-.theme-toggle.dragging[aria-disabled="true"]{cursor:grabbing}
+.theme-toggle{--theme-progress:0;--thumb-x:0px;position:relative;width:58px;height:44px;flex:none;display:grid;place-items:center;padding:0;border:0;border-radius:22px;background:transparent;color:var(--text-2);overflow:visible;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.theme-toggle:hover .theme-track,.theme-toggle:focus-visible .theme-track{border-color:var(--glow-line);box-shadow:0 0 0 1px var(--glow-line),0 0 18px var(--glow-dim)}
+.theme-toggle.dragging,.theme-toggle.dragging[aria-disabled="true"]{cursor:grabbing}
 .theme-toggle[aria-disabled="true"]{cursor:wait}
-.theme-toggle svg{position:absolute;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .58s cubic-bezier(.2,.8,.25,1),opacity .28s}
-.theme-toggle .theme-sun{opacity:0;transform:rotate(-90deg) scale(.45)}
-.theme-toggle .theme-moon{opacity:1;transform:rotate(0) scale(1)}
-html[data-theme="light"] .theme-toggle .theme-sun{opacity:1;transform:rotate(0) scale(1)}
-html[data-theme="light"] .theme-toggle .theme-moon{opacity:0;transform:rotate(90deg) scale(.45)}
-.theme-snapshot{position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:110;pointer-events:none;opacity:0;background:var(--bg-base);will-change:clip-path}
+.theme-track{position:absolute;inset:6px 0;height:32px;border:1px solid rgba(148,163,184,.2);border-radius:16px;background:var(--toggle-track-bg);box-shadow:inset 0 1px 3px rgba(0,0,0,.2),0 4px 14px rgba(0,0,0,.14);transition:border-color .2s,box-shadow .2s;overflow:hidden}
+.theme-thumb{position:absolute;left:3px;top:3px;width:24px;height:24px;border:1px solid var(--thumb-border);border-radius:50%;background:var(--thumb-bg);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 3px 9px rgba(0,0,0,.26);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transform:translateX(var(--thumb-x));transition:transform .58s cubic-bezier(.2,.8,.25,1);z-index:2;display:grid;place-items:center}
+.theme-toggle.dragging .theme-thumb{transition:none}
+.theme-toggle.settling .theme-thumb{transition:transform .8s cubic-bezier(.65,0,.35,1)}
+.theme-toggle.auto .theme-thumb{transition:transform 1.2s cubic-bezier(.65,0,.35,1)}
+.theme-thumb svg{position:absolute;inset:3px;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s ease,opacity .2s}
+.theme-thumb .theme-sun{opacity:0;transform:rotate(-70deg) scale(.6)}
+.theme-thumb .theme-moon{opacity:1;transform:rotate(0) scale(1)}
+.theme-toggle[data-preview="light"] .theme-thumb .theme-sun{opacity:1;transform:rotate(0) scale(1)}
+.theme-toggle[data-preview="light"] .theme-thumb .theme-moon{opacity:0;transform:rotate(70deg) scale(.6)}
+.theme-snapshot{--diag-x:100vw;--diag-y:100vh;--diag-target-x:0px;--diag-target-y:0px;position:fixed;inset:0;width:100vw;height:100vh;border:0;z-index:110;pointer-events:none;opacity:0;background:var(--bg-base);will-change:clip-path}
 .theme-snapshot.ready{opacity:1}
-.theme-snapshot.active[data-direction="to-light"]{animation:themeNewForward .7s cubic-bezier(.65,0,.35,1) both}
-.theme-snapshot.active[data-direction="to-dark"]{animation:themeNewBackward .7s cubic-bezier(.65,0,.35,1) both}
-.theme-snapshot.dragging[data-direction="left"]{clip-path:inset(0 calc(100% - var(--blade-x)) 0 0)}
-.theme-snapshot.dragging[data-direction="right"]{clip-path:inset(0 0 0 var(--blade-x))}
-.theme-snapshot.active[data-direction="left"]{animation:themeDragLeft .45s cubic-bezier(.65,0,.35,1) both}
-.theme-snapshot.active[data-direction="right"]{animation:themeDragRight .45s cubic-bezier(.65,0,.35,1) both}
-@keyframes themeNewForward{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
-@keyframes themeNewBackward{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
-@keyframes themeDragLeft{from{clip-path:inset(0 calc(100% - var(--blade-x)) 0 0)}to{clip-path:inset(0)}}
-@keyframes themeDragRight{from{clip-path:inset(0 0 0 var(--blade-x))}to{clip-path:inset(0)}}
-.theme-sweep{--blade-width:clamp(220px,34vw,480px);--blade-x:50vw;position:fixed;inset:0;z-index:120;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;border:0;padding:0;background:transparent;pointer-events:none;overflow:hidden;visibility:hidden;contain:strict}
+.theme-snapshot.dragging{clip-path:polygon(var(--diag-x) 0,100% 0,100% 100%,0 100%,0 var(--diag-y))}
+.theme-snapshot.active{will-change:clip-path}
+.theme-sweep{position:fixed;inset:0;z-index:120;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;border:0;padding:0;background:transparent;pointer-events:none;overflow:hidden;visibility:hidden;contain:strict}
 .theme-sweep.ready,.theme-sweep.active{visibility:visible}
-.theme-sweep::before{content:"";position:absolute;top:-12%;bottom:-12%;left:0;width:var(--blade-width);opacity:.92;filter:blur(2px);mix-blend-mode:screen;background:linear-gradient(90deg,transparent 0%,rgba(76,141,255,.04) 30%,rgba(49,225,196,.24) 70%,rgba(255,255,255,.92) 96%,#fff 100%);transform:translateX(calc(var(--blade-x) - var(--blade-width)))}
-.theme-sweep::after{content:"";position:absolute;top:-8%;bottom:-8%;left:0;width:var(--blade-width);background:linear-gradient(90deg,transparent calc(100% - 2px),#fff 0);filter:drop-shadow(0 0 7px #fff) drop-shadow(0 0 20px rgba(49,225,196,.95)) drop-shadow(0 0 48px rgba(76,141,255,.75));transform:translateX(calc(var(--blade-x) - var(--blade-width)))}
-.theme-sweep[data-direction="left"]::before{background:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.92) 4%,rgba(49,225,196,.24) 30%,rgba(76,141,255,.04) 70%,transparent 100%);transform:translateX(var(--blade-x))}
-.theme-sweep[data-direction="left"]::after{background:linear-gradient(90deg,#fff 0,transparent 2px);transform:translateX(var(--blade-x))}
-.theme-sweep.active[data-direction="to-light"]::before,.theme-sweep.active[data-direction="to-light"]::after{animation:photonForward .7s cubic-bezier(.65,0,.35,1) both}
-.theme-sweep.active[data-direction="to-dark"]::before{animation:photonBackward .7s cubic-bezier(.65,0,.35,1) both;background:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.92) 4%,rgba(49,225,196,.24) 30%,rgba(76,141,255,.04) 70%,transparent 100%)}
-.theme-sweep.active[data-direction="to-dark"]::after{background:linear-gradient(90deg,#fff 0,transparent 2px);animation:photonBackward .7s cubic-bezier(.65,0,.35,1) both}
-.theme-sweep.active[data-direction="left"]::before,.theme-sweep.active[data-direction="left"]::after{animation:photonDragLeft .45s cubic-bezier(.65,0,.35,1) both}
-.theme-sweep.active[data-direction="right"]::before,.theme-sweep.active[data-direction="right"]::after{animation:photonDragRight .45s cubic-bezier(.65,0,.35,1) both}
-@keyframes photonForward{from{transform:translateX(-100%)}to{transform:translateX(calc(100vw - 100%))}}
-@keyframes photonBackward{from{transform:translateX(100vw)}to{transform:translateX(0)}}
-@keyframes photonDragLeft{from{transform:translateX(var(--blade-x))}to{transform:translateX(0)}}
-@keyframes photonDragRight{from{transform:translateX(calc(var(--blade-x) - var(--blade-width)))}to{transform:translateX(calc(100vw - var(--blade-width)))}}
-.theme-sweep i{position:absolute;left:var(--blade-x);top:var(--dust-top);width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(49,225,196,.95),0 0 16px rgba(76,141,255,.7);opacity:.55;transform:translate(-18px,12px)}
-.theme-sweep.active[data-direction="to-light"] i{animation:dustForward .7s linear both}
-.theme-sweep.active[data-direction="to-dark"] i{animation:dustBackward .7s linear both}
-.theme-sweep.active[data-direction="left"] i{animation:dustDragLeft .45s linear both}
-.theme-sweep.active[data-direction="right"] i{animation:dustDragRight .45s linear both}
-@keyframes dustForward{0%{transform:translate(-40px,18px);opacity:0}18%{opacity:.8}78%{opacity:.45}100%{transform:translate(calc(100vw - 24px),-26px);opacity:0}}
-@keyframes dustBackward{0%{transform:translate(calc(100vw - 24px),-26px);opacity:0}18%{opacity:.8}78%{opacity:.45}100%{transform:translate(-40px,18px);opacity:0}}
-@keyframes dustDragLeft{from{left:var(--blade-x);opacity:.55}to{left:-24px;opacity:0}}
-@keyframes dustDragRight{from{left:var(--blade-x);opacity:.55}to{left:calc(100vw - 24px);opacity:0}}
-html[data-theme-sweeping="true"] .nav,html[data-theme-sweeping="true"] .hero-stage,html[data-theme-sweeping="true"] .metric-group,html[data-theme-sweeping="true"] .domain{animation:themeRipple .7s ease-out both}
-html[data-theme-settling="true"] .nav,html[data-theme-settling="true"] .hero-stage,html[data-theme-settling="true"] .metric-group,html[data-theme-settling="true"] .domain{animation-duration:.45s}
+.theme-sweep svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.theme-sweep line{fill:none;stroke-linecap:round}
+.theme-sweep .trail{stroke:rgba(49,225,196,.5);stroke-width:22;filter:blur(7px)}
+.theme-sweep .core{stroke:#fff;stroke-width:2;filter:drop-shadow(0 0 5px #31e1c4) drop-shadow(0 0 14px #4c8dff)}
+.theme-sweep i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(49,225,196,.95),0 0 16px rgba(76,141,255,.7);opacity:.55;pointer-events:none}
+html[data-theme-sweeping="true"] .nav,html[data-theme-sweeping="true"] .hero-stage,html[data-theme-sweeping="true"] .metric-group,html[data-theme-sweeping="true"] .domain{animation:themeRipple 1.2s ease-out both}
+html[data-theme-settling="true"] .nav,html[data-theme-settling="true"] .hero-stage,html[data-theme-settling="true"] .metric-group,html[data-theme-settling="true"] .domain{animation-duration:.8s}
 @keyframes themeRipple{0%,100%{filter:none}42%{filter:brightness(1.07) saturate(1.12);box-shadow:0 0 0 1px var(--glow-line),0 0 30px var(--glow-dim)}}
 
 /* ============================================================
@@ -959,6 +944,11 @@ html[data-theme="light"] .cite{color:#245CB7}
 @media(max-width:420px){
   .swarm-links{display:none}
 }
+@media(max-width:359px){
+  .nav .brand .name{display:none}
+  .nav .container{gap:8px}
+  .nav-cta{gap:4px}
+}
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-iteration-count:1!important;transition-duration:.01ms !important}
   html{scroll-behavior:auto}
@@ -993,9 +983,13 @@ html[data-theme="light"] .cite{color:#245CB7}
       <a href="#trial">在线体验</a>
     </div>
     <div class="nav-cta">
-      <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-disabled="false" aria-label="当前深色，按住左右拖动或使用左右方向键切换为浅色" title="按住左右拖动或使用左右方向键切换主题">
-        <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.2A8.6 8.6 0 0 1 8.8 3.6 8.7 8.7 0 1 0 20.4 15.2Z"/></svg>
-        <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.6"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/></svg>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-disabled="false" aria-label="当前深色，点击、按住左右拖动或使用左右方向键切换为浅色" title="点击、按住左右拖动或使用左右方向键切换主题">
+        <span class="theme-track" aria-hidden="true">
+          <span class="theme-thumb">
+            <svg class="theme-moon" viewBox="0 0 24 24"><path d="M20.4 15.2A8.6 8.6 0 0 1 8.8 3.6 8.7 8.7 0 1 0 20.4 15.2Z"/></svg>
+            <svg class="theme-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.6"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/></svg>
+          </span>
+        </span>
       </button>
       <button class="btn btn-ghost btn-sm" data-exit="doc">开发文档</button>
       <button class="btn btn-ghost btn-sm" data-exit="system">进入系统</button>
@@ -1310,16 +1304,25 @@ const $$ = (s,r)=>Array.from((r||document).querySelectorAll(s));
 const esc = t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 const themeToggle = $("#themeToggle");
+const themeTrack = $(".theme-track",themeToggle);
+const themeThumb = $(".theme-thumb",themeToggle);
 const themeRoot = document.documentElement;
-const THEME_DRAG_THRESHOLD = 24;
+const THEME_DRAG_THRESHOLD = 2;
 let themeDrag = null;
+let suppressThemeClick = false;
+function setThemeToggleProgress(progress,preview = progress >= .5 ? "light" : "dark"){
+  themeToggle.style.setProperty("--theme-progress",String(progress));
+  themeToggle.style.setProperty("--thumb-x",`${progress * 28}px`);
+  themeToggle.dataset.preview = preview;
+}
 function applyTheme(theme){
   const light = theme === "light";
-  const label = light ? "当前浅色，按住左右拖动或使用左右方向键切换为深色" : "当前深色，按住左右拖动或使用左右方向键切换为浅色";
+  const label = light ? "当前浅色，点击、按住左右拖动或使用左右方向键切换为深色" : "当前深色，点击、按住左右拖动或使用左右方向键切换为浅色";
   themeRoot.dataset.theme = light ? "light" : "dark";
   themeToggle.setAttribute("aria-pressed", String(light));
   themeToggle.setAttribute("aria-label", label);
   themeToggle.title = label;
+  setThemeToggleProgress(light ? 1 : 0,theme);
 }
 function finishThemeSwitch(snapshot,sweep){
   snapshot?.remove();
@@ -1328,9 +1331,10 @@ function finishThemeSwitch(snapshot,sweep){
   themeRoot.removeAttribute("data-theme-sweeping");
   themeRoot.removeAttribute("data-theme-settling");
   themeRoot.removeAttribute("data-theme-dragging");
-  themeToggle.classList.remove("dragging");
+  themeToggle.classList.remove("dragging","settling","auto");
   themeToggle.setAttribute("aria-busy","false");
   themeToggle.setAttribute("aria-disabled","false");
+  setThemeToggleProgress(themeRoot.dataset.theme === "light" ? 1 : 0,themeRoot.dataset.theme);
 }
 function createThemeSnapshot(nextTheme){
   const clone = document.documentElement.cloneNode(true);
@@ -1340,9 +1344,16 @@ function createThemeSnapshot(nextTheme){
   clone.removeAttribute("data-theme-settling");
   clone.removeAttribute("data-theme-dragging");
   clone.querySelectorAll('script,.theme-snapshot,.theme-sweep').forEach(node=>node.remove());
-  clone.querySelector('#themeToggle')?.removeAttribute('aria-disabled');
-  clone.querySelector('#themeToggle')?.removeAttribute('aria-busy');
-  clone.querySelector('#themeToggle')?.classList.remove('dragging');
+  const clonedToggle = clone.querySelector('#themeToggle');
+  clonedToggle?.removeAttribute('aria-disabled');
+  clonedToggle?.removeAttribute('aria-busy');
+  clonedToggle?.classList.remove('dragging','settling','auto');
+  if(clonedToggle){
+    const progress = nextTheme === "light" ? 1 : 0;
+    clonedToggle.style.setProperty('--theme-progress',String(progress));
+    clonedToggle.style.setProperty('--thumb-x',`${progress * 28}px`);
+    clonedToggle.dataset.preview = nextTheme;
+  }
   const snapshot = document.createElement('iframe');
   snapshot.className = 'theme-snapshot';
   snapshot.setAttribute('aria-hidden','true');
@@ -1361,12 +1372,118 @@ function createThemeSnapshot(nextTheme){
   document.body.append(snapshot);
   return { snapshot, loaded };
 }
+function diagonalGeometry(width,height,progress){
+  const p = Math.max(0,Math.min(1,progress));
+  const px = width * (1 - p);
+  const py = height * p;
+  const side = (x,y) => width * (x - px) - height * (y - py);
+  const corners = [[0,0],[width,0],[width,height],[0,height]];
+  const clipped = [];
+  for(let i = 0; i < corners.length; i++){
+    const a = corners[i];
+    const b = corners[(i + 1) % corners.length];
+    const fa = side(a[0],a[1]);
+    const fb = side(b[0],b[1]);
+    if(fa >= 0) clipped.push(a);
+    if((fa >= 0) !== (fb >= 0)){
+      const t = fa / (fa - fb);
+      clipped.push([a[0] + (b[0] - a[0]) * t,a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  const unique = clipped.filter((point,index)=>{
+    if(index === 0) return true;
+    const previous = clipped[index - 1];
+    return Math.abs(point[0] - previous[0]) > .01 || Math.abs(point[1] - previous[1]) > .01;
+  });
+  if(unique.length > 1){
+    const first = unique[0];
+    const last = unique[unique.length - 1];
+    if(Math.abs(first[0] - last[0]) <= .01 && Math.abs(first[1] - last[1]) <= .01) unique.pop();
+  }
+  const points = unique.length ? unique.slice(0,5) : [[width,0]];
+  while(points.length < 5) points.push(points[0].slice());
+  let area = 0;
+  for(let i = 0; i < points.length; i++){
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    area += a[0] * b[1] - b[0] * a[1];
+  }
+  area = Math.abs(area) / 2;
+  const boundary = [];
+  for(let i = 0; i < corners.length; i++){
+    const a = corners[i];
+    const b = corners[(i + 1) % corners.length];
+    const fa = side(a[0],a[1]);
+    const fb = side(b[0],b[1]);
+    if(Math.abs(fa) <= .01) boundary.push(a);
+    if((fa < 0 && fb > 0) || (fa > 0 && fb < 0)){
+      const t = fa / (fa - fb);
+      boundary.push([a[0] + (b[0] - a[0]) * t,a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  const line = boundary.length >= 2 ? [boundary[0],boundary[boundary.length - 1]] : [boundary[0] || [width,0],boundary[0] || [width,0]];
+  return {
+    area,
+    points,
+    boundary:line,
+    clip:`polygon(${points.map(point=>`${point[0]}px ${point[1]}px`).join(',')})`
+  };
+}
+function renderDiagonalSweep(sweep,progress){
+  if(!sweep) return;
+  const geometry = diagonalGeometry(innerWidth,innerHeight,progress);
+  const [[x1,y1],[x2,y2]] = geometry.boundary;
+  sweep.dataset.progress = String(progress);
+  sweep.querySelectorAll('line').forEach(line=>{
+    line.setAttribute('x1',String(x1));
+    line.setAttribute('y1',String(y1));
+    line.setAttribute('x2',String(x2));
+    line.setAttribute('y2',String(y2));
+  });
+  sweep.querySelectorAll('i').forEach((dust,index)=>{
+    const t = (index + 1) / 6;
+    dust.style.left = `${x1 + (x2 - x1) * t}px`;
+    dust.style.top = `${y1 + (y2 - y1) * t}px`;
+  });
+}
+function animateDiagonalTransition(snapshot,sweep,fromProgress,toProgress,duration){
+  const started = performance.now();
+  const renderAt = progress=>{
+    const geometry = diagonalGeometry(innerWidth,innerHeight,progress);
+    snapshot.style.clipPath = geometry.clip;
+    renderDiagonalSweep(sweep,progress);
+  };
+  renderAt(fromProgress);
+  let finishHandler = ()=>{};
+  const promise = new Promise(resolve=>{
+    let settled = false;
+    const finish = ()=>{
+      if(settled) return;
+      settled = true;
+      clearInterval(interval);
+      clearTimeout(timeout);
+      renderAt(toProgress);
+      resolve();
+    };
+    finishHandler = finish;
+    const interval = setInterval(()=>{
+      if(settled) return;
+      if(!snapshot.isConnected){ finish(); return; }
+      const t = Math.min(1,(performance.now() - started) / duration);
+      const eased = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2,3) / 2;
+      renderAt(fromProgress + (toProgress - fromProgress) * eased);
+      if(t >= 1) finish();
+    },16);
+    const timeout = setTimeout(finish,duration + 100);
+  });
+  return { promise, finish:()=>finishHandler() };
+}
 function createThemeSweep(direction){
   const sweep = document.createElement('div');
   sweep.className = 'theme-sweep';
   sweep.dataset.direction = direction;
   sweep.setAttribute('aria-hidden','true');
-  sweep.innerHTML = '<i style="--dust-top:18%"></i><i style="--dust-top:34%"></i><i style="--dust-top:52%"></i><i style="--dust-top:68%"></i><i style="--dust-top:82%"></i>';
+  sweep.innerHTML = '<svg aria-hidden="true"><line class="trail"/><line class="core"/></svg><i></i><i></i><i></i><i></i><i></i>';
   document.body.append(sweep);
   return sweep;
 }
@@ -1387,17 +1504,19 @@ async function switchTheme(nextTheme = themeRoot.dataset.theme === "light" ? "da
     await pendingSnapshot.loaded;
     snapshot.contentWindow.document.documentElement.style.scrollBehavior = 'auto';
     snapshot.contentWindow.scrollTo(scrollX,scrollY);
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-    snapshot.classList.add('ready');
     themeRoot.dataset.themeDirection = nextTheme === "light" ? "to-light" : "to-dark";
     snapshot.dataset.direction = themeRoot.dataset.themeDirection;
+    snapshot.style.clipPath = diagonalGeometry(innerWidth,innerHeight,0).clip;
+    snapshot.classList.add('ready','auto');
+    themeToggle.classList.add('settling','auto');
+    setThemeToggleProgress(nextTheme === 'light' ? 1 : 0,nextTheme);
     sweep = createThemeSweep(themeRoot.dataset.themeDirection);
+    sweep.classList.add('auto');
+    renderDiagonalSweep(sweep,0);
     snapshot.classList.add('active');
     sweep.classList.add('active');
     themeRoot.dataset.themeSweeping = 'true';
-    await new Promise(resolve=>requestAnimationFrame(resolve));
-    const animations = snapshot.getAnimations();
-    await Promise.all(animations.map(animation=>animation.finished.catch(()=>{})));
+    await animateDiagonalTransition(snapshot,sweep,0,1,1200).promise;
     applyTheme(nextTheme);
   }catch{
     applyTheme(nextTheme);
@@ -1406,11 +1525,15 @@ async function switchTheme(nextTheme = themeRoot.dataset.theme === "light" ? "da
   }
 }
 function renderThemeDrag(state){
-  if(!state.snapshot || !state.sweep || !state.direction) return;
-  state.snapshot.style.setProperty('--blade-x',`${state.x}px`);
-  state.sweep.style.setProperty('--blade-x',`${state.x}px`);
+  setThemeToggleProgress(state.progress);
+  if(!state.snapshot || !state.sweep) return;
+  const reveal = state.startProgress === 0 ? state.progress : 1 - state.progress;
+  state.reveal = reveal;
+  const geometry = diagonalGeometry(innerWidth,innerHeight,reveal);
+  state.snapshot.style.clipPath = geometry.clip;
   state.snapshot.dataset.direction = state.direction;
   state.sweep.dataset.direction = state.direction;
+  renderDiagonalSweep(state.sweep,reveal);
 }
 async function prepareThemeDrag(state){
   const pendingSnapshot = createThemeSnapshot(state.nextTheme);
@@ -1437,20 +1560,21 @@ function cancelThemeDrag(state){
 }
 function failThemeDrag(state){
   if(themeDrag !== state) return;
-  applyTheme(state.nextTheme);
+  const targetTheme = state.progress >= .5 ? 'light' : 'dark';
+  if(targetTheme !== themeRoot.dataset.theme) applyTheme(targetTheme);
   cancelThemeDrag(state);
 }
 function updateThemeDrag(state,clientX){
   state.currentX = clientX;
   const delta = clientX - state.startX;
-  state.moved = Math.abs(delta) >= 3;
-  state.x = Math.max(0,Math.min(innerWidth,innerWidth / 2 + delta));
-  if(state.moved) state.direction = delta < 0 ? 'left' : 'right';
+  state.moved = Math.abs(delta) >= THEME_DRAG_THRESHOLD;
+  state.progress = Math.max(0,Math.min(1,state.startProgress + delta / state.travel));
 }
 function syncThemeDragViewport(state){
   if(themeDrag !== state || state.cancelled) return;
-  if(!state.settling){
-    state.x = Math.max(0,Math.min(innerWidth,innerWidth / 2 + state.currentX - state.startX));
+  if(state.settling){
+    state.animation?.finish();
+  }else{
     renderThemeDrag(state);
   }
   if(state.snapshot?.contentWindow){
@@ -1461,7 +1585,17 @@ function syncThemeDragViewport(state){
 async function settleThemeDrag(state){
   if(themeDrag !== state || state.cancelled) return;
   state.settling = true;
-  if(!state.moved || Math.abs(state.currentX - state.startX) < THEME_DRAG_THRESHOLD){
+  if(!state.moved){
+    cancelThemeDrag(state);
+    return;
+  }
+  const targetProgress = state.progress >= .5 ? 1 : 0;
+  const targetTheme = targetProgress === 1 ? 'light' : 'dark';
+  const shouldSwitch = targetTheme !== themeRoot.dataset.theme;
+  state.targetProgress = targetProgress;
+  state.targetReveal = shouldSwitch ? 1 : 0;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+    if(shouldSwitch) applyTheme(targetTheme);
     cancelThemeDrag(state);
     return;
   }
@@ -1473,6 +1607,8 @@ async function settleThemeDrag(state){
     await state.preview;
     if(themeDrag !== state || state.cancelled) return;
     renderThemeDrag(state);
+    themeToggle.classList.add('settling');
+    setThemeToggleProgress(targetProgress,targetTheme);
     state.snapshot.classList.remove('dragging');
     state.sweep.classList.remove('dragging');
     state.snapshot.classList.add('active');
@@ -1480,15 +1616,15 @@ async function settleThemeDrag(state){
     themeRoot.removeAttribute('data-theme-dragging');
     themeRoot.dataset.themeSettling = 'true';
     themeRoot.dataset.themeSweeping = 'true';
-    await new Promise(resolve=>requestAnimationFrame(resolve));
-    const animations = state.snapshot.getAnimations();
-    await Promise.all(animations.map(animation=>animation.finished.catch(()=>{})));
+    state.animation = animateDiagonalTransition(state.snapshot,state.sweep,state.reveal,state.targetReveal,800);
+    await state.animation.promise;
     if(themeDrag !== state || state.cancelled) return;
-    applyTheme(state.nextTheme);
+    if(shouldSwitch) applyTheme(targetTheme);
   }catch{
-    if(themeDrag === state && !state.cancelled) applyTheme(state.nextTheme);
+    if(themeDrag === state && !state.cancelled && shouldSwitch) applyTheme(targetTheme);
   }finally{
     if(themeDrag === state){
+      state.animation = null;
       themeDrag = null;
       finishThemeSwitch(state.snapshot,state.sweep);
       releaseThemeDrag(state);
@@ -1496,13 +1632,19 @@ async function settleThemeDrag(state){
   }
 }
 themeToggle.addEventListener('pointerdown',event=>{
-  if(event.button !== 0 || themeToggle.getAttribute("aria-disabled") === "true") return;
+  if(event.isPrimary === false || themeDrag || event.button !== 0 || themeToggle.getAttribute("aria-disabled") === "true") return;
   event.preventDefault();
   themeToggle.focus({preventScroll:true});
+  suppressThemeClick = false;
+  const startProgress = themeRoot.dataset.theme === "light" ? 1 : 0;
+  const nextTheme = startProgress === 1 ? "dark" : "light";
+  const trackRect = themeTrack.getBoundingClientRect();
+  const thumbRect = themeThumb.getBoundingClientRect();
   const state = {
-    pointerId:event.pointerId,startX:event.clientX,currentX:event.clientX,x:innerWidth / 2,
-    direction:null,moved:false,cancelled:false,settling:false,pointerReleased:false,preview:null,snapshot:null,sweep:null,
-    nextTheme:themeRoot.dataset.theme === 'light' ? 'dark' : 'light'
+    pointerId:event.pointerId,startX:event.clientX,currentX:event.clientX,x:innerWidth,y:innerHeight,
+    startProgress,progress:startProgress,reveal:0,travel:trackRect.width - 6 - thumbRect.width,targetProgress:null,targetReveal:null,animation:null,
+    direction:nextTheme === "light" ? "to-light" : "to-dark",moved:false,cancelled:false,settling:false,pointerReleased:false,preview:null,snapshot:null,sweep:null,
+    nextTheme
   };
   themeDrag = state;
   themeToggle.setPointerCapture(event.pointerId);
@@ -1516,13 +1658,9 @@ themeToggle.addEventListener('pointermove',event=>{
   if(!state || state.pointerId !== event.pointerId || state.settling) return;
   event.preventDefault();
   updateThemeDrag(state,event.clientX);
+  if(state.moved) suppressThemeClick = true;
   if(!state.moved && !state.snapshot) return;
-  if(state.moved && matchMedia('(prefers-reduced-motion: reduce)').matches){
-    applyTheme(state.nextTheme);
-    cancelThemeDrag(state);
-    return;
-  }
-  if(!state.preview && state.moved){
+  if(!state.preview && state.moved && !matchMedia('(prefers-reduced-motion: reduce)').matches){
     state.preview = prepareThemeDrag(state);
     state.preview.catch(()=>failThemeDrag(state));
   }
@@ -1535,15 +1673,29 @@ themeToggle.addEventListener('pointerup',async event=>{
   updateThemeDrag(state,event.clientX);
   const settling = settleThemeDrag(state);
   releaseThemeDrag(state);
+  if(state.moved) setTimeout(()=>{ suppressThemeClick = false; },0);
   await settling;
+});
+themeToggle.addEventListener('click',()=>{
+  if(suppressThemeClick){
+    suppressThemeClick = false;
+    return;
+  }
+  switchTheme();
 });
 themeToggle.addEventListener('pointercancel',event=>{
   const state = themeDrag;
-  if(state && state.pointerId === event.pointerId) cancelThemeDrag(state);
+  if(state && state.pointerId === event.pointerId){
+    suppressThemeClick = false;
+    cancelThemeDrag(state);
+  }
 });
 themeToggle.addEventListener('lostpointercapture',event=>{
   const state = themeDrag;
-  if(state && state.pointerId === event.pointerId && (!state.settling || !state.pointerReleased)) cancelThemeDrag(state);
+  if(state && state.pointerId === event.pointerId && (!state.settling || !state.pointerReleased)){
+    suppressThemeClick = false;
+    cancelThemeDrag(state);
+  }
 });
 window.addEventListener('resize',()=>{
   if(themeDrag) syncThemeDragViewport(themeDrag);
