@@ -28,7 +28,7 @@ spring:
           # 连接坐标支持环境变量覆盖；口令生产必须替换（prod 启动自检会拒绝出厂默认值）
           url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:agenthub}?useUnicode=true&characterEncoding=utf8&useSSL=false&autoReconnect=true&reWriteBatchedInserts=true
           username: ${POSTGRES_USER:postgres}
-          password: ${POSTGRES_PASSWORD:Zl@2026}
+          password: ${POSTGRES_PASSWORD}
 #        # 从库数据源
 #        slave:
 #          lazy: true
@@ -81,7 +81,7 @@ spring.data:
     # 数据库索引
     database: 0
     # redis 密码必须配置；生产必须替换（prod 启动自检会拒绝出厂默认值）
-    password: ${REDIS_PASSWORD:Zl@2026}
+    password: ${REDIS_PASSWORD}
     # 连接超时时间
     timeout: 10s
     # 是否开启ssl
@@ -142,7 +142,7 @@ justauth:
       # 注意 如下均配置均不需要修改 maxkey 已经内置好了数据
       server-url: http://sso.maxkey.top
       client-id: 876892492581044224
-      client-secret: x1Y5MTMwNzIwMjMxNTM4NDc3Mzche8
+      client-secret: ${AGENTHUB_MAXKEY_CLIENT_SECRET:}
       redirect-uri: ${justauth.address}/social-callback?source=maxkey
     topiam:
       # topiam 服务器地址
@@ -161,8 +161,8 @@ justauth:
       client-secret: 1f7d08**********5b7**********29e
       redirect-uri: ${justauth.address}/social-callback?source=weibo
     gitee:
-      client-id: 91436b7940090d09c72c7daf85b959cfd5f215d67eea73acbf61b6b590751a98
-      client-secret: 02c6fcfd70342980cd8dd2f2c06c1a350645d76c754d7a264c4e125f9ba915ac
+      client-id: ${AGENTHUB_GITEE_CLIENT_ID:}
+      client-secret: ${AGENTHUB_GITEE_CLIENT_SECRET:}
       redirect-uri: ${justauth.address}/social-callback?source=gitee
     dingtalk:
       client-id: 10**********6

@@ -63,20 +63,14 @@ public class ProductionConfigGuard implements InitializingBean {
     static final String SAMPLE_API_DECRYPT_PUBLIC_KEY =
         "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDm6u8q8X78onmbU4wGMq3b4ufbWE18YzuWo5jwkUlwWPTPcENbZYtveyTepp2Od1CTDcjhTUmVYvFkhaCF46UfOxZrwoSZc3jf3WXXd0hLOPBHuulynknj2KsWvKDuRig7J2o4KbDhyl0nnlUiMrIiD0tv1rBKpNCJ/T+MN0bERQIDAQAB";
 
-    /**
-     * 接口加密：出厂自带的请求私钥（与前端加密公钥成对，随源码公开）。
-     */
-    static final String SAMPLE_API_DECRYPT_PRIVATE_KEY =
-        "MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAO8QO5Eg4zehk9aP1SShzmlCSVHg8Ufr9yWeN4WqMMsiAPJC+PGGCoBlAD4T14Pqq7oWxc+Yrx2Nwv6eHdwUfPilfjveMO87dK977zIvdVFDSfalGBDZrTUwmzL5bBNkIFhZ/RWctEi8A1ShZCDL2/P3irtVrjh2DsDX/cgJ/7EDAgMBAAECgYEAhNZAQyRDHWZq/45soS5Hw7VRiG21pIE5k22W7G7lLfp3DCaqrYoNy8pTmCruVh7PzVdaE0CEDaf38gNqFCBOT8iTFQiYV3am4W3hsEQM5wmVBeTvCM5P2jsaaBQbqmneRjiZVbs6ha205JSho1Oc85NbaZa8gFVjwZgZWJrbzgECQQD/iZWhkRPtbdeai/Xk7D/eIXKh1Gxid0rWKQq8ikxbaiergn47XzNKrpROVyka3Gn85o7jJphgxp99R3r8sH71AkEA738Dn7xs+I4Y+MLa2EcT78JG3f/VhlWS/ks3qGJ2dfqwS7ntnmf5Q+2Xw+9UcuiK/TxD8K/0inSCkIMeWBOFFwJBAIoTebq3faEJfTqQ7ekojsokIKC4+2epNdLKknaV8/RhQ9Y0yKikJD7yXkiGaDuPZeW1Xvf2XtfL+1niSd5IMBECQDCOOMbe5dzyuj9dCg+FQZZ/dey2XK0Slm22BD/ATrIWtD12IaXXAKNz/Sv9TsrJOLykxkV69wJHIt13p+RFeNsCQGn5XGRn4ZCRVCesJYXyx29MTqkl8sD/gzYcURTZYjHqX2EvtvAyC6gBm9H0EbxmHIi4Oq0tITzklCXj5SpvBEw=";
 
     /**
      * 出厂示例值清单：任何 profile 下沿用任一项即视为未收口（{@code prod} 直接拒绝启动）。
      */
     static final List<SampleSecret> SAMPLE_SECRETS = List.of(
         new SampleSecret("sa-token.jwt-secret-key", "abcdefghijklmnopqrstuvwxyz", "Sa-Token JWT 秘钥"),
-        new SampleSecret("agenthub.ai.crypto-key", "agenthub-ai-2026", "模型密钥加密根"),
+        new SampleSecret("agenthub.ai.crypto-key", "REPLACE_WITH_32_BYTE_ROOT_KEY", "模型密钥加密根占位符"),
         new SampleSecret("api-decrypt.publicKey", SAMPLE_API_DECRYPT_PUBLIC_KEY, "接口加密响应公钥"),
-        new SampleSecret("api-decrypt.privateKey", SAMPLE_API_DECRYPT_PRIVATE_KEY, "接口加密请求私钥"),
         new SampleSecret("spring.datasource.dynamic.datasource.master.password", "Zl@2026", "数据库口令"),
         new SampleSecret("spring.data.redis.password", "Zl@2026", "Redis 口令"),
         new SampleSecret("agenthub.ai.milvus.password", "Milvus", "Milvus 口令")

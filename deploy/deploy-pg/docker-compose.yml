@@ -32,7 +32,8 @@ x-app-environment: &app-environment
   # 生效里程碑：根密钥与守卫模式＝A2/A5（本周 D2）；向量库与对象存储＝A4 RAG 与附件（D3）。
   # 属性路径由我们在代码里声明，不借用底座键名，故不进 config/ 映射文件。
   AGENTHUB_AI_CRYPTO_KEY: ${AGENTHUB_AI_CRYPTO_KEY:?模型密钥密文根密钥，见手册 §10.2 第 4 项}
-  AGENTHUB_SECURITY_GUARD_MODE: ${AGENTHUB_SECURITY_GUARD_MODE:-prod}
+  AGENTHUB_AI_MCP_SERVER_TOKEN: ${AGENTHUB_AI_MCP_SERVER_TOKEN:?MCP 出口口令，见 .env.example}
+  AGENTHUB_SECURITY_GUARD_MODE: ${AGENTHUB_SECURITY_GUARD_MODE:-enforce}
   AGENTHUB_AI_CHAT_CURRENT_TIME_ZONE: ${AGENTHUB_AI_CHAT_CURRENT_TIME_ZONE:-Asia/Shanghai}
   AGENTHUB_AI_MILVUS_URI: http://milvus:19530
   AGENTHUB_AI_MILVUS_USERNAME: root

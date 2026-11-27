@@ -1,9 +1,0 @@
-{
-  "current_skill": "flow-web",
-  "workspace_path": "/Users/caspian/Projects/ai-agent/active/AgentHub",
-  "original_workspace_path": "/Users/caspian/Projects/ai-agent/active/AgentHub",
-  "completed_skills": ["flow-web"],
-  "current_phase": "完成",
-  "updated_at": "2026-11-24T03:45:13Z",
-  "notes": "上游 brief / sitemap / stories 均未跑（Step 0 走退化路径：无 spark-output/context，按用户粘贴的 Step 3 骨架继续）。交付形态经用户拍板为单文件 HTML 高保真稿，跳过 Q_tech 与 Phase A-D。产物：code/intro-site/agenthub-intro-mockup.html。四组动效与本轮界面打磨均已实跑验证：Swarm Rebuild、虚线收缩→瞄准→预热→针光点亮标题、控制票式能力域卡片 3D 翻转、无序号沉浸式可轮播可停靠 3D 圆环；桌面右侧停靠，窄屏底部默认折叠，支持 reduced-motion。最终干净初始态浏览器回归 51/51，控制台无 error/warn/issue。当前分支 fix/intro-ux-polish，提交与推送状态以 Git 记录为准。"
-}

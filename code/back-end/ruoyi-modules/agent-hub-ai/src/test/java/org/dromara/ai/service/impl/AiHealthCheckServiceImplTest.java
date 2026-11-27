@@ -483,7 +483,7 @@ class AiHealthCheckServiceImplTest {
     @Test
     @DisplayName("加密根密钥仍为出厂示例值时告警")
     void shouldWarnWhenCryptoKeyIsSample() {
-        aiProperties.setCryptoKey("agenthub-ai-2026");
+        aiProperties.setCryptoKey("REPLACE_WITH_32_BYTE_ROOT_KEY");
         AiHealthCheckVo item = itemOf(service.check(), "crypto.key");
         assertEquals(AiHealthCheckVo.STATUS_WARN, item.getStatus());
         assertTrue(item.getSuggestion().contains("AGENTHUB_AI_CRYPTO_KEY"), "实际建议：" + item.getSuggestion());
@@ -511,7 +511,7 @@ class AiHealthCheckServiceImplTest {
     @Test
     @DisplayName("整体结论：有失败即 FAIL，只有告警则 WARN")
     void shouldAggregateOverall() {
-        aiProperties.setCryptoKey("agenthub-ai-2026");
+        aiProperties.setCryptoKey("REPLACE_WITH_32_BYTE_ROOT_KEY");
         when(ossService.selectDomainUrl()).thenReturn("");
         AiHealthReportVo warnOnly = service.check();
         assertEquals(AiHealthCheckVo.STATUS_WARN, warnOnly.getOverall());

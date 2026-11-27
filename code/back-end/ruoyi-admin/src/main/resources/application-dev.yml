@@ -23,8 +23,8 @@ spring:
           # 不写 driverClassName：由 Hikari 依 JDBC URL 从 classpath 驱动中自动匹配，
           # 使同一份配置同时服务 PostgreSQL 与 MySQL（两种驱动均在位）。
           url: jdbc:postgresql://localhost:5432/agenthub?useUnicode=true&characterEncoding=utf8&useSSL=false&autoReconnect=true&reWriteBatchedInserts=true
-          username: postgres
-          password: Zl@2026
+          username: ${AGENTHUB_DEV_DB_USERNAME:postgres}
+          password: ${AGENTHUB_DEV_DB_PASSWORD}
 #        # 从库数据源
 #        slave:
 #          lazy: true
@@ -77,7 +77,7 @@ spring.data:
     # 数据库索引
     database: 0
     # redis 密码必须配置
-    password: Zl@2026
+    password: ${AGENTHUB_DEV_REDIS_PASSWORD}
     # 连接超时时间
     timeout: 10s
     # 是否开启ssl
@@ -138,7 +138,7 @@ justauth:
       # 注意 如下均配置均不需要修改 maxkey 已经内置好了数据
       server-url: http://sso.maxkey.top
       client-id: 876892492581044224
-      client-secret: x1Y5MTMwNzIwMjMxNTM4NDc3Mzche8
+      client-secret: ${AGENTHUB_MAXKEY_CLIENT_SECRET:}
       redirect-uri: ${justauth.address}/social-callback?source=maxkey
     topiam:
       # topiam 服务器地址
@@ -157,8 +157,8 @@ justauth:
       client-secret: 1f7d08**********5b7**********29e
       redirect-uri: ${justauth.address}/social-callback?source=weibo
     gitee:
-      client-id: 91436b7940090d09c72c7daf85b959cfd5f215d67eea73acbf61b6b590751a98
-      client-secret: 02c6fcfd70342980cd8dd2f2c06c1a350645d76c754d7a264c4e125f9ba915ac
+      client-id: ${AGENTHUB_GITEE_CLIENT_ID:}
+      client-secret: ${AGENTHUB_GITEE_CLIENT_SECRET:}
       redirect-uri: ${justauth.address}/social-callback?source=gitee
     dingtalk:
       client-id: 10**********6

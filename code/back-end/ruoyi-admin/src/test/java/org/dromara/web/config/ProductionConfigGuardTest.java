@@ -59,7 +59,7 @@ class ProductionConfigGuardTest {
 
         assertTrue(ex.getMessage().contains("sa-token.jwt-secret-key"));
         assertTrue(ex.getMessage().contains("agenthub.ai.crypto-key"));
-        assertTrue(ex.getMessage().contains("api-decrypt.privateKey"));
+        assertTrue(ex.getMessage().contains("api-decrypt.publicKey"));
     }
 
     @Test

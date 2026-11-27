@@ -70,11 +70,11 @@ class AiSkillRepositoryIntegrationTest {
     @BeforeAll
     static void connectStacks() {
         openStack("PostgreSQL", env("AGENTHUB_IT_PG_URL", "jdbc:postgresql://localhost:5432/agenthub"),
-            env("AGENTHUB_IT_PG_USER", "postgres"), env("AGENTHUB_IT_PG_PASSWORD", "Zl@2026"), "postgresql_");
+            env("AGENTHUB_IT_PG_USER", "postgres"), env("AGENTHUB_IT_PG_PASSWORD", "test-only-password"), "postgresql_");
         openStack("MySQL", env("AGENTHUB_IT_MYSQL_URL",
                 "jdbc:mysql://localhost:3306/agenthub?useUnicode=true&characterEncoding=utf8"
                     + "&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"),
-            env("AGENTHUB_IT_MYSQL_USER", "root"), env("AGENTHUB_IT_MYSQL_PASSWORD", "Zl@2026"), "mysql_");
+            env("AGENTHUB_IT_MYSQL_USER", "root"), env("AGENTHUB_IT_MYSQL_PASSWORD", "test-only-password"), "mysql_");
 
         assumeTrue(!STACKS.isEmpty(), "两栈均未就绪（PG 5432 / MySQL 3306），跳过技能仓库集成测试");
     }
