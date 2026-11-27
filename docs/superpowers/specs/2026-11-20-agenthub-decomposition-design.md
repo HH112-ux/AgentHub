@@ -126,7 +126,7 @@ AgentHub
 | 接口 e2e | `e2e/http/L{nn}-{kebab-scope}.mjs`，`nn` 为手册层号 01~21；`L00` 固定留给 §6.5 的契约对账，不占层号 | `e2e/http/L00-contract-consistency.mjs`、`e2e/http/L05-hitl-confirm.mjs` |
 | 浏览器 e2e | `e2e/ui/{domain}-{page}.spec.ts`，覆盖 34 页巡检 | `e2e/ui/audit-tool-call.spec.ts` |
 | RAG 评测 | `e2e/rag/cases.jsonl`（用例集）、`e2e/rag/run.mjs`（跑分）、`e2e/rag/report-{YYYYMMDD}.md`（报告，不入库） | `e2e/rag/report-20261126.md` |
-| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs` |
+| CI 门禁脚本 | `scripts/checks/{scope}.mjs`，零依赖纯 ESM，本地与 CI 同一入口复跑；新增强制规则一律落脚本再登记进工作流，不写"只有文档的门禁"。每条必过步骤还要在「CI 门禁覆盖」小结表里有一行，缺依赖时的跳过要写明缺哪个文件 | `scripts/checks/schema-dialect-parity.mjs`、`scripts/checks/menu-component.mjs`、`scripts/checks/gitignore-hygiene.mjs`、`scripts/checks/dist-rsa.mjs` |
 | Java 源文件 | `.java` 叶子名必须与 public 类型名逐字一致（JLS §7.6），PascalCase 属语言强制而非项目偏好，豁免本表小写 kebab 校验；包目录段仍全小写，其它扩展名不放行 | `.../org/dromara/ai/contract/AiEventType.java` |
 | 交付配置文件 | GitHub 强制约定名，不受本表小写 kebab 约束且豁免命名校验：`.github/workflows/ci.yml`、`.github/pull_request_template.md`（大小写不敏感，须位于默认分支方生效） | `.github/pull_request_template.md` |
 | 部署 | `deploy/{stack}/docker-compose.yml` + `.env.example`；Nginx 配置 `deploy/{stack}/nginx/agenthub.conf`；app 镜像固定 `code/back-end/Dockerfile` + 同目录 `.dockerignore`（构建上下文即后端根，`app.build.context` 指过去，口径见 [配置文档 §7](../../configuration.md)）；`{stack}` ∈ `deploy-pg` / `deploy-mysql` | `deploy/deploy-pg/nginx/agenthub.conf` |
