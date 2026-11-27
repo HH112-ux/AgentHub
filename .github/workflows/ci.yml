@@ -170,6 +170,9 @@ jobs:
         if: steps.probe.outputs.frontend == 'true'
         run: node scripts/checks/dist-rsa.mjs
 
+      - name: 介绍页问答 Function 单测
+        run: node --test code/intro-site/tests/chat.test.mjs
+
       - name: 契约一致性
         if: steps.probe.outputs.contract == 'true'
         run: node e2e/http/L00-contract-consistency.mjs
@@ -204,6 +207,7 @@ jobs:
             echo "| 菜单 component ↔ 前端页面文件 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
             echo "| 前端 lint / 构建 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
             echo "| dist 占位 RSA 密钥复验 | $(state "$FRONTEND" 'code/front-end/package.json 未入仓') |"
+            echo "| 介绍页问答 Function 单测 | 恒定执行 |"
             echo "| 契约一致性 L00 | $(state "$CONTRACT" 'e2e/http/L00-contract-consistency.mjs 未入仓') |"
             echo ""
             echo "> 接口 e2e 分层、浏览器巡检、RAG 评测需真实栈与模型密钥，按设计稿 §9 H1 留作后续流水线硬化。"

@@ -131,6 +131,12 @@ pnpm lint
 pnpm build
 ```
 
+### 介绍页问答 Function
+
+```bash
+node --test code/intro-site/tests/chat.test.mjs
+```
+
 ### 接口契约一致性
 
 栈运行后执行：
