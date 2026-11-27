@@ -2,7 +2,7 @@ name: CI
 
 # 交付门禁：合入 main 前必须通过的最低集合。
 # 档位取自「最小可绿」——规则类检查恒定执行；后端/前端/契约/部署作业在对应制品入仓前自动跳过，
-# 制品出现后无需改本文件即自动生效。设计稿 §9 H1 的 e2e 全量硬门禁与 JaCoCo 覆盖率仍属一周后硬化项，未在此提前。
+# 制品出现后无需改本文件即自动生效。接口 e2e 全量硬门禁与 JaCoCo 覆盖率仍属后续硬化项，未在此提前。
 
 on:
   pull_request:
@@ -65,7 +65,6 @@ jobs:
             echo "backend=$(test_true code/back-end/pom.xml)"
             echo "frontend=$(test_true code/front-end/package.json)"
             echo "contract=$(test_true e2e/http/L00-contract-consistency.mjs)"
-            echo "nodepin=$(test_true code/front-end/.node-version)"
             echo "deploy=$(test_true deploy/deploy-pg/docker-compose.yml)"
           } >> "$GITHUB_OUTPUT"
 
@@ -136,17 +135,27 @@ jobs:
           package_json_file: code/front-end/package.json
 
       - name: 装配 Node
-        if: steps.probe.outputs.frontend == 'true' && steps.probe.outputs.nodepin == 'true'
+        if: steps.probe.outputs.frontend == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: code/front-end/.node-version
+          cache: pnpm
+          cache-dependency-path: code/front-end/pnpm-lock.yaml
+
+      - name: 安装前端依赖
+        if: steps.probe.outputs.frontend == 'true'
+        working-directory: code/front-end
+        run: pnpm install --frozen-lockfile
+
+      - name: 前端 lint
+        if: steps.probe.outputs.frontend == 'true'
+        working-directory: code/front-end
+        run: pnpm lint
 
       - name: 前端构建
         if: steps.probe.outputs.frontend == 'true'
         working-directory: code/front-end
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
+        run: pnpm build
 
       - name: 契约一致性
         if: steps.probe.outputs.contract == 'true'
@@ -180,8 +189,8 @@ jobs:
             echo "| Nginx 入口配置语法（nginx -t） | $(state "$DEPLOY" 'deploy/ 未入仓') |"
             echo "| AI 模块单测 | $(state "$BACKEND" 'code/back-end/pom.xml 未入仓') |"
             echo "| 菜单 component ↔ 前端页面文件 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
-            echo "| 前端构建 | $(state "$FRONTEND" 'code/front-end/package.json 未入仓') |"
+            echo "| 前端 lint / 构建 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
             echo "| 契约一致性 L00 | $(state "$CONTRACT" 'e2e/http/L00-contract-consistency.mjs 未入仓') |"
             echo ""
-            echo "> 接口 e2e 分层、浏览器巡检、RAG 评测需真实栈与模型密钥，按设计稿 §9 H1 留作一周后流水线硬化。"
+            echo "> 接口 e2e 分层、浏览器巡检、RAG 评测需真实栈与模型密钥，按设计稿 §9 H1 留作后续流水线硬化。"
           } >> "$GITHUB_STEP_SUMMARY"

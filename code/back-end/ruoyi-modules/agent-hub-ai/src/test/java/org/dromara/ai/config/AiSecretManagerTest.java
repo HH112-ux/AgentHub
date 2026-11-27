@@ -11,7 +11,13 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("模型密钥密文管理器")
 class AiSecretManagerTest {
 
-    private final AiSecretManager secretManager = new AiSecretManager(new AiProperties());
+    private final AiSecretManager secretManager;
+
+    AiSecretManagerTest() {
+        AiProperties properties = new AiProperties();
+        properties.setCryptoKey("1234567890abcdef");
+        secretManager = new AiSecretManager(properties);
+    }
 
     @Test
     @DisplayName("空明文不加密（未配置密钥，如本地 Ollama）")

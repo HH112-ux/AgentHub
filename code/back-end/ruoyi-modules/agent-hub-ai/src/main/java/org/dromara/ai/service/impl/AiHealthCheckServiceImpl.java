@@ -106,7 +106,7 @@ public class AiHealthCheckServiceImpl implements IAiHealthCheckService {
     /**
      * 出厂示例加密根密钥（与 {@code ProductionConfigGuard.SAMPLE_SECRETS} 同值）
      */
-    private static final String SAMPLE_CRYPTO_KEY = "agenthub-ai-2026";
+    private static final String SAMPLE_CRYPTO_KEY = "REPLACE_WITH_32_BYTE_ROOT_KEY";
 
     /**
      * MCP 出口出厂示例口令

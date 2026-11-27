@@ -1,0 +1,64 @@
+name: Bug report
+description: 报告 AgentHub 的功能缺陷或异常行为
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请确认没有重复 Issue，并移除密码、令牌、证书、业务数据和其他敏感信息。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题摘要
+      description: 用一句话描述发生了什么。
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本或提交
+      description: 填写版本号、分支名或 commit SHA。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 操作系统、浏览器、Node/JDK/Docker 版本、数据库类型等。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 列出可重复触发问题的步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志或截图
+      description: 请粘贴已脱敏的相关日志，或提供截图。
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前检查
+      options:
+        - label: 我已搜索现有 Issue，确认不是重复问题。
+          required: true
+        - label: 我已移除所有密钥、业务数据和个人敏感信息。
+          required: true

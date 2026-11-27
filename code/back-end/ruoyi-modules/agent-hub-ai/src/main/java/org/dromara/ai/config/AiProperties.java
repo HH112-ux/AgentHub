@@ -20,7 +20,7 @@ public class AiProperties {
     /**
      * 模型密钥加密用的 AES 秘钥（长度必须为 16 / 24 / 32 位，生产环境必须替换）
      */
-    private String cryptoKey = "agenthub-ai-2026";
+    private String cryptoKey = "REPLACE_WITH_32_BYTE_ROOT_KEY";
 
     /**
      * 连通性测试的默认超时时间（秒），未配置模型超时时生效

@@ -446,7 +446,9 @@ const refreshAllowlist = async () => {
 
 /** 保存无人值守白名单：二次确认 + 必填理由，任一环节取消即中止 */
 const handleSaveAllowlist = async () => {
+  // oxlint-disable-next-line unicorn/no-array-sort -- 兼容 Safari 14 / Chrome 87，不能使用 toSorted。
   const submitted = [...allowlistToolCodes.value].sort();
+  // oxlint-disable-next-line unicorn/no-array-sort -- 兼容 Safari 14 / Chrome 87，不能使用 toSorted。
   const current = [...currentAllowlist.value].sort();
   const unchanged = submitted.length === current.length && submitted.every((code, index) => code === current[index]);
   if (unchanged) {

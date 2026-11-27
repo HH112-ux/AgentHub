@@ -78,11 +78,11 @@ class AiEntitySchemaIntegrationTest {
     @BeforeAll
     static void connectStacks() throws Exception {
         openStack("PostgreSQL", env("AGENTHUB_IT_PG_URL", "jdbc:postgresql://localhost:5432/agenthub"),
-            env("AGENTHUB_IT_PG_USER", "postgres"), env("AGENTHUB_IT_PG_PASSWORD", "Zl@2026"), "public");
+            env("AGENTHUB_IT_PG_USER", "postgres"), env("AGENTHUB_IT_PG_PASSWORD", "test-only-password"), "public");
         openStack("MySQL", env("AGENTHUB_IT_MYSQL_URL",
                 "jdbc:mysql://localhost:3306/agenthub?useUnicode=true&characterEncoding=utf8"
                     + "&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"),
-            env("AGENTHUB_IT_MYSQL_USER", "root"), env("AGENTHUB_IT_MYSQL_PASSWORD", "Zl@2026"), null);
+            env("AGENTHUB_IT_MYSQL_USER", "root"), env("AGENTHUB_IT_MYSQL_PASSWORD", "test-only-password"), null);
 
         assumeTrue(!STACKS.isEmpty(), "两栈均未就绪（PG 5432 / MySQL 3306），跳过实体↔schema 集成测试");
         entities = scanEntities();

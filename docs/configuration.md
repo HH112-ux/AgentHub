@@ -95,6 +95,7 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 ## 5. 密钥与门禁
 
 - 模型密钥密文落库、不回显；根密钥 `AGENTHUB_AI_CRYPTO_KEY` 只在 `.env`。
+- MCP 出口访问口令由 `AGENTHUB_AI_MCP_SERVER_TOKEN` 注入，生产必须替换为强口令；前端不得持有该值。
 - `.env`、`deploy/*/cert/`、`vendor/` 全部 gitignore；证书文件不得入仓（§2.3.1）。
 - 仓库内不放任何真实口令：`scripts/checks/no-secrets-in-repo.mjs` 扫描跟踪文件。
 - 生产启动必须命中「非出厂示例值」检查，命中即拒绝启动（手册 §10.2 第 1、4 项），该门禁随 A2 落地。
@@ -129,4 +130,4 @@ SPRING_CONFIG_ADDITIONAL_LOCATION=optional:file:/config/
 
 对象存储镜像不适用上一条：上游已把开源版 MinIO 归档，`dl.min.io` 返回 410 Gone，Docker Hub 的 `minio/minio` 与 `minio/mc` 也不再对匿名拉取开放，任何镜像站上的 `minio/minio` 都属来源不可核验的第三方制品——对象存储里放的是用户附件与 Milvus 数据段，不做这种折中。改由 `deploy/tools/build-minio-image.sh` 从 `github.com/minio/{minio,mc}` 官方 Release 取 linux-amd64 二进制、逐个校验 `.sha256sum`，重建出与编排同名的 `minio/minio:RELEASE.2024-08-17T01-24-54Z`（`mc` 取同日 `RELEASE.2024-08-17T11-33-50Z`，编排的健康检查 `mc ready local` 依赖它）。编排文件仍不改镜像名；版本升级需重新评估，因为该分支不再获得上游修复。
 
-镜像暂以 root 运行（与底座编排习惯一致，卷属主也最简单）；改非 root 属一周后硬化项，届时须同时验证两个命名卷的属主。
+镜像暂以 root 运行（与底座编排习惯一致，卷属主也最简单）；改非 root 属后续硬化项，届时须同时验证两个命名卷的属主。

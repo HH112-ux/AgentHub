@@ -72,11 +72,11 @@ class AiDbDialectIntegrationTest {
         pgSchema = "public";
         mysqlSchema = "agenthub";
         pg = connect(env("AGENTHUB_IT_PG_URL", "jdbc:postgresql://localhost:5432/agenthub"),
-            env("AGENTHUB_IT_PG_USER", "postgres"), env("AGENTHUB_IT_PG_PASSWORD", "Zl@2026"));
+            env("AGENTHUB_IT_PG_USER", "postgres"), env("AGENTHUB_IT_PG_PASSWORD", "test-only-password"));
         mysql = connect(env("AGENTHUB_IT_MYSQL_URL",
                 "jdbc:mysql://localhost:3306/agenthub?useUnicode=true&characterEncoding=utf8"
                     + "&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"),
-            env("AGENTHUB_IT_MYSQL_USER", "root"), env("AGENTHUB_IT_MYSQL_PASSWORD", "Zl@2026"));
+            env("AGENTHUB_IT_MYSQL_USER", "root"), env("AGENTHUB_IT_MYSQL_PASSWORD", "test-only-password"));
         assumeTrue(pg != null && mysql != null,
             "两栈未同时就绪（PG 5432 / MySQL 3306）或缺少 JDBC 驱动，跳过集成测试");
         mysqlSchema = queryString(mysql, "select database()");

@@ -16,9 +16,8 @@ const SIGNATURES = [
 ];
 
 // 出处：Vite 按 `--mode` 固定加载 `.env.[mode]`，本仓库的构建脚本写死 `vite build --mode production`，
-// 文件名改名即失效。这两个文件只承载页面标题、接口前缀等构建期配置，以及底座出厂的演示密钥对
-// （后端 ProductionConfigGuard 在 prod 启动时会拒绝未替换的出厂值，故不构成可用凭据）。
-// 免检仅限文件名，下方的内容特征扫描照常执行。
+// 文件名改名即失效。这两个文件只承载页面标题、接口前缀等构建期配置；RSA 私钥等秘密必须由 CI Secret
+// 在构建时注入，不得以真实值提交。免检仅限文件名，下方的内容特征扫描照常执行。
 const ECOSYSTEM_ENV_FILES = new Set(['code/front-end/.env.development', 'code/front-end/.env.production']);
 
 const files = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {

@@ -19,6 +19,8 @@ const ECOSYSTEM_NAMES = new Set([
   'PULL_REQUEST_TEMPLATE.md',
   'issue_template.md',
   'ISSUE_TEMPLATE.md',
+  // GitHub 只识别固定大写目录 .github/ISSUE_TEMPLATE；目录名不可改为 kebab-case。
+  'ISSUE_TEMPLATE',
   'security.md',
   'SECURITY.md',
 ]);
@@ -70,6 +72,7 @@ for (const path of ownFiles) {
     violations.push(`${path}：Java 源文件名须与 public 类型名一致（JLS §7.6），「${leaf}」不符合 PascalCase`);
   }
   for (const segment of leaf.endsWith('.java') ? segs.slice(0, -1) : segs) {
+    if (ECOSYSTEM_NAMES.has(segment)) continue;
     if (/[A-Z]/.test(segment)) {
       violations.push(`${path}：段「${segment}」含大写字母——§3.2 要求 ASCII 小写 kebab-case`);
     } else if (/[^\x00-\x7F]/.test(segment)) {
