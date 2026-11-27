@@ -155,7 +155,20 @@ jobs:
       - name: 前端构建
         if: steps.probe.outputs.frontend == 'true'
         working-directory: code/front-end
-        run: pnpm build
+        run: |
+          # .env.production 只保留占位符；CI 现签一次性密钥对验证构建注入路径，避免把占位符打进 dist。
+          # 进程环境变量优先级高于 .env 文件（Vite 约定），export 即生效。
+          one() { grep -v -- '-----' "$1" | tr -d '\n'; }
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RUNNER_TEMP/rsa.pem" 2>/dev/null
+          openssl pkey -in "$RUNNER_TEMP/rsa.pem" -pubout -out "$RUNNER_TEMP/rsa.pub" 2>/dev/null
+          export VITE_APP_RSA_PUBLIC_KEY="$(one "$RUNNER_TEMP/rsa.pub")"
+          export VITE_APP_RSA_PRIVATE_KEY="$(one "$RUNNER_TEMP/rsa.pem")"
+          pnpm build
+
+      # 复验紧跟在构建之后：扫描刚产出的 dist，命中 .env.production 中的占位符或示例密钥即红。
+      - name: dist 占位密钥复验
+        if: steps.probe.outputs.frontend == 'true'
+        run: node scripts/checks/dist-rsa.mjs
 
       - name: 契约一致性
         if: steps.probe.outputs.contract == 'true'
@@ -190,6 +203,7 @@ jobs:
             echo "| AI 模块单测 | $(state "$BACKEND" 'code/back-end/pom.xml 未入仓') |"
             echo "| 菜单 component ↔ 前端页面文件 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
             echo "| 前端 lint / 构建 | $(state "$FRONTEND" 'code/front-end 未入仓') |"
+            echo "| dist 占位 RSA 密钥复验 | $(state "$FRONTEND" 'code/front-end/package.json 未入仓') |"
             echo "| 契约一致性 L00 | $(state "$CONTRACT" 'e2e/http/L00-contract-consistency.mjs 未入仓') |"
             echo ""
             echo "> 接口 e2e 分层、浏览器巡检、RAG 评测需真实栈与模型密钥，按设计稿 §9 H1 留作后续流水线硬化。"
